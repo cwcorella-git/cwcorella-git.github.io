@@ -24,62 +24,11 @@
 			blurb:
 				'Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam. Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse.'
 		},
-		{
-			id: 'autumn',
-			title: 'Autumn',
-			category: 'GAME',
-			year: '2021–',
-			blurb:
-				'Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium totam rem aperiam eaque ipsa quae ab illo inventore.'
-		},
-		{
-			id: 'dodec',
-			title: 'Dodec: Beyond Our Home',
-			category: 'GAME',
-			year: '2020–',
-			blurb:
-				'Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione sequi nesciunt.'
-		},
-		{
-			id: 'noxii',
-			title: 'NOXII',
-			category: 'GAME',
-			year: '2018–',
-			blurb:
-				'Neque porro quisquam est qui dolorem ipsum quia dolor sit amet consectetur adipisci velit. Ut labore et dolore magnam aliquam quaerat voluptatem.'
-		},
-		{
-			id: 'plye',
-			title: 'PLY',
-			category: 'TOOL',
-			year: '2024–',
-			blurb:
-				'At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores quas molestias excepturi.'
-		},
-		{
-			id: 'enact',
-			title: 'Enact Dialogue System',
-			category: 'TOOL',
-			year: '2017–',
-			blurb:
-				'Nam libero tempore cum soluta nobis eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus omnis voluptas assumenda est.'
-		},
-		{
-			id: 'the-open-book',
-			title: 'The Open Book',
-			category: 'HARDWARE',
-			year: '2023',
-			blurb:
-				'Temporibus autem quibusdam et aut officiis debitis rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint molestiae non recusandae.'
-		}
 	];
 
 	const cat = {
 		PLATFORM: '#c8793a',
-		CIVIC: '#b83232',
-		GAME: '#4a9eff',
-		TOOL: '#3a9e8a',
-		HARDWARE: '#7a6bc8'
+		CIVIC: '#b83232'
 	};
 </script>
 
