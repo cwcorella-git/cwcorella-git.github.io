@@ -3,33 +3,34 @@
 		{
 			id: 'veritable-games',
 			title: 'Veritable Games',
-			category: 'PLATFORM',
+			tag: 'platform',
 			year: '2024–',
 			blurb:
-				'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco.'
+				'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua, quis nostrud exercitation ullamco laboris.'
 		},
 		{
 			id: 'rstu-connect',
 			title: 'RSTU Connect',
-			category: 'CIVIC',
+			tag: 'civic tech',
 			year: '2024',
 			blurb:
-				'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident deserunt.'
+				'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit.'
 		},
 		{
 			id: 'reno-dev-space',
 			title: 'Reno Dev Space',
-			category: 'CIVIC',
+			tag: 'civic tech',
 			year: '2023–',
 			blurb:
-				'Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam. Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse.'
-		},
+				'Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit.'
+		}
 	];
 
-	const cat = {
-		PLATFORM: '#c8793a',
-		CIVIC: '#b83232'
-	};
+	const currently = [
+		{ label: 'making', text: 'Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod.' },
+		{ label: 'reading', text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' },
+		{ label: 'thinking about', text: 'Lorem ipsum dolor sit amet consectetur adipiscing elit ut labore.' }
+	];
 </script>
 
 <svelte:head>
@@ -37,111 +38,140 @@
 	<meta name="description" content="Game designer, civic technologist, open source builder — Reno, NV." />
 </svelte:head>
 
-<div class="field">
-	<div class="ambient" aria-hidden="true"></div>
+<div class="page">
+	<div class="glow" aria-hidden="true"></div>
+	<div class="glow glow--2" aria-hidden="true"></div>
 
 	<nav>
-		<span class="nav-id">cwcorella</span>
-		<span class="nav-links">
+		<a href="/" class="nav-home">cwcorella</a>
+		<div class="nav-links">
 			<a href="#work">work</a>
 			<a href="#about">about</a>
-		</span>
+		</div>
 	</nav>
 
 	<header class="hero">
 		<div class="hero-inner">
-			<p class="hero-pre">— index</p>
-			<h1>
-				<span class="dim">cw</span>corella
-			</h1>
-			<p class="hero-sub">GAME DESIGN&ensp;/&ensp;CIVIC TECH&ensp;/&ensp;OPEN SOURCE&ensp;/&ensp;RENO NV</p>
+			<p class="hi">hi.</p>
+			<h1>cwcorella</h1>
+			<p class="tagline">
+				Lorem ipsum dolor sit amet — consectetur adipiscing elit, sed do eiusmod tempor
+				incididunt ut labore. (reno, nv.)
+			</p>
 		</div>
-		<div class="coord" aria-hidden="true">39.5296° N / 119.8138° W</div>
 	</header>
 
+	<section class="intro">
+		<p>
+			Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt
+			ut labore et dolore magna aliqua. Ut enim ad minim veniam — quis nostrud exercitation
+			ullamco laboris nisi ut aliquip. Duis aute irure dolor in reprehenderit in voluptate velit
+			esse cillum.
+		</p>
+		<p>
+			Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit
+			anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem
+			accusantium doloremque laudantium — totam rem aperiam, eaque ipsa.
+		</p>
+	</section>
+
 	<section id="work" class="work">
-		<h2 class="section-label">WORK</h2>
-		<div class="grid">
+		<h2 class="label">things i've made</h2>
+		<ul class="project-list">
 			{#each projects as p}
-				<article class="card" style="--c: {cat[p.category]}">
-					<div class="card-top">
-						<span class="card-cat">{p.category}</span>
-						<span class="card-year">{p.year}</span>
+				<li class="project">
+					<div class="project-head">
+						<span class="project-title">{p.title}</span>
+						<span class="project-meta">{p.tag} · {p.year}</span>
 					</div>
-					<h3 class="card-title">{p.title}</h3>
-					<p class="card-blurb">{p.blurb}</p>
-				</article>
+					<p class="project-blurb">{p.blurb}</p>
+				</li>
 			{/each}
-		</div>
+		</ul>
+	</section>
+
+	<section class="currently">
+		<h2 class="label">lately</h2>
+		<ul class="currently-list">
+			{#each currently as item}
+				<li>
+					<span class="currently-label">{item.label}</span>
+					<span class="currently-text">{item.text}</span>
+				</li>
+			{/each}
+		</ul>
 	</section>
 
 	<section id="about" class="about">
-		<h2 class="section-label">ABOUT</h2>
+		<h2 class="label">a few words</h2>
 		<div class="about-body">
 			<p class="lede">
 				Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt
 				ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation
-				ullamco laboris nisi ut aliquip ex ea commodo consequat duis aute irure.
+				ullamco laboris nisi — duis aute irure dolor in reprehenderit.
 			</p>
 			<p>
 				Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque
-				laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi
-				architecto beatae vitae dicta sunt explicabo nemo enim ipsam voluptatem.
+				laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis. Nemo enim
+				ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit.
 			</p>
 			<p>
 				At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium
-				voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint
-				occaecati cupiditate non provident similique sunt in culpa qui officia deserunt.
+				voluptatum deleniti atque corrupti. Nam libero tempore cum soluta nobis eligendi optio
+				cumque nihil impedit quo minus id quod maxime placeat.
 			</p>
 		</div>
 	</section>
 
 	<footer>
-		<span>cwcorella&ensp;—&ensp;{new Date().getFullYear()}</span>
-		<a href="https://github.com/cwcorella-git" target="_blank" rel="noopener noreferrer">github</a>
+		<span>cwcorella — {new Date().getFullYear()}</span>
+		<a href="https://github.com/cwcorella-git" target="_blank" rel="noopener noreferrer">github ↗</a>
 	</footer>
 </div>
 
 <style>
-	/* ── tokens ─────────────────────────────────────────────── */
+	/* ── reset ───────────────────────────────────────────────── */
 	:global(*, *::before, *::after) { box-sizing: border-box; }
 	:global(body, html) {
-		margin: 0;
-		padding: 0;
-		background: #080808;
-		color: #d0cdc8;
-		font-family: system-ui, -apple-system, sans-serif;
+		margin: 0; padding: 0;
+		background: #0c0902;
+		color: #e2d8c4;
+		font-family: Georgia, 'Times New Roman', Times, serif;
 		-webkit-font-smoothing: antialiased;
 	}
 	:global(a) { color: inherit; }
 
-	/* ── field + grid texture ────────────────────────────────── */
-	.field {
+	/* ── page + warm grid texture ────────────────────────────── */
+	.page {
 		min-height: 100vh;
 		position: relative;
 		background-image:
-			linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
-			linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+			linear-gradient(rgba(212, 160, 80, 0.018) 1px, transparent 1px),
+			linear-gradient(90deg, rgba(212, 160, 80, 0.018) 1px, transparent 1px);
 		background-size: 48px 48px;
 	}
 
-	/* ── ambient glow ────────────────────────────────────────── */
-	.ambient {
+	/* ── twin candlelight glows ──────────────────────────────── */
+	.glow {
 		position: fixed;
-		top: 40%;
-		left: 38%;
-		width: 700px;
-		height: 700px;
-		transform: translate(-50%, -50%);
 		border-radius: 50%;
-		background: radial-gradient(circle, rgba(200, 121, 58, 0.045) 0%, transparent 68%);
-		animation: breathe 14s ease-in-out infinite;
 		pointer-events: none;
 		z-index: 0;
+		top: 30%; left: 25%;
+		width: 800px; height: 800px;
+		transform: translate(-50%, -50%);
+		background: radial-gradient(circle, rgba(210, 130, 40, 0.07) 0%, transparent 65%);
+		animation: breathe 16s ease-in-out infinite;
+	}
+	.glow--2 {
+		top: 75%; left: 72%;
+		width: 500px; height: 500px;
+		background: radial-gradient(circle, rgba(180, 100, 50, 0.05) 0%, transparent 65%);
+		animation-delay: -7s;
 	}
 	@keyframes breathe {
-		0%, 100% { transform: translate(-50%, -50%) scale(1);   opacity: 0.6; }
-		50%       { transform: translate(-50%, -50%) scale(1.3); opacity: 1;   }
+		0%, 100% { opacity: 0.7; transform: translate(-50%, -50%) scale(1); }
+		50%       { opacity: 1;   transform: translate(-50%, -50%) scale(1.18); }
 	}
 
 	/* ── nav ─────────────────────────────────────────────────── */
@@ -149,26 +179,29 @@
 		position: fixed;
 		inset: 0 0 auto 0;
 		z-index: 100;
-		padding: 1.1rem 2rem;
+		padding: 1.2rem 2rem;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		font-family: 'Courier New', Courier, monospace;
-		font-size: 0.68rem;
-		letter-spacing: 0.14em;
-		text-transform: uppercase;
-		background: rgba(8, 8, 8, 0.88);
-		backdrop-filter: blur(10px);
-		border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+		background: rgba(12, 9, 2, 0.85);
+		backdrop-filter: blur(12px);
+		border-bottom: 1px solid rgba(212, 160, 80, 0.06);
 	}
-	.nav-id { color: #3a3a3a; }
-	.nav-links { display: flex; gap: 2.5rem; }
-	.nav-links a {
-		color: #555;
+	.nav-home {
+		font-size: 0.9rem;
+		color: #6a5c3a;
 		text-decoration: none;
 		transition: color 0.2s;
 	}
-	.nav-links a:hover { color: #d0cdc8; }
+	.nav-home:hover { color: #c8a060; }
+	.nav-links { display: flex; gap: 2rem; }
+	.nav-links a {
+		font-size: 0.85rem;
+		color: #5a4e32;
+		text-decoration: none;
+		transition: color 0.2s;
+	}
+	.nav-links a:hover { color: #c8a060; }
 
 	/* ── hero ────────────────────────────────────────────────── */
 	.hero {
@@ -176,169 +209,186 @@
 		z-index: 1;
 		min-height: 100vh;
 		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		padding: 8rem 2rem 4rem;
+		align-items: center;
+		padding: 0 2rem;
 	}
 	.hero-inner {
-		max-width: 1280px;
+		max-width: 820px;
 		margin: 0 auto;
 		width: 100%;
+		padding-top: 5rem;
 	}
-	.hero-pre {
-		font-family: 'Courier New', Courier, monospace;
-		font-size: 0.68rem;
-		letter-spacing: 0.18em;
-		color: #c8793a;
-		text-transform: uppercase;
-		margin-bottom: 1.2rem;
+	.hi {
+		font-size: 1.4rem;
+		color: #c8a060;
+		margin: 0 0 0.6rem;
+		font-style: italic;
 	}
 	h1 {
-		font-family: Georgia, 'Times New Roman', Times, serif;
-		font-size: clamp(4.5rem, 11vw, 11rem);
+		font-size: clamp(3.5rem, 9vw, 8.5rem);
 		font-weight: 400;
-		line-height: 0.88;
-		letter-spacing: -0.025em;
-		color: #d0cdc8;
-		margin: 0 0 2.5rem;
+		line-height: 0.92;
+		letter-spacing: -0.02em;
+		color: #e2d8c4;
+		margin: 0 0 2rem;
 	}
-	.dim { color: #252525; }
-	.hero-sub {
-		font-family: 'Courier New', Courier, monospace;
-		font-size: 0.65rem;
-		letter-spacing: 0.22em;
-		color: #404040;
-		text-transform: uppercase;
-	}
-	.coord {
-		position: absolute;
-		bottom: 2.5rem;
-		right: 2rem;
-		font-family: 'Courier New', Courier, monospace;
-		font-size: 0.58rem;
-		letter-spacing: 0.15em;
-		color: #252525;
-		text-transform: uppercase;
+	.tagline {
+		font-size: 1.05rem;
+		line-height: 1.7;
+		color: #7a6a48;
+		max-width: 520px;
+		font-style: italic;
 	}
 
-	/* ── section label ───────────────────────────────────────── */
-	.section-label {
+	/* ── intro ───────────────────────────────────────────────── */
+	.intro {
+		position: relative;
+		z-index: 1;
+		max-width: 640px;
+		margin: 0 auto;
+		padding: 5rem 2rem 4rem;
+	}
+	.intro p {
+		font-size: 1.05rem;
+		line-height: 1.9;
+		color: #9a8a68;
+		margin-bottom: 1.4rem;
+	}
+
+	/* ── shared label ────────────────────────────────────────── */
+	.label {
+		font-size: 0.72rem;
 		font-family: 'Courier New', Courier, monospace;
-		font-size: 0.62rem;
-		letter-spacing: 0.28em;
-		color: #303030;
+		letter-spacing: 0.18em;
 		text-transform: uppercase;
+		color: #4a3e26;
 		font-weight: 400;
-		margin-bottom: 3rem;
-		padding-bottom: 0.8rem;
-		border-bottom: 1px solid #161616;
+		margin: 0 0 2.5rem;
+		padding-bottom: 0.7rem;
+		border-bottom: 1px solid rgba(212, 160, 80, 0.08);
 	}
 
 	/* ── work ────────────────────────────────────────────────── */
 	.work {
 		position: relative;
 		z-index: 1;
-		max-width: 1280px;
+		max-width: 720px;
 		margin: 0 auto;
-		padding: 6rem 2rem 8rem;
+		padding: 5rem 2rem 4rem;
 	}
-	.grid {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 1px;
-		background: #141414;
+	.project-list {
+		list-style: none;
+		margin: 0; padding: 0;
 	}
-
-	/* ── card ────────────────────────────────────────────────── */
-	.card {
-		background: #080808;
-		padding: 2rem 1.8rem;
-		border-left: 2px solid var(--c);
-		transition: background 0.18s;
+	.project {
+		padding: 2rem 0;
+		border-bottom: 1px solid rgba(212, 160, 80, 0.07);
 	}
-	.card:hover { background: #0d0d0d; }
-	.card-top {
+	.project:first-child { border-top: 1px solid rgba(212, 160, 80, 0.07); }
+	.project-head {
 		display: flex;
 		justify-content: space-between;
 		align-items: baseline;
-		margin-bottom: 1rem;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-bottom: 0.8rem;
 	}
-	.card-cat {
+	.project-title {
+		font-size: 1.2rem;
+		color: #d4c4a0;
+		letter-spacing: -0.01em;
+	}
+	.project-meta {
 		font-family: 'Courier New', Courier, monospace;
-		font-size: 0.58rem;
-		letter-spacing: 0.22em;
-		color: var(--c);
+		font-size: 0.68rem;
+		color: #4a3e26;
+		letter-spacing: 0.08em;
+	}
+	.project-blurb {
+		font-size: 0.9rem;
+		line-height: 1.8;
+		color: #6a5c3a;
+		margin: 0;
+	}
+
+	/* ── currently ───────────────────────────────────────────── */
+	.currently {
+		position: relative;
+		z-index: 1;
+		max-width: 720px;
+		margin: 0 auto;
+		padding: 3rem 2rem 4rem;
+	}
+	.currently-list {
+		list-style: none;
+		margin: 0; padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 1.1rem;
+	}
+	.currently-list li {
+		display: grid;
+		grid-template-columns: 130px 1fr;
+		gap: 1rem;
+		align-items: baseline;
+	}
+	.currently-label {
+		font-family: 'Courier New', Courier, monospace;
+		font-size: 0.68rem;
+		letter-spacing: 0.1em;
+		color: #c8a060;
 		text-transform: uppercase;
 	}
-	.card-year {
-		font-family: 'Courier New', Courier, monospace;
-		font-size: 0.58rem;
-		letter-spacing: 0.1em;
-		color: #2a2a2a;
-	}
-	.card-title {
-		font-family: Georgia, 'Times New Roman', Times, serif;
-		font-size: 1.15rem;
-		font-weight: 400;
-		color: #c0bdb8;
-		margin: 0 0 0.8rem;
-		line-height: 1.3;
-	}
-	.card-blurb {
-		font-size: 0.8rem;
-		line-height: 1.75;
-		color: #404040;
+	.currently-text {
+		font-size: 0.9rem;
+		line-height: 1.6;
+		color: #6a5c3a;
+		font-style: italic;
 	}
 
 	/* ── about ───────────────────────────────────────────────── */
 	.about {
 		position: relative;
 		z-index: 1;
-		max-width: 660px;
+		max-width: 640px;
 		margin: 0 auto;
-		padding: 6rem 2rem 8rem;
+		padding: 4rem 2rem 7rem;
 	}
 	.about-body p {
 		font-size: 0.97rem;
-		line-height: 1.9;
-		color: #606060;
-		margin-bottom: 1.6rem;
+		line-height: 1.95;
+		color: #6a5c3a;
+		margin-bottom: 1.4rem;
 	}
 	.about-body .lede {
-		font-size: 1.08rem;
-		color: #909090;
-		line-height: 1.85;
+		font-size: 1.05rem;
+		color: #9a8a68;
 	}
 
 	/* ── footer ──────────────────────────────────────────────── */
 	footer {
 		position: relative;
 		z-index: 1;
-		padding: 1.8rem 2rem;
+		padding: 2rem;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		border-top: 1px solid #141414;
+		border-top: 1px solid rgba(212, 160, 80, 0.07);
 		font-family: 'Courier New', Courier, monospace;
-		font-size: 0.62rem;
-		letter-spacing: 0.14em;
-		color: #282828;
-		text-transform: uppercase;
+		font-size: 0.65rem;
+		letter-spacing: 0.1em;
+		color: #3a3020;
 	}
 	footer a {
 		text-decoration: none;
 		transition: color 0.2s;
 	}
-	footer a:hover { color: #888; }
+	footer a:hover { color: #c8a060; }
 
 	/* ── responsive ──────────────────────────────────────────── */
-	@media (max-width: 960px) {
-		.grid { grid-template-columns: repeat(2, 1fr); }
-	}
 	@media (max-width: 600px) {
-		.grid { grid-template-columns: 1fr; }
-		h1 { font-size: 4rem; }
-		.nav-links { gap: 1.5rem; }
-		.coord { display: none; }
+		h1 { font-size: 3.5rem; }
+		.currently-list li { grid-template-columns: 1fr; gap: 0.25rem; }
+		.project-head { flex-direction: column; }
 	}
 </style>
