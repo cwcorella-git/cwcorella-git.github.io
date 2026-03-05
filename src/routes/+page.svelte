@@ -1,10 +1,4 @@
-<script>
-	const lately = [
-		{ label: 'making', text: 'Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor.' },
-		{ label: 'reading', text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' },
-		{ label: 'thinking', text: 'Lorem ipsum dolor sit amet consectetur adipiscing elit ut labore et dolore.' }
-	];
-</script>
+<script></script>
 
 <svelte:head>
 	<title>cwcorella</title>
@@ -30,14 +24,9 @@
 			totam rem aperiam, eaque ipsa quae ab illo inventore veritatis.
 		</p>
 
-		<ul class="lately">
-			{#each lately as item}
-				<li>
-					<span class="k">{item.label}</span>
-					<span class="v">{item.text}</span>
-				</li>
-			{/each}
-		</ul>
+		<blockquote>
+			Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do eiusmod.
+		</blockquote>
 	</main>
 
 	<footer>
@@ -108,32 +97,13 @@
 		margin-bottom: 1.5rem;
 	}
 
-	.lately {
-		list-style: none;
-		margin: 3rem 0 0; padding: 0;
-		border-top: 1px solid rgba(200, 150, 60, 0.08);
-		padding-top: 2.5rem;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-	.lately li {
-		display: grid;
-		grid-template-columns: 90px 1fr;
-		gap: 1rem;
-		align-items: baseline;
-	}
-	.k {
-		font-family: 'Courier New', Courier, monospace;
-		font-size: 0.65rem;
-		letter-spacing: 0.12em;
-		text-transform: uppercase;
-		color: #c8a060;
-	}
-	.v {
-		font-size: 0.88rem;
-		line-height: 1.6;
-		color: #6a5c3a;
+	blockquote {
+		margin: 3rem 0 0;
+		padding: 0;
+		border: none;
+		font-size: 0.9rem;
+		line-height: 1.7;
+		color: #4a3e26;
 		font-style: italic;
 	}
 
@@ -152,7 +122,4 @@
 	}
 	footer a:hover { color: #c8a060; }
 
-	@media (max-width: 600px) {
-		.lately li { grid-template-columns: 1fr; gap: 0.2rem; }
-	}
 </style>
