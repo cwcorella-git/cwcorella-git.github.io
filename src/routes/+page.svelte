@@ -71,7 +71,7 @@
 	main p {
 		font-size: 1rem;
 		line-height: 1.9;
-		color: #9a8a68;
+		color: #b8a880;
 		margin-bottom: 1.5rem;
 	}
 
@@ -81,7 +81,7 @@
 		border: none;
 		font-size: 1rem;
 		line-height: 1.9;
-		color: #5a4e34;
+		color: #7a6a4a;
 		font-style: italic;
 	}
 
@@ -92,7 +92,7 @@
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.65rem;
 		letter-spacing: 0.1em;
-		color: #3a3020;
+		color: #5a4e38;
 	}
 	footer a {
 		text-decoration: none;

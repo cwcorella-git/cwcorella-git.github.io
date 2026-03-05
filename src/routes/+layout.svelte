@@ -21,7 +21,7 @@
 	:global(body, html) {
 		margin: 0; padding: 0;
 		background: #0c0902;
-		color: #b8a880;
+		color: #c0b088;
 		font-family: Georgia, 'Times New Roman', Times, serif;
 		-webkit-font-smoothing: antialiased;
 	}
@@ -35,17 +35,17 @@
 		display: flex;
 		gap: 2rem;
 		align-items: center;
-		background: rgba(12, 9, 2, 0.88);
+		background: rgba(12, 9, 2, 0.92);
 		backdrop-filter: blur(12px);
-		border-bottom: 1px solid rgba(200, 150, 60, 0.06);
+		border-bottom: 1px solid rgba(200, 150, 60, 0.12);
 	}
 	nav a {
 		font-size: 0.82rem;
-		color: #3a3020;
+		color: #6a5a40;
 		text-decoration: none;
 		transition: color 0.2s;
 		letter-spacing: 0.02em;
 	}
-	nav a:hover { color: #9a8060; }
+	nav a:hover { color: #c8a060; }
 	nav a.active { color: #c8a060; }
 </style>
