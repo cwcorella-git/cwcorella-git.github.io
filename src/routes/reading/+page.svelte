@@ -6,10 +6,38 @@
 	// ── categories ──────────────────────────────────────────────
 	const countMap = {};
 	allBooks.forEach((b) => { countMap[b.category] = (countMap[b.category] || 0) + 1; });
-	const categories = ['All', ...Object.entries(countMap).sort((a, b) => b[1] - a[1]).map(([c]) => c)];
+	const categories = Object.entries(countMap)
+		.sort((a, b) => b[1] - a[1])
+		.map(([c]) => c);
 
-	let activeCategory = 'All';
-	$: filtered = activeCategory === 'All' ? allBooks : allBooks.filter((b) => b.category === activeCategory);
+	// ── search / filter state ────────────────────────────────────
+	let searchQuery = '';
+	let activeTag = '';
+	let suggestionsDismissed = false;
+
+	$: tagSuggestions = (searchQuery.trim() && !activeTag)
+		? categories.filter(c => c.toLowerCase().includes(searchQuery.trim().toLowerCase())).slice(0, 6)
+		: [];
+
+	$: showSuggestions = tagSuggestions.length > 0 && !suggestionsDismissed;
+
+	$: filtered = activeTag
+		? allBooks.filter(b => b.category === activeTag)
+		: searchQuery.trim()
+			? allBooks.filter(b =>
+					b.title.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
+					b.author.toLowerCase().includes(searchQuery.trim().toLowerCase())
+				)
+			: allBooks;
+
+	function setTag(cat) { activeTag = cat; searchQuery = ''; }
+	function clearTag()  { activeTag = ''; }
+	function clearAll()  { activeTag = ''; searchQuery = ''; }
+
+	function handleKeydown(e) {
+		if (e.key === 'Escape') { clearAll(); closeMenu(); }
+		if (e.key === 'Enter')  { suggestionsDismissed = true; }
+	}
 
 	// ── completed state (localStorage) ──────────────────────────
 	let completed = new Set();
@@ -55,7 +83,7 @@
 	<title>reading — cwcorella</title>
 </svelte:head>
 
-<svelte:window on:keydown={(e) => e.key === 'Escape' && closeMenu()} />
+<svelte:window on:keydown={handleKeydown} />
 
 <!-- svelte-ignore a11y_click_events_have_key_events a11y_noninteractive_element_interactions -->
 {#if menu}
@@ -76,27 +104,51 @@
 	<div class="glow" aria-hidden="true"></div>
 
 	<div class="inner">
-		<div class="filters">
-			{#each categories as cat}
-				<button
-					class="pill"
-					class:active={activeCategory === cat}
-					on:click={() => { activeCategory = cat; closeMenu(); }}
-				>
-					{cat}
-				</button>
-			{/each}
+		<div class="search-area">
+			<div class="search-bar">
+				{#if activeTag}
+					<span class="tag-chip">
+						{activeTag}
+						<button class="chip-clear" on:click={clearTag} aria-label="clear filter">×</button>
+					</span>
+				{/if}
+				<input
+					type="text"
+					class="search-input"
+					class:with-chip={!!activeTag}
+					placeholder={activeTag ? '' : 'search titles, authors, or categories…'}
+					bind:value={searchQuery}
+					on:input={() => { suggestionsDismissed = false; if (searchQuery.trim()) activeTag = ''; }}
+					aria-label="Search books"
+					autocomplete="off"
+					spellcheck="false"
+				/>
+			</div>
+			{#if showSuggestions}
+				<div class="suggestions">
+					{#each tagSuggestions as cat}
+						<button class="pill" on:click={() => setTag(cat)}>{cat}</button>
+					{/each}
+				</div>
+			{/if}
 		</div>
 
 		<ul class="list">
 			{#each filtered as book (book.id)}
 				<li class:done={completed.has(book.id)}>
-					<button class="row" on:click={(e) => openMenu(e, book)}>
-						<span class="title">{book.title}</span>
-						<span class="meta">
-							{book.author}{book.year ? ` · ${book.year}` : ''}
-						</span>
-					</button>
+					<div class="row-wrap">
+						<button class="row" on:click={(e) => openMenu(e, book)}>
+							<span class="title">{book.title}</span>
+							<span class="meta">{book.author}{book.year ? ` · ${book.year}` : ''}</span>
+						</button>
+						<button
+							class="cat-label"
+							class:active-cat={activeTag === book.category}
+							on:click={() => setTag(book.category)}
+						>
+							{book.category}
+						</button>
+					</div>
 				</li>
 			{/each}
 		</ul>
@@ -134,13 +186,47 @@
 		padding: 3rem 2rem 6rem;
 	}
 
-	/* ── filters ─────────────────────────────────────────────── */
-	.filters {
+	/* ── search area ─────────────────────────────────────────── */
+	.search-area { margin-bottom: 2rem; }
+
+	.search-bar {
 		display: flex;
-		flex-wrap: wrap;
-		gap: 0.4rem;
-		margin-bottom: 2.5rem;
+		align-items: center;
+		gap: 0.5rem;
+		border-bottom: 1px solid rgba(200, 150, 60, 0.15);
+		padding-bottom: 0.4rem;
 	}
+
+	.search-input {
+		background: none; border: none; outline: none; flex: 1;
+		font-family: 'Courier New', Courier, monospace;
+		font-size: 0.78rem; letter-spacing: 0.06em;
+		color: #8a7a58; padding: 0.3rem 0;
+		caret-color: #c8a060;
+	}
+	.search-input::placeholder { color: #2a2010; }
+
+	.tag-chip {
+		display: inline-flex; align-items: center; gap: 0.4rem;
+		background: rgba(200, 150, 60, 0.08);
+		border: 1px solid rgba(200, 150, 60, 0.35);
+		border-radius: 2px; padding: 0.2rem 0.45rem 0.2rem 0.65rem;
+		font-family: 'Courier New', Courier, monospace;
+		font-size: 0.62rem; letter-spacing: 0.1em;
+		text-transform: uppercase; color: #c8a060; white-space: nowrap;
+	}
+	.chip-clear {
+		background: none; border: none; cursor: pointer;
+		color: #c8a060; opacity: 0.5; font-size: 0.85rem;
+		padding: 0; line-height: 1; transition: opacity 0.15s;
+	}
+	.chip-clear:hover { opacity: 1; }
+
+	.suggestions {
+		display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.6rem;
+	}
+
+	/* ── pills (reused for suggestions) ─────────────────────── */
 	.pill {
 		background: none;
 		border: 1px solid rgba(200, 150, 60, 0.12);
@@ -155,16 +241,13 @@
 		transition: all 0.15s;
 	}
 	.pill:hover { color: #9a8060; border-color: rgba(200, 150, 60, 0.3); }
-	.pill.active { color: #c8a060; border-color: #c8a060; }
 
 	/* ── list ────────────────────────────────────────────────── */
 	.list {
 		list-style: none;
 		margin: 0; padding: 0;
 	}
-	li {
-		border-bottom: 1px solid rgba(200, 150, 60, 0.05);
-	}
+	li { border-bottom: none; }
 	li.done .title {
 		color: #c8a060;
 	}
@@ -175,11 +258,16 @@
 		opacity: 0.6;
 	}
 
+	.row-wrap {
+		display: flex; align-items: center;
+		border-bottom: 1px solid rgba(200, 150, 60, 0.05);
+	}
+
 	.row {
 		display: flex;
 		flex-direction: column;
 		gap: 0.15rem;
-		width: 100%;
+		flex: 1;
 		background: none;
 		border: none;
 		padding: 0.85rem 0;
@@ -200,6 +288,17 @@
 		letter-spacing: 0.06em;
 		color: #3a3020;
 	}
+
+	.cat-label {
+		background: none; border: none; cursor: pointer;
+		font-family: 'Courier New', Courier, monospace;
+		font-size: 0.55rem; letter-spacing: 0.08em;
+		text-transform: uppercase; color: #2a2010;
+		padding: 0 0 0 1rem; white-space: nowrap;
+		flex-shrink: 0; text-align: right; transition: color 0.15s;
+	}
+	.cat-label:hover { color: #4a3e26; }
+	.cat-label.active-cat { color: #c8a060; }
 
 	.count {
 		margin-top: 2rem;
