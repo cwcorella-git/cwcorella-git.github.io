@@ -1,5 +1,3 @@
-<script></script>
-
 <svelte:head>
 	<title>cwcorella</title>
 	<meta name="description" content="Reno, NV." />
@@ -7,10 +5,6 @@
 
 <div class="page">
 	<div class="glow" aria-hidden="true"></div>
-
-	<header>
-		<span>cwcorella</span>
-	</header>
 
 	<main>
 		<p>
@@ -35,16 +29,6 @@
 </div>
 
 <style>
-	:global(*, *::before, *::after) { box-sizing: border-box; }
-	:global(body, html) {
-		margin: 0; padding: 0;
-		background: #0c0902;
-		color: #b8a880;
-		font-family: Georgia, 'Times New Roman', Times, serif;
-		-webkit-font-smoothing: antialiased;
-	}
-	:global(a) { color: inherit; }
-
 	.page {
 		min-height: 100vh;
 		display: flex;
@@ -69,15 +53,6 @@
 	@keyframes breathe {
 		0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
 		50%       { opacity: 1;   transform: translate(-50%, -50%) scale(1.2); }
-	}
-
-	header {
-		position: relative;
-		z-index: 1;
-		padding: 2rem;
-		font-size: 0.8rem;
-		color: #4a3e26;
-		letter-spacing: 0.04em;
 	}
 
 	main {
@@ -124,5 +99,4 @@
 		transition: color 0.2s;
 	}
 	footer a:hover { color: #c8a060; }
-
 </style>
