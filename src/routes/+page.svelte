@@ -86,8 +86,11 @@
 		flex: 1;
 		max-width: 560px;
 		margin: 0 auto;
-		padding: 6rem 2rem 4rem;
+		padding: 2rem;
 		width: 100%;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
 	}
 
 	main p {
@@ -98,12 +101,12 @@
 	}
 
 	blockquote {
-		margin: 3rem 0 0;
+		margin: 1.5rem 0 0;
 		padding: 0;
 		border: none;
-		font-size: 0.9rem;
-		line-height: 1.7;
-		color: #4a3e26;
+		font-size: 1rem;
+		line-height: 1.9;
+		color: #5a4e34;
 		font-style: italic;
 	}
 
