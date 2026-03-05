@@ -68,14 +68,9 @@
 
 	function closeMenu() { menu = null; }
 
-	function link(type, book) {
+	function goodreadsUrl(book) {
 		const q = encodeURIComponent(`${book.title} ${book.author}`.trim());
-		const t = encodeURIComponent(book.title);
-		return {
-			anna:        `https://annas-archive.org/search?q=${q}`,
-			openlibrary: `https://openlibrary.org/search?q=${q}`,
-			worldcat:    `https://search.worldcat.org/search?q=${t}`,
-		}[type];
+		return `https://www.goodreads.com/search?q=${q}`;
 	}
 </script>
 
@@ -92,9 +87,17 @@
 			{completed.has(menu.book.id) ? '✓ mark unread' : 'mark as read'}
 		</button>
 		<div class="menu-divider"></div>
-		<a href={link('anna', menu.book)} target="_blank" rel="noopener noreferrer">Anna's Archive ↗</a>
-		<a href={link('openlibrary', menu.book)} target="_blank" rel="noopener noreferrer">Open Library ↗</a>
-		<a href={link('worldcat', menu.book)} target="_blank" rel="noopener noreferrer">WorldCat ↗</a>
+		{#if menu.book.links?.openlibrary}
+			<a href={menu.book.links.openlibrary} target="_blank" rel="noopener noreferrer">Open Library ↗</a>
+		{/if}
+		{#if menu.book.links?.anna}
+			<a href={menu.book.links.anna} target="_blank" rel="noopener noreferrer">Anna's Archive ↗</a>
+		{/if}
+		{#if menu.book.links?.goodreads}
+			<a href={menu.book.links.goodreads} target="_blank" rel="noopener noreferrer">Goodreads ↗</a>
+		{:else}
+			<a href={goodreadsUrl(menu.book)} target="_blank" rel="noopener noreferrer">Goodreads ↗</a>
+		{/if}
 	</div>
 	<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 	<div class="menu-backdrop" on:click={closeMenu}></div>
