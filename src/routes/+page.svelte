@@ -1,3 +1,41 @@
+<script lang="ts">
+	import homeContent from '$lib/content/home.json';
+	import InlineEditor from '$lib/components/InlineEditor.svelte';
+	import { adminState } from '$lib/admin/state.svelte';
+	import { getFile, putFile } from '$lib/admin/github';
+
+	let paragraphs = $state([...homeContent.paragraphs]);
+	let blockquote = $state(homeContent.blockquote);
+
+	async function saveParagraph(index: number, newText: string) {
+		const updated = [...paragraphs];
+		updated[index] = newText;
+		const newContent = { paragraphs: updated, blockquote };
+		const { sha } = await getFile(adminState.pat, 'src/lib/content/home.json');
+		await putFile(
+			adminState.pat,
+			'src/lib/content/home.json',
+			JSON.stringify(newContent, null, '\t'),
+			sha,
+			'update home content'
+		);
+		paragraphs = updated;
+	}
+
+	async function saveBlockquote(newText: string) {
+		const newContent = { paragraphs, blockquote: newText };
+		const { sha } = await getFile(adminState.pat, 'src/lib/content/home.json');
+		await putFile(
+			adminState.pat,
+			'src/lib/content/home.json',
+			JSON.stringify(newContent, null, '\t'),
+			sha,
+			'update home content'
+		);
+		blockquote = newText;
+	}
+</script>
+
 <svelte:head>
 	<title>cwcorella</title>
 	<meta name="description" content="Reno, NV." />
@@ -7,19 +45,22 @@
 	<div class="glow" aria-hidden="true"></div>
 
 	<main>
-		<p>
-			Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt
-			ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation —
-			duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat.
-		</p>
-		<p>
-			Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit
-			anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem
-			totam rem aperiam, eaque ipsa quae ab illo inventore veritatis.
-		</p>
+		{#each paragraphs as para, i}
+			<p>
+				{#if adminState.editMode}
+					<InlineEditor content={para} onSave={(t) => saveParagraph(i, t)} />
+				{:else}
+					{para}
+				{/if}
+			</p>
+		{/each}
 
 		<blockquote>
-			Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do eiusmod.
+			{#if adminState.editMode}
+				<InlineEditor content={blockquote} onSave={saveBlockquote} />
+			{:else}
+				{blockquote}
+			{/if}
 		</blockquote>
 	</main>
 

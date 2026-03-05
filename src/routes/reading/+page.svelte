@@ -1,91 +1,121 @@
-<script>
+<script lang="ts">
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
-	import allBooks from '$lib/books.json';
+	import type { Book } from '$lib/types';
+	import allBooksStatic from '$lib/books.json';
+	import { adminState, bookFormState, booksState } from '$lib/admin/state.svelte';
+	import DocReader from '$lib/components/DocReader.svelte';
+
+	// Derive from shared booksState so BookForm updates are visible here
+	let books = $derived(booksState.books);
 
 	// ── categories ──────────────────────────────────────────────
-	const countMap = {};
-	allBooks.forEach((b) => { countMap[b.category] = (countMap[b.category] || 0) + 1; });
+	const countMap: Record<string, number> = {};
+	(allBooksStatic as Book[]).forEach((b) => { countMap[b.category] = (countMap[b.category] || 0) + 1; });
 	const categories = Object.entries(countMap)
 		.sort((a, b) => b[1] - a[1])
 		.map(([c]) => c);
 
 	// ── search / filter state ────────────────────────────────────
-	let searchQuery = '';
-	let activeTag = '';
-	let suggestionsDismissed = false;
+	let searchQuery = $state('');
+	let activeTag = $state('');
+	let suggestionsDismissed = $state(false);
 
-	$: tagSuggestions = (searchQuery.trim() && !activeTag)
-		? categories.filter(c => c.toLowerCase().includes(searchQuery.trim().toLowerCase())).slice(0, 6)
-		: [];
+	let tagSuggestions = $derived(
+		(searchQuery.trim() && !activeTag)
+			? categories.filter((c) => c.toLowerCase().includes(searchQuery.trim().toLowerCase())).slice(0, 6)
+			: []
+	);
 
-	$: showSuggestions = tagSuggestions.length > 0 && !suggestionsDismissed;
+	let showSuggestions = $derived(tagSuggestions.length > 0 && !suggestionsDismissed);
 
-	$: filtered = activeTag
-		? allBooks.filter(b => b.category === activeTag)
-		: searchQuery.trim()
-			? allBooks.filter(b =>
-					b.title.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
-					b.author.toLowerCase().includes(searchQuery.trim().toLowerCase())
-				)
-			: allBooks;
+	let filtered = $derived(
+		activeTag
+			? books.filter((b) => b.category === activeTag)
+			: searchQuery.trim()
+				? books.filter(
+						(b) =>
+							b.title.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
+							b.author.toLowerCase().includes(searchQuery.trim().toLowerCase())
+					)
+				: books
+	);
 
-	function setTag(cat) { activeTag = cat; searchQuery = ''; }
-	function clearTag()  { activeTag = ''; }
-	function clearAll()  { activeTag = ''; searchQuery = ''; }
+	function setTag(cat: string) { activeTag = cat; searchQuery = ''; }
+	function clearTag() { activeTag = ''; }
+	function clearAll() { activeTag = ''; searchQuery = ''; }
 
-	function handleKeydown(e) {
+	function handleKeydown(e: KeyboardEvent) {
 		if (e.key === 'Escape') { clearAll(); closeMenu(); }
-		if (e.key === 'Enter')  { suggestionsDismissed = true; }
+		if (e.key === 'Enter') { suggestionsDismissed = true; }
 	}
 
 	// ── completed state (localStorage) ──────────────────────────
-	let completed = new Set();
+	let completed = $state(new Set<number>());
 	onMount(() => {
 		if (browser) {
 			completed = new Set(JSON.parse(localStorage.getItem('cwc-read') || '[]'));
 		}
 	});
 
-	function toggleRead(id) {
-		if (completed.has(id)) {
-			completed.delete(id);
-		} else {
-			completed.add(id);
-		}
-		completed = new Set(completed);
-		if (browser) localStorage.setItem('cwc-read', JSON.stringify([...completed]));
+	function toggleRead(id: number) {
+		const next = new Set(completed);
+		if (next.has(id)) next.delete(id); else next.add(id);
+		completed = next;
+		if (browser) localStorage.setItem('cwc-read', JSON.stringify([...next]));
 		menu = null;
 	}
 
 	// ── context menu ─────────────────────────────────────────────
-	let menu = null; // { book, x, y }
+	let menu = $state<{ book: Book; x: number; y: number } | null>(null);
 
-	function openMenu(e, book) {
-		const rect = e.currentTarget.getBoundingClientRect();
+	function openMenu(e: MouseEvent, book: Book) {
+		e.preventDefault();
+		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
 		menu = { book, x: rect.left, y: rect.bottom + window.scrollY + 4 };
 	}
 
 	function closeMenu() { menu = null; }
 
-	function goodreadsUrl(book) {
+	function goodreadsUrl(book: Book) {
 		const q = encodeURIComponent(`${book.title} ${book.author}`.trim());
 		return `https://www.goodreads.com/search?q=${q}`;
 	}
+
+	// ── doc reader ───────────────────────────────────────────────
+	let docReaderBook = $state<Book | null>(null);
+
+	function handleRowClick(book: Book) {
+		docReaderBook = book;
+	}
+
 </script>
 
 <svelte:head>
 	<title>reading — cwcorella</title>
 </svelte:head>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} />
 
-<!-- svelte-ignore a11y_click_events_have_key_events a11y_noninteractive_element_interactions -->
+<!-- DocReader overlay -->
+{#if docReaderBook}
+	<DocReader book={docReaderBook} onClose={() => (docReaderBook = null)} />
+{/if}
+
+<!-- Context menu -->
 {#if menu}
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div class="menu" style="top:{menu.y}px; left:{menu.x}px" role="dialog">
-		<button class="menu-toggle" on:click={() => toggleRead(menu.book.id)}>
-			{completed.has(menu.book.id) ? '✓ mark unread' : 'mark as read'}
-		</button>
+		{#if adminState.active}
+			<button class="menu-toggle" onclick={() => toggleRead(menu!.book.id)}>
+				{completed.has(menu.book.id) ? '✓ mark unread' : 'mark as read'}
+			</button>
+		{/if}
+		{#if adminState.active && adminState.editMode}
+			<button class="menu-toggle" onclick={() => { bookFormState.openEdit(menu!.book); closeMenu(); }}>
+				✎ edit book
+			</button>
+		{/if}
 		<div class="menu-divider"></div>
 		{#if menu.book.links?.openlibrary}
 			<a href={menu.book.links.openlibrary} target="_blank" rel="noopener noreferrer">Open Library ↗</a>
@@ -99,8 +129,12 @@
 			<a href={goodreadsUrl(menu.book)} target="_blank" rel="noopener noreferrer">Goodreads ↗</a>
 		{/if}
 	</div>
-	<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-	<div class="menu-backdrop" on:click={closeMenu}></div>
+	<div
+		class="menu-backdrop"
+		role="presentation"
+		onclick={closeMenu}
+		onkeydown={undefined}
+	></div>
 {/if}
 
 <div class="page">
@@ -112,7 +146,7 @@
 				{#if activeTag}
 					<span class="tag-chip">
 						{activeTag}
-						<button class="chip-clear" on:click={clearTag} aria-label="clear filter">×</button>
+						<button class="chip-clear" onclick={clearTag} aria-label="clear filter">×</button>
 					</span>
 				{/if}
 				<input
@@ -121,7 +155,7 @@
 					class:with-chip={!!activeTag}
 					placeholder={activeTag ? '' : 'search titles, authors, or categories…'}
 					bind:value={searchQuery}
-					on:input={() => { suggestionsDismissed = false; if (searchQuery.trim()) activeTag = ''; }}
+					oninput={() => { suggestionsDismissed = false; if (searchQuery.trim()) activeTag = ''; }}
 					aria-label="Search books"
 					autocomplete="off"
 					spellcheck="false"
@@ -130,7 +164,7 @@
 			{#if showSuggestions}
 				<div class="suggestions">
 					{#each tagSuggestions as cat}
-						<button class="pill" on:click={() => setTag(cat)}>{cat}</button>
+						<button class="pill" onclick={() => setTag(cat)}>{cat}</button>
 					{/each}
 				</div>
 			{/if}
@@ -140,14 +174,29 @@
 			{#each filtered as book (book.id)}
 				<li class:done={completed.has(book.id)}>
 					<div class="row-wrap">
-						<button class="row" on:click={(e) => openMenu(e, book)}>
+						<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+						<div
+							class="row"
+							role="button"
+							tabindex="0"
+							onclick={() => handleRowClick(book)}
+							oncontextmenu={(e) => openMenu(e, book)}
+							onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleRowClick(book); }}
+						>
 							<span class="title">{book.title}</span>
 							<span class="meta">{book.author}{book.year ? ` · ${book.year}` : ''}</span>
-						</button>
+						</div>
+						{#if adminState.editMode}
+							<button
+								class="edit-pencil"
+								onclick={() => bookFormState.openEdit(book)}
+								aria-label="Edit {book.title}"
+							>✎</button>
+						{/if}
 						<button
 							class="cat-label"
 							class:active-cat={activeTag === book.category}
-							on:click={() => setTag(book.category)}
+							onclick={() => setTag(book.category)}
 						>
 							{book.category}
 						</button>
@@ -229,7 +278,7 @@
 		display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.6rem;
 	}
 
-	/* ── pills (reused for suggestions) ─────────────────────── */
+	/* ── pills ───────────────────────────────────────────────── */
 	.pill {
 		background: none;
 		border: 1px solid rgba(200, 150, 60, 0.18);
@@ -271,10 +320,7 @@
 		flex-direction: column;
 		gap: 0.15rem;
 		flex: 1;
-		background: none;
-		border: none;
 		padding: 0.85rem 0;
-		text-align: left;
 		cursor: pointer;
 		transition: background 0.15s;
 	}
@@ -291,6 +337,18 @@
 		letter-spacing: 0.06em;
 		color: #6a5a40;
 	}
+
+	.edit-pencil {
+		background: none;
+		border: none;
+		cursor: pointer;
+		color: #6a5a40;
+		font-size: 0.85rem;
+		padding: 0 0.5rem;
+		transition: color 0.15s;
+		flex-shrink: 0;
+	}
+	.edit-pencil:hover { color: #c8a060; }
 
 	.cat-label {
 		background: none; border: none; cursor: pointer;
