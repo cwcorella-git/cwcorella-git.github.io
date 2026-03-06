@@ -144,11 +144,13 @@ export async function commitFiles(
 	if (!treeRes.ok) throw new Error(`Failed to create tree: ${treeRes.status}`);
 	const newTreeSha: string = (await treeRes.json()).sha;
 
-	// 5 + 6. Commit and advance ref, retrying once on 422 fast-forward failure
-	async function commitAndPush(parentSha: string): Promise<void> {
+	// 5 + 6. Commit and advance ref, retrying up to 5 times on 422 fast-forward failure
+	const MAX_RETRIES = 5;
+	let currentParent = headSha;
+	for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
 		const newCommitRes = await fetch(`${API}/repos/${REPO}/git/commits`, {
 			method: 'POST', headers,
-			body: JSON.stringify({ message, tree: newTreeSha, parents: [parentSha] })
+			body: JSON.stringify({ message, tree: newTreeSha, parents: [currentParent] })
 		});
 		if (!newCommitRes.ok) throw new Error(`Failed to create commit: ${newCommitRes.status}`);
 		const newCommitSha: string = (await newCommitRes.json()).sha;
@@ -161,15 +163,15 @@ export async function commitFiles(
 
 		const patchErr = await patchRes.json().catch(() => ({}));
 		if (patchRes.status === 422 && patchErr.message?.includes('not a fast forward')) {
+			if (attempt === MAX_RETRIES - 1) throw new Error('Conflict: too many concurrent writes, please try again.');
+			await new Promise(r => setTimeout(r, 300 * (attempt + 1)));
 			const retryRef = await fetch(`${API}/repos/${REPO}/git/ref/heads/main`, { headers });
 			if (!retryRef.ok) throw new Error(`Failed to re-fetch ref: ${retryRef.status}`);
-			await commitAndPush((await retryRef.json()).object.sha);
+			currentParent = (await retryRef.json()).object.sha;
 		} else {
 			throw new Error(patchErr.message || `Failed to update ref: ${patchRes.status}`);
 		}
 	}
-
-	await commitAndPush(headSha);
 }
 
 export async function updateBooksJson(pat: string, books: Book[]): Promise<void> {
