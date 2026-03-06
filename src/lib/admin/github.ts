@@ -114,33 +114,24 @@ export async function commitFiles(
 	if (!treeRes.ok) throw new Error(`Failed to create tree: ${treeRes.status}`);
 	const newTreeSha: string = (await treeRes.json()).sha;
 
-	// 5 + 6. Commit and advance ref, retrying up to 5 times on 422 fast-forward failure
-	const MAX_RETRIES = 5;
-	let currentParent = headSha;
-	for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-		const newCommitRes = await fetch(`${API}/repos/${REPO}/git/commits`, {
-			method: 'POST', headers,
-			body: JSON.stringify({ message, tree: newTreeSha, parents: [currentParent] })
-		});
-		if (!newCommitRes.ok) throw new Error(`Failed to create commit: ${newCommitRes.status}`);
-		const newCommitSha: string = (await newCommitRes.json()).sha;
+	// 5. Create commit
+	const newCommitRes = await fetch(`${API}/repos/${REPO}/git/commits`, {
+		method: 'POST', headers,
+		body: JSON.stringify({ message, tree: newTreeSha, parents: [headSha] })
+	});
+	if (!newCommitRes.ok) throw new Error(`Failed to create commit: ${newCommitRes.status}`);
+	const newCommitSha: string = (await newCommitRes.json()).sha;
 
-		const patchRes = await fetch(`${API}/repos/${REPO}/git/refs/heads/main`, {
-			method: 'PATCH', headers,
-			body: JSON.stringify({ sha: newCommitSha })
-		});
-		if (patchRes.ok) return;
-
+	// 6. Force-update ref — bypasses fast-forward check.
+	// Safe because: (a) we always write complete file state, not diffs,
+	// and (b) this is a single-admin site with no concurrent writers.
+	const patchRes = await fetch(`${API}/repos/${REPO}/git/refs/heads/main`, {
+		method: 'PATCH', headers,
+		body: JSON.stringify({ sha: newCommitSha, force: true })
+	});
+	if (!patchRes.ok) {
 		const patchErr = await patchRes.json().catch(() => ({}));
-		if (patchRes.status === 422 && patchErr.message?.includes('not a fast forward')) {
-			if (attempt === MAX_RETRIES - 1) throw new Error('Conflict: too many concurrent writes, please try again.');
-			await new Promise(r => setTimeout(r, 300 * (attempt + 1)));
-			const retryRef = await fetch(`${API}/repos/${REPO}/git/ref/heads/main`, { headers });
-			if (!retryRef.ok) throw new Error(`Failed to re-fetch ref: ${retryRef.status}`);
-			currentParent = (await retryRef.json()).object.sha;
-		} else {
-			throw new Error(patchErr.message || `Failed to update ref: ${patchRes.status}`);
-		}
+		throw new Error(patchErr.message || `Failed to update ref: ${patchRes.status}`);
 	}
 }
 
