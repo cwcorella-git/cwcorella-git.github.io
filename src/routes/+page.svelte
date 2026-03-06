@@ -2,7 +2,7 @@
 	import homeContent from '$lib/content/home.json';
 	import HomeEditor from '$lib/components/HomeEditor.svelte';
 	import { adminState } from '$lib/admin/state.svelte';
-	import { putFileWithFreshSha } from '$lib/admin/github';
+	import { commitFiles } from '$lib/admin/github';
 	import { marked } from 'marked';
 
 	let content = $state(homeContent.content);
@@ -12,10 +12,9 @@
 	let rendered = $derived(marked(content) as string);
 
 	async function save(newContent: string) {
-		await putFileWithFreshSha(
+		await commitFiles(
 			adminState.pat,
-			'src/lib/content/home.json',
-			JSON.stringify({ content: newContent }, null, '\t'),
+			[{ path: 'src/lib/content/home.json', content: JSON.stringify({ content: newContent }, null, '\t') }],
 			'update home content'
 		);
 		content = newContent;
