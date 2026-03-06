@@ -61,10 +61,10 @@
 <style>
 	.editable {
 		cursor: text;
-		border-bottom: 1px dashed rgba(255, 255, 255, 0.22);
+		border-bottom: 1px dashed rgba(var(--dark-panel-rgb), 0.22);
 		transition: border-color 0.15s;
 	}
-	.editable:hover { border-color: rgba(255, 255, 255, 0.40); }
+	.editable:hover { border-color: rgba(var(--dark-panel-rgb), 0.40); }
 
 	.editor {
 		display: flex;
@@ -74,8 +74,8 @@
 
 	textarea {
 		width: 100%;
-		background: rgba(255, 255, 255, 0.04);
-		border: 1px solid rgba(255, 255, 255, 0.18);
+		background: rgba(var(--dark-panel-rgb), 0.04);
+		border: 1px solid rgba(var(--dark-panel-rgb), 0.18);
 		color: var(--clr-dark-text);
 		font-family: Georgia, 'Times New Roman', Times, serif;
 		font-size: 1rem;
@@ -84,7 +84,7 @@
 		resize: vertical;
 		outline: none;
 	}
-	textarea:focus { border-color: rgba(255, 255, 255, 0.35); }
+	textarea:focus { border-color: rgba(var(--dark-panel-rgb), 0.35); }
 
 	.actions {
 		display: flex;
@@ -94,7 +94,7 @@
 
 	button {
 		background: none;
-		border: 1px solid rgba(255, 255, 255, 0.15);
+		border: 1px solid rgba(var(--dark-panel-rgb), 0.15);
 		color: var(--clr-dark-text);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
@@ -103,10 +103,10 @@
 		cursor: pointer;
 		transition: all 0.15s;
 	}
-	button:hover:not(:disabled) { color: var(--clr-dark-text); border-color: rgba(255, 255, 255, 0.32); }
+	button:hover:not(:disabled) { color: var(--clr-dark-text); border-color: rgba(var(--dark-panel-rgb), 0.32); }
 	button.save {
-		background: rgba(255, 255, 255, 0.06);
-		border-color: rgba(255, 255, 255, 0.25);
+		background: rgba(var(--dark-panel-rgb), 0.06);
+		border-color: rgba(var(--dark-panel-rgb), 0.25);
 		color: var(--clr-dark-text);
 	}
 	button:disabled { opacity: 0.5; cursor: not-allowed; }

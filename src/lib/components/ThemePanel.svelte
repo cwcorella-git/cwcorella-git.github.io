@@ -75,12 +75,12 @@
 	}
 	.palette-btn:hover {
 		opacity: 1;
-		border-color: rgba(255, 255, 255, 0.12);
+		border-color: rgba(var(--dark-panel-rgb), 0.12);
 	}
 	.palette-btn.active {
 		opacity: 1;
-		border-color: rgba(255, 255, 255, 0.22);
-		background: rgba(255, 255, 255, 0.06);
+		border-color: rgba(var(--dark-panel-rgb), 0.22);
+		background: rgba(var(--dark-panel-rgb), 0.06);
 	}
 
 	.swatch {

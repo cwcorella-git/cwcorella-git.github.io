@@ -448,6 +448,6 @@
 	}
 	.menu a:hover {
 		color: var(--clr-dark-text);
-		background: rgba(255, 255, 255, 0.06);
+		background: rgba(var(--dark-panel-rgb), 0.06);
 	}
 </style>

@@ -171,8 +171,8 @@
 	}
 
 	label input {
-		background: rgba(255, 255, 255, 0.04);
-		border: 1px solid rgba(255, 255, 255, 0.15);
+		background: rgba(var(--dark-panel-rgb), 0.04);
+		border: 1px solid rgba(var(--dark-panel-rgb), 0.15);
 		outline: none;
 		color: var(--clr-dark-text);
 		font-family: 'Courier New', Courier, monospace;
@@ -180,7 +180,7 @@
 		padding: 0.5rem 0.65rem;
 		transition: border-color 0.15s;
 	}
-	label input:focus { border-color: rgba(255, 255, 255, 0.32); }
+	label input:focus { border-color: rgba(var(--dark-panel-rgb), 0.32); }
 
 	.error {
 		font-family: 'Courier New', Courier, monospace;
@@ -190,8 +190,8 @@
 	}
 
 	.submit-btn {
-		background: rgba(255, 255, 255, 0.08);
-		border: 1px solid rgba(255, 255, 255, 0.25);
+		background: rgba(var(--dark-panel-rgb), 0.08);
+		border: 1px solid rgba(var(--dark-panel-rgb), 0.25);
 		color: var(--clr-dark-text);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.65rem;
@@ -202,6 +202,6 @@
 		transition: background 0.15s;
 		align-self: flex-end;
 	}
-	.submit-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.14); }
+	.submit-btn:hover:not(:disabled) { background: rgba(var(--dark-panel-rgb), 0.14); }
 	.submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>

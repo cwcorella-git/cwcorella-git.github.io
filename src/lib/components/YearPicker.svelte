@@ -151,12 +151,12 @@
 	.year-input-row {
 		display: flex;
 		align-items: stretch;
-		border: 1px solid rgba(255, 255, 255, 0.14);
-		background: rgba(255, 255, 255, 0.04);
+		border: 1px solid rgba(var(--dark-panel-rgb), 0.14);
+		background: rgba(var(--dark-panel-rgb), 0.04);
 		transition: border-color 0.15s;
 	}
 	.year-input-row:focus-within {
-		border-color: rgba(255, 255, 255, 0.32);
+		border-color: rgba(var(--dark-panel-rgb), 0.32);
 	}
 
 	.year-input {
@@ -184,7 +184,7 @@
 		justify-content: center;
 		background: none;
 		border: none;
-		border-left: 1px solid rgba(255, 255, 255, 0.14);
+		border-left: 1px solid rgba(var(--dark-panel-rgb), 0.14);
 		color: var(--clr-dark-text);
 		padding: 0 0.5rem;
 		cursor: pointer;
@@ -203,7 +203,7 @@
 		left: 0;
 		z-index: 50;
 		background: var(--glass-bg-dark);
-		border: 1px solid rgba(255, 255, 255, 0.25);
+		border: 1px solid rgba(var(--dark-panel-rgb), 0.25);
 		padding: 0.6rem;
 		min-width: 200px;
 		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
@@ -260,15 +260,15 @@
 	}
 	.year-btn:hover {
 		color: var(--clr-dark-text);
-		border-color: rgba(255, 255, 255, 0.25);
-		background: rgba(255, 255, 255, 0.05);
+		border-color: rgba(var(--dark-panel-rgb), 0.25);
+		background: rgba(var(--dark-panel-rgb), 0.05);
 	}
 	.year-btn.current {
 		color: var(--clr-dark-text);
 	}
 	.year-btn.selected {
-		background: rgba(255, 255, 255, 0.12);
-		border-color: rgba(255, 255, 255, 0.35);
+		background: rgba(var(--dark-panel-rgb), 0.12);
+		border-color: rgba(var(--dark-panel-rgb), 0.35);
 		color: var(--clr-dark-text);
 	}
 </style>
