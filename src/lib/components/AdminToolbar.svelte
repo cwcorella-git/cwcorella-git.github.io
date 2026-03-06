@@ -36,7 +36,7 @@
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
 		letter-spacing: 0.1em;
-		color: var(--clr-text-muted);
+		color: var(--clr-text);
 		opacity: 0.8;
 		margin-right: 0.2rem;
 	}
@@ -44,7 +44,7 @@
 	button {
 		background: none;
 		border: 1px solid var(--glass-border);
-		color: var(--clr-text-secondary);
+		color: var(--clr-text);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.58rem;
 		letter-spacing: 0.08em;
@@ -52,15 +52,15 @@
 		cursor: pointer;
 		transition: all 0.15s;
 	}
-	button:hover:not(:disabled) { color: var(--clr-text-primary); border-color: var(--glass-border); }
+	button:hover:not(:disabled) { color: var(--clr-text); border-color: var(--glass-border); }
 	button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 	.sync-btn.dirty {
-		color: var(--clr-text-primary);
+		color: var(--clr-text);
 		border-color: var(--glass-border);
 	}
 	.sync-btn.saving {
-		color: var(--clr-text-muted);
+		color: var(--clr-text);
 	}
 	.sync-btn.error {
 		color: var(--clr-danger);

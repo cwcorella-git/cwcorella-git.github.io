@@ -135,20 +135,20 @@
 		font-size: 0.7rem;
 		letter-spacing: 0.12em;
 		text-transform: uppercase;
-		color: var(--clr-dark-text-primary);
+		color: var(--clr-dark-text);
 	}
 
 	.close-btn {
 		background: none;
 		border: none;
-		color: var(--clr-dark-text-secondary);
+		color: var(--clr-dark-text);
 		font-size: 1.2rem;
 		cursor: pointer;
 		padding: 0;
 		line-height: 1;
 		transition: color 0.15s;
 	}
-	.close-btn:hover { color: var(--clr-dark-text-primary); }
+	.close-btn:hover { color: var(--clr-dark-text); }
 
 	form {
 		display: flex;
@@ -167,14 +167,14 @@
 		font-size: 0.6rem;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
-		color: var(--clr-dark-text-secondary);
+		color: var(--clr-dark-text);
 	}
 
 	label input {
 		background: rgba(255, 255, 255, 0.04);
 		border: 1px solid rgba(255, 255, 255, 0.15);
 		outline: none;
-		color: var(--clr-dark-text-primary);
+		color: var(--clr-dark-text);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.75rem;
 		padding: 0.5rem 0.65rem;
@@ -192,7 +192,7 @@
 	.submit-btn {
 		background: rgba(255, 255, 255, 0.08);
 		border: 1px solid rgba(255, 255, 255, 0.25);
-		color: var(--clr-dark-text-primary);
+		color: var(--clr-dark-text);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.65rem;
 		letter-spacing: 0.1em;

@@ -72,39 +72,54 @@
 		--font-prose: Georgia, 'Times New Roman', Times, serif;
 		--font-ui:    'Courier New', Courier, monospace;
 
-		/* Glass — light */
-		--glass-bg:        rgba(255, 255, 255, 0.22);
-		--glass-bg-heavy:  rgba(255, 252, 242, 0.78);
-		--glass-border:    rgba(255, 255, 255, 0.40);
-		--glass-blur:      blur(22px);
-		--glass-blur-heavy:blur(28px);
+		/* Typography */
+		--lh-prose: 1.9;
 
-		/* Glass — dark (admin panels) */
-		--glass-bg-dark:      rgba(10, 12, 16, 0.78);
-		--glass-border-dark:  rgba(200, 210, 220, 0.15);
+		/* Timing */
+		--t-theme:  1.5s;   /* day/night transitions on glass + text */
+		--t-ui:     0.15s;  /* hover / interactive micro-transitions */
+		--t-reveal: 0.4s;   /* page panel fade-in (FOUC mask) */
 
-		/* Glass — nav (day default; updated dynamically at night) */
-		--glass-nav-bg:       rgba(255, 255, 255, 0.30);
+		/* Seed: light-context chrome (borders, subtle fills, glass tint in rgba()) */
+		/* [theme: --ui-rgb] amber=160,120,60 | beige=140,120,90 | gray=128,128,128 | neutral=128,128,128 */
+		--ui-rgb: 128, 128, 128;
 
-		/* Text (day defaults; updated dynamically by Garden.svelte) */
-		--clr-text-primary:   #080808;
-		--clr-text-prose:     #0f0f0f;
-		--clr-text-secondary: #373737;
-		--clr-text-muted:     #555555;
-		--clr-text-faint:     #737373;
+		/* Glass — light (day defaults; updated per-frame by Garden.svelte) */
+		--glass-bg:         rgba(255, 255, 255, 0.22);
+		--glass-bg-heavy:   rgba(255, 255, 255, 0.78);
+		--glass-border:     rgba(255, 255, 255, 0.40);
+		--glass-blur:       blur(22px);
+		--glass-blur-heavy: blur(28px);
+		--glass-blur-nav:   blur(20px);
 
-		/* Danger / Success */
-		--clr-danger:         #c07050;
-		--clr-danger-muted:   #8a4040;
-		--clr-success:        #70b880;
+		/* Glass — dark panels (admin, toasts, dropdowns) */
+		/* [theme: --glass-bg-dark] amber=rgba(12,8,2,0.72) | others=rgba(10,12,16,0.78) */
+		--glass-bg-dark:     rgba(10, 12, 16, 0.78);
+		--glass-border-dark: rgba(200, 210, 220, 0.15);
 
-		/* Dark-panel text (for components on dark glass: BookForm, AdminDrawer, YearPicker) */
-		--clr-dark-text-primary:   #bcc0c4;
-		--clr-dark-text-secondary: #8a9098;
-		--clr-dark-text-muted:     #606870;
+		/* Glass — nav (day default; updated per-frame by Garden.svelte) */
+		--glass-nav-bg: rgba(255, 255, 255, 0.30);
 
-		/* Backdrop overlay */
-		--backdrop-overlay:   rgba(0, 0, 0, 0.45);
+		/* Text — light context (day default; updated per-frame by Garden.svelte)        */
+		/* One color for all text; hierarchy via size / weight / spacing, not shade.      */
+		/* [theme: day val] amber=#3d2e1a | beige=#2a2218 | gray=#080808 | neutral=#080808 */
+		--clr-text: #080808;
+
+		/* Text — dark panels (BookForm, AdminDrawer, YearPicker, Toasts, InlineEditor) */
+		/* [theme: --clr-dark-text] amber=#c8b890 | beige=#c4bcb0 | gray=#bcc0c4 | neutral=#c0c4c8 */
+		--clr-dark-text: #c0c4c8;
+
+		/* Semantic colors */
+		--clr-danger:       #c07050;
+		--clr-danger-muted: #8a4040;
+		--clr-success:      #70b880;
+
+		/* Backdrop overlay (modals) */
+		--backdrop-overlay: rgba(0, 0, 0, 0.45);
+
+		/* Body background (canvas fallback before Garden.svelte paints) */
+		/* [theme: --body-bg] amber=#e8d5b0 | beige=#e8e0d0 | gray=#d8d8d8 | neutral=#d8d8d8 */
+		--body-bg: #d8d8d8;
 	}
 
 	:global(*, *::before, *::after) { box-sizing: border-box; }
@@ -112,8 +127,8 @@
 	:global(button, input, textarea, select) { font: inherit; }
 	:global(body, html) {
 		margin: 0; padding: 0;
-		background: #e8d5b0; /* ground fallback before canvas paints */
-		color: var(--clr-text-primary);
+		background: var(--body-bg); /* ground fallback before canvas paints */
+		color: var(--clr-text);
 		font-family: var(--font-prose);
 		-webkit-font-smoothing: antialiased;
 	}
@@ -129,10 +144,10 @@
 	}
 	/* Smooth day→night transitions on glass panels and text */
 	:global(.inner), :global(.content-panel) {
-		transition: background 1.5s, border-color 1.5s;
+		transition: background var(--t-theme), border-color var(--t-theme);
 	}
 	:global(body) {
-		transition: color 1.5s;
+		transition: color var(--t-theme);
 	}
 
 	nav {
@@ -144,18 +159,19 @@
 		gap: 2rem;
 		align-items: center;
 		background: var(--glass-nav-bg);
-		backdrop-filter: blur(20px);
-		-webkit-backdrop-filter: blur(20px);
+		backdrop-filter: var(--glass-blur-nav);
+		-webkit-backdrop-filter: var(--glass-blur-nav);
 		border-bottom: 1px solid var(--glass-border);
-		transition: background 1s, border-color 1s;
+		transition: background var(--t-theme), border-color var(--t-theme);
 	}
 	nav a {
 		font-size: 0.82rem;
-		color: var(--clr-text-secondary);
+		color: var(--clr-text);
 		text-decoration: none;
-		transition: color 0.2s;
+		transition: color var(--t-ui);
 		letter-spacing: 0.02em;
+		opacity: 0.65;
 	}
-	nav a:hover { color: var(--clr-text-primary); }
-	nav a.active { color: var(--clr-text-primary); }
+	nav a:hover { opacity: 1; }
+	nav a.active { opacity: 1; }
 </style>

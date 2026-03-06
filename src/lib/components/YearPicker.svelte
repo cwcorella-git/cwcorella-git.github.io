@@ -165,7 +165,7 @@
 		background: transparent;
 		border: none;
 		outline: none;
-		color: var(--clr-dark-text-primary);
+		color: var(--clr-dark-text);
 		font-family: var(--font-ui);
 		font-size: 0.88rem;
 		padding: 0.45rem 0.6rem;
@@ -185,7 +185,7 @@
 		background: none;
 		border: none;
 		border-left: 1px solid rgba(255, 255, 255, 0.14);
-		color: var(--clr-dark-text-secondary);
+		color: var(--clr-dark-text);
 		padding: 0 0.5rem;
 		cursor: pointer;
 		transition: color 0.15s;
@@ -194,7 +194,7 @@
 		letter-spacing: inherit;
 	}
 	.cal-btn:hover {
-		color: var(--clr-dark-text-primary);
+		color: var(--clr-dark-text);
 	}
 
 	.dropdown {
@@ -220,14 +220,14 @@
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
 		letter-spacing: 0.1em;
-		color: var(--clr-dark-text-secondary);
+		color: var(--clr-dark-text);
 		text-transform: uppercase;
 	}
 
 	.nav-btn {
 		background: none;
 		border: none;
-		color: var(--clr-dark-text-secondary);
+		color: var(--clr-dark-text);
 		font-size: 1rem;
 		cursor: pointer;
 		padding: 0 0.4rem;
@@ -237,7 +237,7 @@
 		transition: color 0.15s;
 	}
 	.nav-btn:hover {
-		color: var(--clr-dark-text-primary);
+		color: var(--clr-dark-text);
 	}
 
 	.year-grid {
@@ -249,7 +249,7 @@
 	.year-btn {
 		background: none;
 		border: 1px solid transparent;
-		color: var(--clr-dark-text-primary);
+		color: var(--clr-dark-text);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.62rem;
 		letter-spacing: 0.04em;
@@ -259,16 +259,16 @@
 		transition: all 0.12s;
 	}
 	.year-btn:hover {
-		color: var(--clr-dark-text-primary);
+		color: var(--clr-dark-text);
 		border-color: rgba(255, 255, 255, 0.25);
 		background: rgba(255, 255, 255, 0.05);
 	}
 	.year-btn.current {
-		color: var(--clr-dark-text-primary);
+		color: var(--clr-dark-text);
 	}
 	.year-btn.selected {
 		background: rgba(255, 255, 255, 0.12);
 		border-color: rgba(255, 255, 255, 0.35);
-		color: var(--clr-dark-text-primary);
+		color: var(--clr-dark-text);
 	}
 </style>

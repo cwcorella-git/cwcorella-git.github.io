@@ -85,7 +85,7 @@
 	:global(.prose p) {
 		font-size: 1rem;
 		line-height: 1.9;
-		color: var(--clr-text-prose);
+		color: var(--clr-text);
 		margin-bottom: 1.5rem;
 		margin-top: 0;
 	}
@@ -95,20 +95,20 @@
 		border: none;
 		font-size: 1rem;
 		line-height: 1.9;
-		color: var(--clr-text-secondary);
+		color: var(--clr-text);
 		font-style: italic;
 	}
 	:global(.prose blockquote p) {
 		margin: 0;
-		color: var(--clr-text-secondary);
+		color: var(--clr-text);
 	}
-	:global(.prose strong) { color: var(--clr-text-prose); font-weight: normal; letter-spacing: 0.01em; }
+	:global(.prose strong) { color: var(--clr-text); font-weight: normal; letter-spacing: 0.01em; }
 	:global(.prose em) { font-style: italic; }
 
 	.edit-btn {
 		background: none;
-		border: 1px solid rgba(128, 128, 128, 0.15);
-		color: var(--clr-text-muted);
+		border: 1px solid rgba(var(--ui-rgb), 0.15);
+		color: var(--clr-text);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
 		letter-spacing: 0.08em;
@@ -118,7 +118,7 @@
 		align-self: flex-start;
 		margin-top: 0.5rem;
 	}
-	.edit-btn:hover { color: var(--clr-text-primary); border-color: rgba(128, 128, 128, 0.40); }
+	.edit-btn:hover { color: var(--clr-text); border-color: rgba(var(--ui-rgb), 0.40); }
 
 	footer {
 		position: relative;
@@ -127,11 +127,11 @@
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.65rem;
 		letter-spacing: 0.1em;
-		color: var(--clr-text-muted);
+		color: var(--clr-text);
 	}
 	footer a {
 		text-decoration: none;
 		transition: color 0.2s;
 	}
-	footer a:hover { color: var(--clr-text-primary); }
+	footer a:hover { color: var(--clr-text); }
 </style>

@@ -568,14 +568,10 @@
 		r.style.setProperty('--glass-bg',      `rgba(${gr},${gg},${gb},${(0.22*dl + 0.42*(1-dl)).toFixed(2)})`);
 		r.style.setProperty('--glass-border',  `rgba(${gr},${gg},${gb},${(0.40*dl + 0.15*(1-dl)).toFixed(2)})`);
 		r.style.setProperty('--glass-nav-bg',  `rgba(${gr},${gg},${gb},${(0.30*dl + 0.52*(1-dl)).toFixed(2)})`);
-		// Text — high-contrast neutral scale
-		// Day:   8 / 15 / 55 / 85 / 115  (dark → readable on light glass)
-		// Night: 248 / 238 / 210 / 175 / 140  (light → readable on dark glass)
-		r.style.setProperty('--clr-text-primary',   `rgb(${ri(8,248)},${ri(8,246)},${ri(8,242)})`);
-		r.style.setProperty('--clr-text-prose',      `rgb(${ri(15,238)},${ri(15,235)},${ri(15,228)})`);
-		r.style.setProperty('--clr-text-secondary',  `rgb(${ri(55,210)},${ri(55,207)},${ri(55,200)})`);
-		r.style.setProperty('--clr-text-muted',      `rgb(${ri(85,175)},${ri(85,172)},${ri(85,165)})`);
-		r.style.setProperty('--clr-text-faint',      `rgb(${ri(115,140)},${ri(115,137)},${ri(115,130)})`);
+		// Text — single high-contrast color, interpolated dark (day) → light (night).
+		// Hierarchy is expressed via size / weight / spacing / opacity, not shade.
+		// Day: rgb(8,8,8) — Night: rgb(248,246,242)
+		r.style.setProperty('--clr-text', `rgb(${ri(8,248)},${ri(8,246)},${ri(8,242)})`);
 	}
 
 	// ── cursor tracking ────────────────────────────────────────────────────────

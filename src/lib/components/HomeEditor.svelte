@@ -87,7 +87,7 @@
 	.toolbar button {
 		background: none;
 		border: 1px solid rgba(255, 255, 255, 0.12);
-		color: var(--clr-text-secondary);
+		color: var(--clr-text);
 		font-family: var(--font-ui);
 		font-size: 0.75rem;
 		width: 1.8rem;
@@ -99,7 +99,7 @@
 		justify-content: center;
 		padding: 0;
 	}
-	.toolbar button:hover { color: var(--clr-text-primary); border-color: rgba(255, 255, 255, 0.28); }
+	.toolbar button:hover { color: var(--clr-text); border-color: rgba(255, 255, 255, 0.28); }
 	.toolbar button.italic { font-style: italic; }
 
 	.sep {
@@ -113,7 +113,7 @@
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.55rem;
 		letter-spacing: 0.06em;
-		color: var(--clr-text-muted);
+		color: var(--clr-text);
 		margin-left: auto;
 	}
 
@@ -121,7 +121,7 @@
 		width: 100%;
 		background: rgba(255, 255, 255, 0.04);
 		border: 1px solid rgba(255, 255, 255, 0.15);
-		color: var(--clr-text-prose);
+		color: var(--clr-text);
 		font-family: var(--font-prose);
 		font-size: 1rem;
 		line-height: 1.9;
@@ -142,7 +142,7 @@
 	button.save {
 		background: none;
 		border: 1px solid rgba(255, 255, 255, 0.15);
-		color: var(--clr-text-secondary);
+		color: var(--clr-text);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
 		letter-spacing: 0.08em;
@@ -150,11 +150,11 @@
 		cursor: pointer;
 		transition: all 0.15s;
 	}
-	button.cancel:hover:not(:disabled) { color: var(--clr-text-primary); border-color: rgba(255, 255, 255, 0.32); }
+	button.cancel:hover:not(:disabled) { color: var(--clr-text); border-color: rgba(255, 255, 255, 0.32); }
 	button.save {
 		background: rgba(255, 255, 255, 0.06);
 		border-color: rgba(255, 255, 255, 0.25);
-		color: var(--clr-text-primary);
+		color: var(--clr-text);
 	}
 	button.save:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
 	button:disabled { opacity: 0.5; cursor: not-allowed; }

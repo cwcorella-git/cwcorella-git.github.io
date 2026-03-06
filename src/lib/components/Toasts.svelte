@@ -30,14 +30,14 @@
 		justify-content: space-between;
 		gap: 0.8rem;
 		padding: 0.65rem 0.9rem;
-		background: rgba(18, 14, 4, 0.88);
+		background: var(--glass-bg-dark);
 		backdrop-filter: blur(10px);
 		-webkit-backdrop-filter: blur(10px);
-		border: 1px solid rgba(255, 255, 255, 0.18);
+		border: 1px solid var(--glass-border-dark);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.65rem;
 		letter-spacing: 0.05em;
-		color: var(--clr-dark-text-primary);
+		color: var(--clr-dark-text);
 		pointer-events: all;
 		animation: slide-in 0.15s ease-out;
 	}

@@ -138,7 +138,7 @@
 		justify-content: space-between;
 		align-items: center;
 		padding: 1rem 2rem;
-		border-bottom: 1px solid rgba(128, 128, 128, 0.12);
+		border-bottom: 1px solid rgba(var(--ui-rgb), 0.12);
 		flex-shrink: 0;
 	}
 
@@ -150,27 +150,27 @@
 
 	.book-title {
 		font-size: 0.95rem;
-		color: var(--clr-text-primary);
+		color: var(--clr-text);
 	}
 
 	.book-meta {
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
 		letter-spacing: 0.06em;
-		color: var(--clr-text-secondary);
+		color: var(--clr-text);
 	}
 
 	.close-btn {
 		background: none;
 		border: none;
-		color: var(--clr-text-muted);
+		color: var(--clr-text);
 		font-size: 1.4rem;
 		cursor: pointer;
 		padding: 0;
 		line-height: 1;
 		transition: color 0.15s;
 	}
-	.close-btn:hover { color: var(--clr-text-primary); }
+	.close-btn:hover { color: var(--clr-text); }
 
 	.overlay-body {
 		flex: 1;
@@ -189,7 +189,7 @@
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.75rem;
 		letter-spacing: 0.08em;
-		color: var(--clr-text-secondary);
+		color: var(--clr-text);
 	}
 	.state-msg.error { color: var(--clr-danger); }
 
@@ -197,8 +197,8 @@
 		display: inline-block;
 		width: 20px;
 		height: 20px;
-		border: 2px solid rgba(128, 128, 128, 0.15);
-		border-top-color: var(--clr-text-muted);
+		border: 2px solid rgba(var(--ui-rgb), 0.15);
+		border-top-color: var(--clr-text);
 		border-radius: 50%;
 		animation: spin 0.8s linear infinite;
 	}
@@ -209,7 +209,7 @@
 		flex-shrink: 0;
 		overflow-y: auto;
 		padding: 1.5rem 1rem;
-		border-right: 1px solid rgba(128, 128, 128, 0.10);
+		border-right: 1px solid rgba(var(--ui-rgb), 0.10);
 	}
 
 	.toc-label {
@@ -217,7 +217,7 @@
 		font-size: 0.55rem;
 		letter-spacing: 0.12em;
 		text-transform: uppercase;
-		color: var(--clr-text-muted);
+		color: var(--clr-text);
 		margin: 0 0 0.8rem;
 	}
 
@@ -231,11 +231,11 @@
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.62rem;
 		line-height: 1.5;
-		color: var(--clr-text-secondary);
+		color: var(--clr-text);
 		padding: 0.2rem 0;
 		transition: color 0.15s;
 	}
-	.toc-item:hover { color: var(--clr-text-primary); }
+	.toc-item:hover { color: var(--clr-text); }
 	.toc-h1 { font-weight: bold; }
 	.toc-h2 { padding-left: 0.8rem; }
 	.toc-h3 { padding-left: 1.6rem; font-size: 0.58rem; }
@@ -253,36 +253,36 @@
 	:global(.doc-content h2),
 	:global(.doc-content h3) {
 		font-family: var(--font-prose);
-		color: var(--clr-text-primary);
+		color: var(--clr-text);
 		font-weight: normal;
 		margin-top: 2rem;
 	}
-	:global(.doc-content h1) { font-size: 1.4rem; border-bottom: 1px solid rgba(128,128,128,0.15); padding-bottom: 0.5rem; }
+	:global(.doc-content h1) { font-size: 1.4rem; border-bottom: 1px solid rgba(var(--ui-rgb),0.15); padding-bottom: 0.5rem; }
 	:global(.doc-content h2) { font-size: 1.1rem; }
-	:global(.doc-content h3) { font-size: 0.95rem; color: var(--clr-text-secondary); }
-	:global(.doc-content p) { line-height: 1.9; color: var(--clr-text-prose); margin-bottom: 1rem; }
-	:global(.doc-content a) { color: var(--clr-text-secondary); }
+	:global(.doc-content h3) { font-size: 0.95rem; color: var(--clr-text); }
+	:global(.doc-content p) { line-height: 1.9; color: var(--clr-text); margin-bottom: 1rem; }
+	:global(.doc-content a) { color: var(--clr-text); }
 	:global(.doc-content blockquote) {
-		border-left: 2px solid rgba(128,128,128,0.25);
+		border-left: 2px solid rgba(var(--ui-rgb),0.25);
 		margin: 1rem 0;
 		padding: 0.3rem 1rem;
-		color: var(--clr-text-muted);
+		color: var(--clr-text);
 		font-style: italic;
 	}
 	:global(.doc-content code) {
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.82em;
-		background: rgba(100,75,40,0.07);
+		background: rgba(var(--ui-rgb),0.07);
 		padding: 0.1em 0.35em;
-		color: var(--clr-text-secondary);
+		color: var(--clr-text);
 	}
 	:global(.doc-content pre) {
-		background: rgba(100,75,40,0.04);
-		border: 1px solid rgba(128,128,128,0.12);
+		background: rgba(var(--ui-rgb),0.04);
+		border: 1px solid rgba(var(--ui-rgb),0.12);
 		padding: 1rem;
 		overflow-x: auto;
 	}
-	:global(.doc-content ul, .doc-content ol) { line-height: 1.8; color: var(--clr-text-prose); padding-left: 1.5rem; }
+	:global(.doc-content ul, .doc-content ol) { line-height: 1.8; color: var(--clr-text); padding-left: 1.5rem; }
 
 	@media (max-width: 640px) {
 		.toc { display: none; }

@@ -241,7 +241,7 @@
 	.add-btn {
 		background: none;
 		border: 1px solid var(--glass-border);
-		color: var(--clr-text-secondary);
+		color: var(--clr-text);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
 		letter-spacing: 0.08em;
@@ -251,14 +251,14 @@
 		white-space: nowrap;
 		flex-shrink: 0;
 	}
-	.add-btn:hover { color: var(--clr-text-primary); border-color: var(--glass-border); }
+	.add-btn:hover { color: var(--clr-text); border-color: var(--glass-border); }
 
 	.search-bar {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
 		flex: 1;
-		border-bottom: 1px solid rgba(128, 128, 128, 0.22);
+		border-bottom: 1px solid rgba(var(--ui-rgb), 0.22);
 		padding-bottom: 0.4rem;
 	}
 
@@ -266,10 +266,10 @@
 		background: none; border: none; outline: none; flex: 1;
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.78rem; letter-spacing: 0.06em;
-		color: var(--clr-text-primary); padding: 0.3rem 0;
+		color: var(--clr-text); padding: 0.3rem 0;
 		caret-color: currentColor;
 	}
-	.search-input::placeholder { color: var(--clr-text-faint); }
+	.search-input::placeholder { color: var(--clr-text); }
 
 	.tag-chip {
 		display: inline-flex; align-items: center; gap: 0.4rem;
@@ -278,11 +278,11 @@
 		border-radius: 2px; padding: 0.2rem 0.45rem 0.2rem 0.65rem;
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.62rem; letter-spacing: 0.1em;
-		text-transform: uppercase; color: var(--clr-text-primary); white-space: nowrap;
+		text-transform: uppercase; color: var(--clr-text); white-space: nowrap;
 	}
 	.chip-clear {
 		background: none; border: none; cursor: pointer;
-		color: var(--clr-text-primary); opacity: 0.5; font-size: 0.85rem;
+		color: var(--clr-text); opacity: 0.5; font-size: 0.85rem;
 		padding: 0; line-height: 1; transition: opacity 0.15s;
 	}
 	.chip-clear:hover { opacity: 1; }
@@ -301,11 +301,11 @@
 		font-size: 0.62rem;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
-		color: var(--clr-text-secondary);
+		color: var(--clr-text);
 		cursor: pointer;
 		transition: all 0.15s;
 	}
-	.pill:hover { color: var(--clr-text-primary); }
+	.pill:hover { color: var(--clr-text); }
 
 	/* ── list ────────────────────────────────────────────────── */
 	.list {
@@ -314,29 +314,29 @@
 	}
 	li { border-bottom: none; }
 	li.done .row-wrap {
-		background: rgba(128, 128, 128, 0.06);
-		border-left: 2px solid rgba(128, 128, 128, 0.50);
+		background: rgba(var(--ui-rgb), 0.06);
+		border-left: 2px solid rgba(var(--ui-rgb), 0.50);
 		padding-left: 0.75rem;
 	}
 	li.done .title {
-		color: var(--clr-text-primary);
+		color: var(--clr-text);
 	}
 	li.done .title::after {
 		content: ' ✓';
 		font-size: 0.7em;
-		color: var(--clr-text-muted);
+		color: var(--clr-text);
 		opacity: 0.9;
 	}
 	li.done .meta {
-		color: var(--clr-text-secondary);
+		color: var(--clr-text);
 	}
 	li.done .cat-label {
-		color: var(--clr-text-muted);
+		color: var(--clr-text);
 	}
 
 	.row-wrap {
 		display: flex; align-items: center;
-		border-bottom: 1px solid rgba(128, 128, 128, 0.09);
+		border-bottom: 1px solid rgba(var(--ui-rgb), 0.09);
 	}
 
 	.row {
@@ -348,18 +348,18 @@
 		cursor: pointer;
 		transition: background 0.15s;
 	}
-	.row:hover { background: rgba(128, 128, 128, 0.03); }
+	.row:hover { background: rgba(var(--ui-rgb), 0.03); }
 
 	.title {
 		font-size: 0.95rem;
-		color: var(--clr-text-primary);
+		color: var(--clr-text);
 		line-height: 1.4;
 	}
 	.meta {
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.62rem;
 		letter-spacing: 0.06em;
-		color: var(--clr-text-secondary);
+		color: var(--clr-text);
 	}
 
 	.read-toggle {
@@ -370,14 +370,14 @@
 		font-size: 0.55rem;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
-		color: var(--clr-text-faint);
+		color: var(--clr-text);
 		padding: 0 0.6rem;
 		transition: color 0.15s;
 		flex-shrink: 0;
 		white-space: nowrap;
 	}
-	.read-toggle:hover:not(:disabled) { color: var(--clr-text-primary); }
-	.read-toggle.is-read { color: var(--clr-text-primary); }
+	.read-toggle:hover:not(:disabled) { color: var(--clr-text); }
+	.read-toggle.is-read { color: var(--clr-text); }
 	.read-toggle:disabled { opacity: 0.4; cursor: not-allowed; }
 
 	.edit-pencil {
@@ -388,31 +388,31 @@
 		font-size: 0.55rem;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
-		color: var(--clr-text-faint);
+		color: var(--clr-text);
 		padding: 0 0.6rem;
 		transition: color 0.15s;
 		flex-shrink: 0;
 		white-space: nowrap;
 	}
-	.edit-pencil:hover { color: var(--clr-text-primary); }
+	.edit-pencil:hover { color: var(--clr-text); }
 
 	.cat-label {
 		background: none; border: none; cursor: pointer;
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.55rem; letter-spacing: 0.08em;
-		text-transform: uppercase; color: var(--clr-text-faint);
+		text-transform: uppercase; color: var(--clr-text);
 		padding: 0 0 0 1rem; white-space: nowrap;
 		flex-shrink: 0; text-align: right; transition: color 0.15s;
 	}
-	.cat-label:hover { color: var(--clr-text-primary); }
-	.cat-label.active-cat { color: var(--clr-text-primary); }
+	.cat-label:hover { color: var(--clr-text); }
+	.cat-label.active-cat { color: var(--clr-text); }
 
 	.count {
 		margin-top: 2rem;
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.62rem;
 		letter-spacing: 0.1em;
-		color: var(--clr-text-muted);
+		color: var(--clr-text);
 	}
 
 	/* ── context menu ────────────────────────────────────────── */
@@ -424,8 +424,8 @@
 	.menu {
 		position: absolute;
 		z-index: 200;
-		background: #120e04;
-		border: 1px solid rgba(255, 255, 255, 0.18);
+		background: var(--glass-bg-dark);
+		border: 1px solid var(--glass-border-dark);
 		padding: 0.3rem 0;
 		min-width: 180px;
 		display: flex;
@@ -437,7 +437,7 @@
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.65rem;
 		letter-spacing: 0.08em;
-		color: var(--clr-dark-text-secondary);
+		color: var(--clr-dark-text);
 		text-decoration: none;
 		background: none;
 		border: none;
@@ -447,7 +447,7 @@
 		width: 100%;
 	}
 	.menu a:hover {
-		color: var(--clr-dark-text-primary);
+		color: var(--clr-dark-text);
 		background: rgba(255, 255, 255, 0.06);
 	}
 </style>

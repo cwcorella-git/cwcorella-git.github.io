@@ -76,7 +76,7 @@
 		width: 100%;
 		background: rgba(255, 255, 255, 0.04);
 		border: 1px solid rgba(255, 255, 255, 0.18);
-		color: var(--clr-dark-text-primary);
+		color: var(--clr-dark-text);
 		font-family: Georgia, 'Times New Roman', Times, serif;
 		font-size: 1rem;
 		line-height: 1.9;
@@ -95,7 +95,7 @@
 	button {
 		background: none;
 		border: 1px solid rgba(255, 255, 255, 0.15);
-		color: var(--clr-dark-text-secondary);
+		color: var(--clr-dark-text);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
 		letter-spacing: 0.08em;
@@ -103,11 +103,11 @@
 		cursor: pointer;
 		transition: all 0.15s;
 	}
-	button:hover:not(:disabled) { color: var(--clr-dark-text-primary); border-color: rgba(255, 255, 255, 0.32); }
+	button:hover:not(:disabled) { color: var(--clr-dark-text); border-color: rgba(255, 255, 255, 0.32); }
 	button.save {
 		background: rgba(255, 255, 255, 0.06);
 		border-color: rgba(255, 255, 255, 0.25);
-		color: var(--clr-dark-text-primary);
+		color: var(--clr-dark-text);
 	}
 	button:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>
