@@ -95,10 +95,6 @@
 			toast.error('no source available');
 			return;
 		}
-		if (!book.doc) {
-			toast.error('no source available');
-			return;
-		}
 		docReaderBook = book;
 	}
 
