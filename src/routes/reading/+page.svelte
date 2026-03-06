@@ -4,6 +4,7 @@
 	import type { Book } from '$lib/types';
 	import allBooksStatic from '$lib/books.json';
 	import { adminState, bookFormState, booksState } from '$lib/admin/state.svelte';
+	import { toast } from '$lib/admin/toast.svelte';
 	import DocReader from '$lib/components/DocReader.svelte';
 
 	// Derive from shared booksState so BookForm updates are visible here
@@ -90,6 +91,14 @@
 	let docReaderBook = $state<Book | null>(null);
 
 	function handleRowClick(book: Book) {
+		if (book.doc?.visibility === 'admin' && !adminState.active) {
+			toast.error('no source available');
+			return;
+		}
+		if (!book.doc) {
+			toast.error('no source available');
+			return;
+		}
 		docReaderBook = book;
 	}
 
@@ -110,11 +119,9 @@
 {#if menu}
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div class="menu" style="top:{menu.y}px; left:{menu.x}px" role="dialog">
-		{#if adminState.active}
-			<button class="menu-toggle" onclick={() => toggleRead(menu!.book.id)}>
-				{completed.has(menu.book.id) ? '✓ mark unread' : 'mark as read'}
-			</button>
-		{/if}
+		<button class="menu-toggle" onclick={() => toggleRead(menu!.book.id)}>
+			{completed.has(menu.book.id) ? '✓ mark unread' : 'mark as read'}
+		</button>
 		{#if adminState.active && adminState.editMode}
 			<button class="menu-toggle" onclick={() => { bookFormState.openEdit(menu!.book); closeMenu(); }}>
 				✎ edit book
@@ -137,7 +144,7 @@
 	></div>
 {/if}
 
-<div class="page">
+<div class="page" role="main" oncontextmenu={(e) => e.preventDefault()}>
 	<div class="glow" aria-hidden="true"></div>
 
 	<div class="inner">
@@ -300,14 +307,25 @@
 		margin: 0; padding: 0;
 	}
 	li { border-bottom: none; }
+	li.done .row-wrap {
+		background: rgba(200, 150, 60, 0.055);
+		border-left: 2px solid rgba(200, 150, 60, 0.28);
+		padding-left: 0.75rem;
+	}
 	li.done .title {
-		color: #c8a060;
+		color: #d4b878;
 	}
 	li.done .title::after {
 		content: ' ✓';
 		font-size: 0.7em;
 		color: #c8a060;
-		opacity: 0.6;
+		opacity: 0.7;
+	}
+	li.done .meta {
+		color: #7a6a50;
+	}
+	li.done .cat-label {
+		color: #6a5a3a;
 	}
 
 	.row-wrap {
