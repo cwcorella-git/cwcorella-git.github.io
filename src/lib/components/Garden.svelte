@@ -908,91 +908,125 @@
 	}
 
 	// ── cloud: offscreen renderer ─────────────────────────────────────────────
-	// Slab model: flat base + bumpy top. All lobe centers sit ABOVE the base line.
-	// Their sphere-tops create the cauliflower bumps; everything below the base is
-	// erased, giving the characteristic flat-bottomed cumulus shape. Perspective
-	// is baked in via aspectRatio: near-horizon clouds are thin slabs (~0.10),
-	// overhead clouds are tall domes (~0.42).
+	// Path-based silhouette: ONE continuous bezier shape — flat base + bumpy top.
+	// No individual circles. The bumpy outline IS the cloud edge, drawn as a
+	// connected series of quadratic bezier curves through generated peak points.
+	// Perspective baked via aspectRatio: near-horizon ~0.10, overhead ~0.42.
 	function renderCloudToCanvas(cloud: CloudDef, topRGB: RGB, shadowRGB: RGB): HTMLCanvasElement {
-		const rng      = makePRNG(cloud.prngseed);
-		const totalW   = cloud.size;
-		const totalH   = Math.max(cloud.size * cloud.aspectRatio, 8);
+		const rng    = makePRNG(cloud.prngseed);
+		const totalW = cloud.size;
+		const totalH = Math.max(cloud.size * cloud.aspectRatio, 10);
 
-		// Padding: horizontal for side feathering, vertical top for lobe overflow
-		const padX = totalW * 0.14;
-		const padT = totalH * 0.85;   // room above base for lobe tops
-		const padB = Math.max(totalH * 0.22, 6);  // small gap below base for feather
+		// Small top buffer (peaks are path points, not extended circles);
+		// generous bottom padding for base-fade.
+		const padX = totalW * 0.15;
+		const padT = Math.max(totalH * 0.12, 6);
+		const padB = Math.max(totalH * 0.42, 10);
 
 		const CW    = Math.ceil(totalW + padX * 2);
 		const CH    = Math.ceil(totalH + padT + padB);
-		const baseY = CH - padB;   // flat base sits here in offscreen canvas
+		const baseY = CH - padB;
 
 		const c  = document.createElement('canvas');
 		c.width  = CW;
 		c.height = CH;
 		const ctx = c.getContext('2d')!;
 
-		// Generate lobes — all centers anchored above baseY.
-		// They spread evenly across the width; edge lobes are shorter than central ones.
-		const numLobes = 4 + Math.floor(rng() * 4);
-		for (let i = 0; i < numLobes; i++) {
-			const xFrac    = (i + 0.15 + rng() * 0.70) / numLobes;
-			const cx       = padX + xFrac * totalW;
-			const edgeness = Math.abs(xFrac - 0.5) * 2;   // 0 center → 1 edge
-			// Radius: central lobes taller, edge lobes shorter — gives the dome silhouette
-			const r = Math.max(totalH * (0.42 + rng() * 0.30) * (1 - edgeness * 0.30), 5);
-			// Center: placed so the circle's bottom reaches baseY (or slightly past)
-			const cy = baseY - r * (0.52 + rng() * 0.36);
+		// ── Generate bump peaks ──────────────────────────────────────────────────
+		// Edge peaks are shorter → dome silhouette, not a flat bar.
+		const numBumps = 3 + Math.floor(rng() * 4);
+		const peaks: Array<{ x: number; y: number }> = [];
+		for (let i = 0; i < numBumps; i++) {
+			const xFrac    = (i + 0.15 + rng() * 0.70) / numBumps;
+			const px       = padX + xFrac * totalW;
+			const edgeness = Math.abs(xFrac - 0.5) * 2;
+			const h        = totalH * (0.58 + rng() * 0.42) * (1 - edgeness * 0.40);
+			peaks.push({ x: px, y: baseY - h });
+		}
+		peaks.sort((a, b) => a.x - b.x);
 
-			// Soft gradient disc — overlapping discs merge into dense body;
-			// the rounded tops of each disc ARE the cauliflower bumps.
-			const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-			g.addColorStop(0.00, css(topRGB, 0.90));
-			g.addColorStop(0.52, css(topRGB, 0.72));
-			g.addColorStop(0.80, css(topRGB, 0.22));
-			g.addColorStop(1.00, css(topRGB, 0.00));
-			ctx.beginPath();
-			ctx.arc(cx, cy, r, 0, Math.PI * 2);
-			ctx.fillStyle = g;
-			ctx.fill();
+		const leftX  = padX * 0.3;
+		const rightX = CW - padX * 0.3;
+		const lastP  = peaks[peaks.length - 1];
+
+		// ── Build silhouette path ────────────────────────────────────────────────
+		ctx.beginPath();
+		ctx.moveTo(leftX, baseY);
+
+		// Sweep up from left edge to first peak
+		ctx.quadraticCurveTo(
+			leftX + (peaks[0].x - leftX) * 0.42, baseY - totalH * 0.30,
+			peaks[0].x, peaks[0].y
+		);
+
+		// Walk through peaks; each pair shares a shallow valley
+		for (let i = 0; i < peaks.length - 1; i++) {
+			const p1 = peaks[i], p2 = peaks[i + 1];
+			// Valley sits between peaks, 14–30% of the way down toward baseY
+			const valX  = (p1.x + p2.x) / 2 + (rng() - 0.5) * (p2.x - p1.x) * 0.18;
+			const lower = Math.max(p1.y, p2.y);
+			const valY  = lower + (baseY - lower) * (0.14 + rng() * 0.18);
+			ctx.quadraticCurveTo(p1.x + (valX - p1.x) * 0.58, p1.y, valX, valY);
+			ctx.quadraticCurveTo(valX + (p2.x - valX) * 0.42, p2.y, p2.x, p2.y);
 		}
 
-		// Pass 2: erase everything at and below baseY → creates the flat base
-		ctx.save();
-		ctx.globalCompositeOperation = 'destination-out';
-		ctx.fillStyle = 'rgba(0,0,0,1)';
-		ctx.fillRect(0, baseY, CW, CH - baseY);
-		ctx.restore();
+		// Sweep down from last peak to right edge
+		ctx.quadraticCurveTo(
+			rightX - (rightX - lastP.x) * 0.42, baseY - totalH * 0.30,
+			rightX, baseY
+		);
+		ctx.lineTo(leftX, baseY);
+		ctx.closePath();
 
-		// Pass 3: directional top→base shading (source-atop so it only touches
-		// the cloud mass, not the transparent background).
-		// Top stays bright (lit by sun); base zone darkens to shadowRGB.
+		// Fill unified shape — all shading applied on top of this flat fill
+		ctx.fillStyle = css(topRGB, 0.92);
+		ctx.fill();
+
+		// ── Directional shading (source-atop) ────────────────────────────────────
 		ctx.save();
 		ctx.globalCompositeOperation = 'source-atop';
-		const shadeTop = Math.max(0, baseY - totalH * 1.2);
+		const shadeTop = Math.max(0, baseY - totalH);
 		const shade    = ctx.createLinearGradient(0, shadeTop, 0, baseY);
 		shade.addColorStop(0.00, css(shadowRGB, 0.00));
-		shade.addColorStop(0.52, css(shadowRGB, 0.00));
-		shade.addColorStop(0.76, css(shadowRGB, 0.28));
-		shade.addColorStop(1.00, css(shadowRGB, 0.58));
+		shade.addColorStop(0.50, css(shadowRGB, 0.00));
+		shade.addColorStop(0.75, css(shadowRGB, 0.28));
+		shade.addColorStop(1.00, css(shadowRGB, 0.60));
 		ctx.fillStyle = shade;
 		ctx.fillRect(0, 0, CW, CH);
 		ctx.restore();
 
-		// Pass 4: feather the base edge so the cloud dissolves into the sky
+		// ── Shadow pockets at bump valleys (source-atop) ─────────────────────────
 		ctx.save();
-		ctx.globalCompositeOperation = 'destination-out';
-		const featherH   = Math.max(totalH * 0.22, 6);
-		const featherTop = baseY - featherH * 0.25;
-		const feather    = ctx.createLinearGradient(0, featherTop, 0, baseY + padB * 0.5);
-		feather.addColorStop(0.00, 'rgba(0,0,0,0)');
-		feather.addColorStop(0.50, 'rgba(0,0,0,0.50)');
-		feather.addColorStop(1.00, 'rgba(0,0,0,1)');
-		ctx.fillStyle = feather;
-		ctx.fillRect(0, featherTop, CW, baseY + padB * 0.5 - featherTop);
+		ctx.globalCompositeOperation = 'source-atop';
+		for (let i = 0; i < peaks.length - 1; i++) {
+			const p1    = peaks[i], p2 = peaks[i + 1];
+			const valX  = (p1.x + p2.x) / 2;
+			const lower = Math.max(p1.y, p2.y);
+			const valY  = lower + (baseY - lower) * 0.22;
+			const rr    = (p2.x - p1.x) * 0.20;
+			const vg    = ctx.createRadialGradient(valX, valY, 0, valX, valY, rr);
+			vg.addColorStop(0, css(shadowRGB, 0.28));
+			vg.addColorStop(1, css(shadowRGB, 0));
+			ctx.beginPath();
+			ctx.ellipse(valX, valY, rr * 1.2, rr * 0.60, 0, 0, Math.PI * 2);
+			ctx.fillStyle = vg;
+			ctx.fill();
+		}
 		ctx.restore();
 
-		// Pass 5: feather left/right sides so clouds trail off softly
+		// ── Feather base edge (destination-out) ──────────────────────────────────
+		ctx.save();
+		ctx.globalCompositeOperation = 'destination-out';
+		const fTop = baseY - Math.max(totalH * 0.15, 5);
+		const fade = ctx.createLinearGradient(0, fTop, 0, baseY + padB * 0.55);
+		fade.addColorStop(0.00, 'rgba(0,0,0,0)');
+		fade.addColorStop(0.48, 'rgba(0,0,0,0.45)');
+		fade.addColorStop(1.00, 'rgba(0,0,0,1)');
+		ctx.fillStyle = fade;
+		ctx.fillRect(0, fTop, CW, baseY + padB * 0.55 - fTop);
+		ctx.restore();
+
+		// ── Feather sides (destination-out) ──────────────────────────────────────
 		ctx.save();
 		ctx.globalCompositeOperation = 'destination-out';
 		const sw = padX * 1.15;
@@ -1006,7 +1040,6 @@
 
 		return c;
 	}
-
 	// ── draw: clouds ───────────────────────────────────────────────────────────
 	function drawClouds(ctx: CanvasRenderingContext2D, altDeg: number): void {
 		const cloudAlpha = Math.max(0, Math.min(1, (altDeg + 14) / 6));
@@ -1026,7 +1059,7 @@
 			// Compute where in the offscreen canvas the flat base sits, so we can
 			// align it to the cloud's vertical position in the main canvas.
 			const totalH = Math.max(cloud.size * cloud.aspectRatio, 8);
-			const padB   = Math.max(totalH * 0.22, 6);
+			const padB   = Math.max(totalH * 0.42, 10);
 			const CH     = cloud.cache.height;
 			const baseY  = CH - padB;   // base y within offscreen canvas
 
