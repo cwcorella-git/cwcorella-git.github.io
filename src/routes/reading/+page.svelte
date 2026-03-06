@@ -222,6 +222,11 @@
 		backdrop-filter: var(--glass-blur);
 		-webkit-backdrop-filter: var(--glass-blur);
 		border: 1px solid var(--glass-border);
+		animation: reveal 0.18s ease both;
+	}
+	@keyframes reveal {
+		from { opacity: 0; }
+		to   { opacity: 1; }
 	}
 
 	/* ── search area ─────────────────────────────────────────── */
