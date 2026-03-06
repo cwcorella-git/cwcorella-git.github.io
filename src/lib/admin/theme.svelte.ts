@@ -16,7 +16,14 @@ export interface Palette {
 	clrDarkText: string;     // text on dark glass panels
 	glassBgDark: string;     // dark panel background
 	glassBorderDark: string; // dark panel outer border
-	// Garden.svelte seeds for per-frame day↔night interpolation
+	// Dark-glass mode: applyPalette sets all glass/text vars directly;
+	// Garden.svelte does NOT override them per-frame.
+	darkGlass: boolean;
+	glassFixed?: string;        // --glass-bg  (main content panels)
+	glassBorderFixed?: string;  // --glass-border
+	glassNavBgFixed?: string;   // --glass-nav-bg
+	glassHeavyFixed?: string;   // --glass-bg-heavy (fullscreen overlays)
+	// Garden.svelte seeds for per-frame day↔night interpolation (light-glass only)
 	glassDay: [number, number, number];   // RGB at full day
 	glassNight: [number, number, number]; // RGB at full night
 	textDay: [number, number, number];    // --clr-text at full day
@@ -31,29 +38,41 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		label: 'amber',
 		uiRgb:        '160, 120, 60',
 		darkPanelRgb: '200, 150, 60',    // amber-gold tint on all dark-panel chrome
-		bodyBg:       '#e8d5b0',
-		clrDarkText:  '#c8b890',
-		glassBgDark:     'rgba(45, 30, 6, 0.90)',    // dark amber-brown panel bg
-		glassBorderDark: 'rgba(200, 150, 60, 0.35)', // clearly visible amber border
-		glassDay:   [255, 220, 160],  // warm amber-golden → tints all glass panels visibly
+		bodyBg:       '#0c0902',          // original dark amber body — near-black
+		clrDarkText:  '#c0b088',          // original amber body text
+		glassBgDark:     'rgba(18, 12, 3, 0.97)',    // near-opaque dark amber modals
+		glassBorderDark: 'rgba(200, 150, 60, 0.30)', // amber accent border
+		// Dark-glass: solid opaque panels — no sky transparency
+		darkGlass:        true,
+		glassFixed:       'rgba(22, 14, 3, 0.88)',    // main content panels
+		glassBorderFixed: 'rgba(200, 150, 60, 0.15)', // amber panel border
+		glassNavBgFixed:  'rgba(12, 9, 2, 0.92)',     // original nav bg
+		glassHeavyFixed:  'rgba(18, 12, 2, 0.96)',    // fullscreen overlays
+		glassDay:   [22,  14,  3  ],  // kept for compat; not used for glass in dark mode
 		glassNight: [12,  8,   2  ],
-		textDay:    [61,  46,  26 ],
-		textNight:  [248, 235, 210],
-		swatchBg:     '#e8d5b0',
+		textDay:    [192, 176, 136],  // #c0b088 — same day and night (always dark site)
+		textNight:  [192, 176, 136],
+		swatchBg:     '#0c0902',
 		swatchBorder: '#c8a060',
 	},
 	beige: {
 		label: 'beige',
 		uiRgb:        '140, 120, 90',
 		darkPanelRgb: '155, 130, 95',    // same hue as uiRgb for cross-context consistency
-		bodyBg:       '#e8e0d0',
-		clrDarkText:  '#c4bcb0',
-		glassBgDark:     'rgba(32, 26, 12, 0.87)',   // warm dark beige-brown
-		glassBorderDark: 'rgba(155, 130, 95, 0.30)', // warm beige border
-		glassDay:   [255, 244, 224],  // warm cream → clearly warmer than neutral
+		bodyBg:       '#160f05',          // warm dark brown body
+		clrDarkText:  '#bfb090',
+		glassBgDark:     'rgba(22, 18, 8, 0.97)',
+		glassBorderDark: 'rgba(155, 130, 95, 0.28)',
+		// Dark-glass: warm dark opaque panels
+		darkGlass:        true,
+		glassFixed:       'rgba(32, 25, 10, 0.82)',
+		glassBorderFixed: 'rgba(160, 135, 95, 0.15)',
+		glassNavBgFixed:  'rgba(24, 18, 7, 0.90)',
+		glassHeavyFixed:  'rgba(28, 22, 8, 0.94)',
+		glassDay:   [32,  25,  10 ],
 		glassNight: [10,  9,   6  ],
-		textDay:    [42,  34,  24 ],
-		textNight:  [240, 235, 225],
+		textDay:    [182, 165, 128],
+		textNight:  [182, 165, 128],
 		swatchBg:     '#e8e0d0',
 		swatchBorder: '#b0a080',
 	},
@@ -65,6 +84,7 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		clrDarkText:  '#bcc0c4',
 		glassBgDark:     'rgba(12, 14, 22, 0.86)',   // cool blue-gray dark
 		glassBorderDark: 'rgba(180, 190, 210, 0.22)',
+		darkGlass: false,
 		glassDay:   [244, 246, 255],  // slight cool blue-white → distinguishable from neutral
 		glassNight: [8,   10,  14 ],
 		textDay:    [8,   8,   8  ],
@@ -80,6 +100,7 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		clrDarkText:  '#c0c4c8',
 		glassBgDark:     'rgba(10, 12, 16, 0.78)',
 		glassBorderDark: 'rgba(200, 210, 220, 0.15)',
+		darkGlass: false,
 		glassDay:   [255, 255, 255],
 		glassNight: [8,   6,   2  ],
 		textDay:    [8,   8,   8  ],
@@ -107,9 +128,21 @@ function applyPalette(name: PaletteName): void {
 	r.style.setProperty('--glass-bg-dark',     p.glassBgDark);
 	r.style.setProperty('--glass-border-dark', p.glassBorderDark);
 
-	// Derive --glass-bg-heavy from glassDay so fullscreen overlays stay on-palette
-	const [dr, dg, db] = p.glassDay;
-	r.style.setProperty('--glass-bg-heavy', `rgba(${dr}, ${dg}, ${db}, 0.78)`);
+	if (p.darkGlass) {
+		// Dark-glass palettes: set all glass/text vars directly.
+		// Garden.svelte detects darkGlass=true and skips per-frame overrides.
+		r.style.setProperty('--glass-bg',       p.glassFixed!);
+		r.style.setProperty('--glass-border',   p.glassBorderFixed!);
+		r.style.setProperty('--glass-nav-bg',   p.glassNavBgFixed!);
+		r.style.setProperty('--glass-bg-heavy', p.glassHeavyFixed!);
+		r.style.setProperty('--clr-text',
+			`rgb(${p.textDay[0]},${p.textDay[1]},${p.textDay[2]})`);
+	} else {
+		// Light-glass palettes: derive --glass-bg-heavy from glassDay;
+		// Garden.svelte handles --glass-bg, --glass-border, --glass-nav-bg, --clr-text per-frame.
+		const [dr, dg, db] = p.glassDay;
+		r.style.setProperty('--glass-bg-heavy', `rgba(${dr}, ${dg}, ${db}, 0.78)`);
+	}
 
 	_active = name;
 	_version++;

@@ -134,6 +134,30 @@
 		return kfs[kfs.length - 1];
 	}
 
+	// ── cloud color keyframes (top-lit / shadow) ──────────────────────────────
+	const CLOUD_KF: Array<{ alt: number; top: RGB; shadow: RGB }> = [
+		{ alt: -14, top: [72,  82, 110] as RGB, shadow: [34,  40,  66] as RGB },
+		{ alt:  -6, top: [148, 122, 162] as RGB, shadow: [72,  58, 108] as RGB },
+		{ alt:   0, top: [255, 210, 140] as RGB, shadow: [195, 100,  65] as RGB },
+		{ alt:   8, top: [255, 238, 192] as RGB, shadow: [210, 155,  78] as RGB },
+		{ alt:  22, top: [252, 250, 246] as RGB, shadow: [175, 172, 168] as RGB },
+	];
+
+	function getCloudColors(altDeg: number): { top: RGB; shadow: RGB } {
+		const kfs = CLOUD_KF;
+		if (altDeg <= kfs[0].alt) return kfs[0];
+		for (let i = 0; i < kfs.length - 1; i++) {
+			if (altDeg <= kfs[i + 1].alt) {
+				const t = (altDeg - kfs[i].alt) / (kfs[i + 1].alt - kfs[i].alt);
+				return {
+					top:    lerpRGB(kfs[i].top,    kfs[i + 1].top,    t),
+					shadow: lerpRGB(kfs[i].shadow, kfs[i + 1].shadow, t),
+				};
+			}
+		}
+		return kfs[kfs.length - 1];
+	}
+
 	// ── scene data (rebuilt on resize) ────────────────────────────────────────
 	interface Star {
 		x: number; y: number;
@@ -145,12 +169,22 @@
 	}
 
 	interface CloudDef {
-		xFrac:  number;   // initial x fraction (0–1)
-		yFrac:  number;   // y fraction in sky area (0–1)
-		size:   number;
-		alpha:  number;
+		xFrac:    number;   // initial x fraction (0–1)
+		yFrac:    number;   // y fraction in sky area (0–1)
+		size:     number;
+		alpha:    number;
 		prngseed: number;
-		speed:  number;   // px / minute
+		speed:    number;   // px / minute
+	}
+
+	interface CirrusDef {
+		xFrac:    number;
+		yFrac:    number;   // high in sky (0.03–0.18)
+		width:    number;   // streak width
+		angle:    number;   // slight tilt in radians
+		alpha:    number;
+		prngseed: number;
+		speed:    number;   // px / minute (slow)
 	}
 
 	const SPECTRAL: Array<{ color: string; weight: number }> = [
@@ -165,6 +199,7 @@
 
 	let stars: Star[]               = [];
 	let clouds: CloudDef[]          = [];
+	let cirrus: CirrusDef[]         = [];
 	let plants: PlantInstance[]     = [];
 	let treeSegments: TreeSegment[] = [];
 	let gardenAgeUnits              = 11315;   // default; overwritten from localStorage on mount
@@ -214,6 +249,20 @@
 				alpha:    0.62 + crng() * 0.28,
 				prngseed: Math.floor(crng() * 0x7FFFFFFF),
 				speed:    8 + crng() * 18,
+			});
+		}
+
+		const cirrng = makePRNG(0xC19C1991);
+		cirrus = [];
+		for (let i = 0; i < 6; i++) {
+			cirrus.push({
+				xFrac:    cirrng(),
+				yFrac:    0.03 + cirrng() * 0.15,
+				width:    130 + cirrng() * 220,
+				angle:    (cirrng() - 0.5) * 0.28,
+				alpha:    0.22 + cirrng() * 0.30,
+				prngseed: Math.floor(cirrng() * 0x7FFFFFFF),
+				speed:    2 + cirrng() * 5,
 			});
 		}
 
@@ -599,37 +648,82 @@
 		ctx.fillRect(0, horizonY - 60, W, 52);
 	}
 
-	// ── draw: clouds ───────────────────────────────────────────────────────────
-	function drawClouds(ctx: CanvasRenderingContext2D, altDeg: number): void {
-		// Fade out in deep night
-		const cloudAlpha = Math.max(0, Math.min(1, (altDeg + 14) / 6));
-		if (cloudAlpha <= 0) return;
+	// ── draw: cirrus ───────────────────────────────────────────────────────────
+	// High-altitude ice-crystal streaks — drawn before cumulus so they sit behind.
+	function drawCirrus(ctx: CanvasRenderingContext2D, altDeg: number): void {
+		const alphaBase = Math.max(0, Math.min(1, (altDeg + 8) / 6));
+		if (alphaBase <= 0) return;
 
 		const minutesSinceEpoch = Date.now() / 60000;
-		ctx.save();
-		ctx.fillStyle = '#FEFCF4';
+		const { top } = getCloudColors(altDeg);
 
-		for (const cloud of clouds) {
-			const rawX  = (cloud.xFrac * W + minutesSinceEpoch * cloud.speed) % (W + cloud.size * 3);
-			const cx    = rawX - cloud.size * 1.5;
-			const cy    = cloud.yFrac * horizonY * 0.82;
-			ctx.globalAlpha = cloud.alpha * cloudAlpha;
-			drawCloudBlob(ctx, cx, cy, cloud.size, cloud.prngseed);
+		ctx.save();
+		ctx.fillStyle = css(top);
+
+		for (const c of cirrus) {
+			const rawX = (c.xFrac * W + minutesSinceEpoch * c.speed) % (W + c.width * 2);
+			const cx   = rawX - c.width;
+			const cy   = c.yFrac * horizonY;
+
+			ctx.save();
+			ctx.translate(cx, cy);
+			ctx.rotate(c.angle);
+			ctx.globalAlpha = c.alpha * alphaBase;
+
+			const rng = makePRNG(c.prngseed);
+			for (let i = 0; i < 5; i++) {
+				const ox = (rng() - 0.5) * c.width * 0.55;
+				const oy = (rng() - 0.4) * 10;
+				const w  = c.width * (0.28 + rng() * 0.72);
+				const h  = 2.5 + rng() * 5.5;
+				ctx.beginPath();
+				ctx.ellipse(ox, oy, w, h, 0, 0, Math.PI * 2);
+				ctx.fill();
+			}
+			ctx.restore();
 		}
 		ctx.restore();
 	}
 
+	// ── draw: clouds ───────────────────────────────────────────────────────────
+	function drawClouds(ctx: CanvasRenderingContext2D, altDeg: number): void {
+		const cloudAlpha = Math.max(0, Math.min(1, (altDeg + 14) / 6));
+		if (cloudAlpha <= 0) return;
+
+		const minutesSinceEpoch = Date.now() / 60000;
+		const { top, shadow } = getCloudColors(altDeg);
+
+		ctx.save();
+		for (const cloud of clouds) {
+			const rawX = (cloud.xFrac * W + minutesSinceEpoch * cloud.speed) % (W + cloud.size * 3);
+			const cx   = rawX - cloud.size * 1.5;
+			const cy   = cloud.yFrac * horizonY * 0.82;
+			ctx.globalAlpha = cloud.alpha * cloudAlpha;
+			drawCloudBlob(ctx, cx, cy, cloud.size, cloud.prngseed, top, shadow);
+		}
+		ctx.restore();
+	}
+
+	// Each puff gets a radial gradient: bright top → darker underside.
 	function drawCloudBlob(
 		ctx: CanvasRenderingContext2D,
-		cx: number, cy: number, size: number, seed: number
+		cx: number, cy: number, size: number, seed: number,
+		topRGB: RGB, shadowRGB: RGB
 	): void {
 		const rng = makePRNG(seed);
-		for (let i = 0; i < 7; i++) {
-			const ox = (rng() - 0.5) * size * 1.5;
-			const oy = (rng() - 0.5) * size * 0.35;
-			const rx = size * (0.38 + rng() * 0.62);
+		for (let i = 0; i < 9; i++) {
+			const ox = (rng() - 0.5) * size * 1.6;
+			const oy = (rng() - 0.5) * size * 0.38;
+			const rx = size * (0.35 + rng() * 0.65);
+			const ry = rx * 0.56;
+			const px = cx + ox, py = cy + oy;
+			// Gradient: inner center is slightly above puff center (lit from above)
+			const grad = ctx.createRadialGradient(px, py - ry * 0.4, 0, px, py + ry * 0.3, rx * 1.1);
+			grad.addColorStop(0, css(topRGB));
+			grad.addColorStop(1, css(shadowRGB));
 			ctx.beginPath();
-			ctx.ellipse(cx + ox, cy + oy, rx, rx * 0.56, 0, 0, Math.PI * 2);
+			ctx.ellipse(px, py, rx, ry, 0, 0, Math.PI * 2);
+			ctx.fillStyle = grad;
 			ctx.fill();
 		}
 	}
@@ -647,6 +741,10 @@
 		if (!paletteChanged && Math.abs(altDeg - lastThemeAlt) < 0.4) return;
 		lastThemeAlt   = altDeg;
 		lastPaletteVer = themeState.version;
+
+		// Dark-glass palettes (amber, beige) set their own fixed glass/text vars
+		// in applyPalette() — don't override them per-frame.
+		if (themeState.palette.darkGlass) return;
 
 		const dl = Math.max(0, Math.min(1, (altDeg + 12) / 18)); // 0 = night, 1 = day
 
@@ -746,6 +844,7 @@
 		drawSun(ctx, altDeg, sxn);
 		drawBeltOfVenus(ctx, altDeg);
 		drawPurpleLight(ctx, altDeg, sxn);
+		drawCirrus(ctx, altDeg);
 		drawClouds(ctx, altDeg);
 		drawPlants(ctx, plants);
 
