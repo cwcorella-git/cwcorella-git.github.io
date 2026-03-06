@@ -33,10 +33,6 @@
 			<button class="sync-btn error" onclick={handleSync} title={writeQueue.error}>⚠ retry</button>
 		{/if}
 
-		<button class="edit-btn" class:active={adminState.editMode} onclick={() => adminState.toggleEditMode()}>
-			{adminState.editMode ? '✎ editing' : '✎ edit'}
-		</button>
-
 		<!-- Theme palette picker -->
 		<div class="theme-wrapper" use:handleClickOutside>
 			<button
@@ -95,11 +91,6 @@
 		opacity: 1;
 	}
 	.sync-btn.error:hover { border-color: rgba(190, 80, 60, 0.7); }
-
-	.edit-btn.active {
-		opacity: 1;
-		background: rgba(var(--ui-rgb), 0.10);
-	}
 
 	/* Theme button wrapper — positions the dropdown panel */
 	.theme-wrapper {

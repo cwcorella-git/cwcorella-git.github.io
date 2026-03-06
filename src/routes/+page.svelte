@@ -33,7 +33,7 @@
 					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 					{@html rendered}
 				</div>
-				{#if adminState.editMode}
+				{#if adminState.active}
 					<button class="edit-btn" onclick={() => (editing = true)}>✎ edit</button>
 				{/if}
 			</div>

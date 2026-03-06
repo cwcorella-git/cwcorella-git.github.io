@@ -180,13 +180,11 @@ export const homeState = {
 
 // ── Admin state ───────────────────────────────────────────────────────────────
 let _active = $state(false);
-let _editMode = $state(false);
 let _pat = $state('');
 let _contentKey = $state('');
 
 export const adminState = {
 	get active() { return _active; },
-	get editMode() { return _editMode; },
 	get pat() { return _pat; },
 	get contentKey() { return _contentKey; },
 
@@ -201,16 +199,11 @@ export const adminState = {
 	async logout() {
 		await writeQueue.flush();
 		_active = false;
-		_editMode = false;
 		_pat = '';
 		_contentKey = '';
 		sessionStorage.removeItem('cwc-admin-pat');
 		sessionStorage.removeItem('cwc-admin-key');
 		journalIndexState.clear();
-	},
-
-	toggleEditMode() {
-		_editMode = !_editMode;
 	},
 
 	restoreFromSession() {

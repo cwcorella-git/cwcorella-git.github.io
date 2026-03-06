@@ -15,7 +15,7 @@
 	let saving = $state(false);
 
 	function startEdit() {
-		if (!adminState.editMode) return;
+		if (!adminState.active) return;
 		draft = content;
 		editing = true;
 	}
@@ -45,7 +45,7 @@
 			<button class="save" onclick={save} disabled={saving}>{saving ? 'saving…' : 'save'}</button>
 		</div>
 	</div>
-{:else if adminState.editMode}
+{:else if adminState.active}
 	<span
 		class="editable"
 		role="button"
