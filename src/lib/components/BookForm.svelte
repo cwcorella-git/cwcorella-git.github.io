@@ -4,6 +4,7 @@
 	import { adminState, booksState, writeQueue } from '$lib/admin/state.svelte';
 	import { encryptDoc } from '$lib/admin/crypto';
 	import { toast } from '$lib/admin/toast.svelte';
+	import { addAgeUnits } from '$lib/garden/state';
 	import allBooksStatic from '$lib/books.json';
 	import YearPicker from '$lib/components/YearPicker.svelte';
 
@@ -101,6 +102,7 @@
 
 			writeQueue.push({ domain: 'books', books: updatedBooks, extraUpdates });
 			booksState.set(updatedBooks);
+			addAgeUnits(5);
 			onSaved(updatedBooks);
 		} catch (e: unknown) {
 			toast.error(e instanceof Error ? e.message : 'Save failed.');

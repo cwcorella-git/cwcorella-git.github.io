@@ -4,6 +4,7 @@
 	import { renderMarkdown } from '$lib/admin/markdown';
 	import { toast } from '$lib/admin/toast.svelte';
 	import { generateJournalSlug } from '$lib/admin/slug';
+	import { addAgeUnits } from '$lib/garden/state';
 	import type { JournalMeta } from '$lib/types';
 
 	// ── index ─────────────────────────────────────────────────────────────
@@ -137,6 +138,7 @@
 				editorMode === 'create' ? `add journal: ${title}` : `update journal: ${title}`,
 				[{ path: `static/docs/private/journals/${slug}.enc`, content: JSON.stringify(encContent) }]
 			);
+			addAgeUnits(editorMode === 'create' ? 30 : 10);
 			closeEditor();
 		} catch (e: unknown) {
 			toast.error(e instanceof Error ? e.message : 'Save failed.');

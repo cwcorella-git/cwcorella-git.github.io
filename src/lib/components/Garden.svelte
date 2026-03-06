@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { makeGrassTuft, makeFern, tickWind, drawPlants, type PlantInstance } from '$lib/garden/plants';
 	import { generateTree, loadTreeFromCache, saveTreeToCache, drawTree, type TreeSegment } from '$lib/garden/tree';
+	import { loadGardenState, saveGardenState, creditVisit, accrueElapsedDays, growthFactor } from '$lib/garden/state';
 
 	// ── constants ─────────────────────────────────────────────────────────────
 	const HOME_LAT    = 39.53;   // Reno, NV
@@ -157,10 +158,11 @@
 	];
 	const SPECTRAL_TOTAL = SPECTRAL.reduce((s, e) => s + e.weight, 0);
 
-	let stars: Star[]            = [];
-	let clouds: CloudDef[]       = [];
-	let plants: PlantInstance[]  = [];
+	let stars: Star[]               = [];
+	let clouds: CloudDef[]          = [];
+	let plants: PlantInstance[]     = [];
 	let treeSegments: TreeSegment[] = [];
+	let gardenAgeUnits              = 11315;   // default; overwritten from localStorage on mount
 	let W = 0, H = 0, horizonY = 0;
 
 	function buildScene(cw: number, ch: number, hy: number): void {
@@ -215,18 +217,22 @@
 		plants = [];
 
 		for (let i = 0; i < 50; i++) {
-			const x    = prng() * cw;
-			const y    = hy + prng() * 12;
-			const h    = 22 + prng() * 42;
-			const seed = Math.floor(prng() * 0x7FFFFFFF);
+			const x      = prng() * cw;
+			const y      = hy + prng() * 12;
+			const bornAt = prng() * 4000;   // plants born at random points during pre-history
+			const scale  = growthFactor(Math.max(0, gardenAgeUnits - bornAt));
+			const h      = (22 + prng() * 42) * scale;
+			const seed   = Math.floor(prng() * 0x7FFFFFFF);
 			plants.push(makeGrassTuft(x, y, h, seed));
 		}
 
 		for (let i = 0; i < 8; i++) {
-			const x    = prng() * cw;
-			const y    = hy + prng() * 8;
-			const h    = 52 + prng() * 52;
-			const seed = Math.floor(prng() * 0x7FFFFFFF);
+			const x      = prng() * cw;
+			const y      = hy + prng() * 8;
+			const bornAt = prng() * 6000;   // ferns can be older relative to the pre-history
+			const scale  = growthFactor(Math.max(0, gardenAgeUnits - bornAt));
+			const h      = (52 + prng() * 52) * scale;
+			const seed   = Math.floor(prng() * 0x7FFFFFFF);
 			plants.push(makeFern(x, y, h, seed));
 		}
 	}
@@ -548,6 +554,14 @@
 		W        = canvas!.width  = window.innerWidth;
 		H        = canvas!.height = window.innerHeight;
 		horizonY = H * HORIZON_FRAC;
+
+		// Load persistent garden state, credit visit, accrue days offline
+		const gs = loadGardenState();
+		accrueElapsedDays(gs);
+		creditVisit(gs);
+		saveGardenState(gs);
+		gardenAgeUnits = gs.ageUnits;
+
 		buildScene(W, H, horizonY);
 
 		animFrame = requestAnimationFrame(draw);
