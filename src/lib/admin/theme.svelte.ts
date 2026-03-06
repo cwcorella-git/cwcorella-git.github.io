@@ -59,20 +59,20 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		label: 'beige',
 		uiRgb:        '140, 120, 90',
 		darkPanelRgb: '155, 130, 95',    // same hue as uiRgb for cross-context consistency
-		bodyBg:       '#160f05',          // warm dark brown body
+		bodyBg:       '#d8cdb5',          // warm sandy/parchment body
 		clrDarkText:  '#bfb090',
 		glassBgDark:     'rgba(22, 18, 8, 0.97)',
 		glassBorderDark: 'rgba(155, 130, 95, 0.28)',
-		// Dark-glass: warm dark opaque panels
+		// Light-cream glass: fixed warm parchment panels, no sky interpolation
 		darkGlass:        true,
-		glassFixed:       'rgba(32, 25, 10, 0.82)',
-		glassBorderFixed: 'rgba(160, 135, 95, 0.15)',
-		glassNavBgFixed:  'rgba(24, 18, 7, 0.90)',
-		glassHeavyFixed:  'rgba(28, 22, 8, 0.94)',
-		glassDay:   [32,  25,  10 ],
-		glassNight: [10,  9,   6  ],
-		textDay:    [182, 165, 128],
-		textNight:  [182, 165, 128],
+		glassFixed:       'rgba(240, 230, 208, 0.88)',  // warm cream content panels
+		glassBorderFixed: 'rgba(160, 135, 90, 0.22)',   // warm tan border
+		glassNavBgFixed:  'rgba(232, 222, 198, 0.82)',  // warm cream nav
+		glassHeavyFixed:  'rgba(244, 236, 215, 0.94)',  // very opaque cream for fullscreen
+		glassDay:   [240, 230, 208],
+		glassNight: [240, 230, 208],
+		textDay:    [48,  36,  18 ],   // dark warm brown — consistent
+		textNight:  [48,  36,  18 ],
 		swatchBg:     '#e8e0d0',
 		swatchBorder: '#b0a080',
 	},
