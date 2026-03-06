@@ -130,21 +130,33 @@ export async function updateBooksJson(pat: string, books: Book[]): Promise<void>
 	if (!treeRes.ok) throw new Error(`Failed to create tree: ${treeRes.status}`);
 	const newTreeSha: string = (await treeRes.json()).sha;
 
-	// 5. Create commit
-	const newCommitRes = await fetch(`${API}/repos/${REPO}/git/commits`, {
-		method: 'POST', headers,
-		body: JSON.stringify({ message: 'update books.json', tree: newTreeSha, parents: [headSha] })
-	});
-	if (!newCommitRes.ok) throw new Error(`Failed to create commit: ${newCommitRes.status}`);
-	const newCommitSha: string = (await newCommitRes.json()).sha;
+	// 5 + 6. Create commit and advance ref, retrying if another commit lands between our
+	//        GET and PATCH (GitHub Actions race → 422 "not a fast forward").
+	async function createCommitAndAdvanceRef(parentSha: string): Promise<void> {
+		const commitRes2 = await fetch(`${API}/repos/${REPO}/git/commits`, {
+			method: 'POST', headers,
+			body: JSON.stringify({ message: 'update books.json', tree: newTreeSha, parents: [parentSha] })
+		});
+		if (!commitRes2.ok) throw new Error(`Failed to create commit: ${commitRes2.status}`);
+		const commitSha: string = (await commitRes2.json()).sha;
 
-	// 6. Advance the ref (fast-forward)
-	const updateRes = await fetch(`${API}/repos/${REPO}/git/refs/heads/main`, {
-		method: 'PATCH', headers,
-		body: JSON.stringify({ sha: newCommitSha })
-	});
-	if (!updateRes.ok) {
-		const err = await updateRes.json().catch(() => ({}));
-		throw new Error(err.message || `Failed to update ref: ${updateRes.status}`);
+		const patchRes = await fetch(`${API}/repos/${REPO}/git/refs/heads/main`, {
+			method: 'PATCH', headers,
+			body: JSON.stringify({ sha: commitSha })
+		});
+		if (patchRes.ok) return;
+
+		const patchErr = await patchRes.json().catch(() => ({}));
+		if (patchRes.status === 422 && patchErr.message?.includes('not a fast forward')) {
+			// Another commit landed — re-fetch HEAD and retry once
+			const retryRef = await fetch(`${API}/repos/${REPO}/git/ref/heads/main`, { headers });
+			if (!retryRef.ok) throw new Error(`Failed to re-fetch ref: ${retryRef.status}`);
+			const newHead: string = (await retryRef.json()).object.sha;
+			await createCommitAndAdvanceRef(newHead);
+		} else {
+			throw new Error(patchErr.message || `Failed to update ref: ${patchRes.status}`);
+		}
 	}
+
+	await createCommitAndAdvanceRef(headSha);
 }
