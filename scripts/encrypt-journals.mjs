@@ -6,18 +6,19 @@
  *   static/docs/private/journals-index.enc  — encrypted index (titles + slugs)
  *   static/docs/private/journals/<slug>.enc  — encrypted content per file
  *
- * Slugs are word-based (top nouns from content via compromise NLP) for new
- * entries. Existing entries preserve their slugs — matched by title — so
- * re-running updates content without orphaning files.
- * Titles are encrypted in the index, so no plaintext metadata is in the repo.
+ * Slugs are word-based (top nouns from content via compromise NLP).
+ * By default, existing entries preserve their slugs (matched by title)
+ * so re-running updates content without orphaning files.
+ * Pass --reslug to regenerate word slugs for ALL entries (including
+ * browser-created entries stored only as .enc files) and delete old files.
  *
  * Usage:
- *   node scripts/encrypt-journals.mjs <passphrase> [source-dir]
+ *   node scripts/encrypt-journals.mjs <passphrase> [--reslug] [source-dir ...]
  *
  * source-dir defaults to ~/Documents/Writing/MD Files
  */
 
-import { readFileSync, writeFileSync, readdirSync, mkdirSync, statSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, readdirSync, mkdirSync, statSync, existsSync, unlinkSync } from 'fs';
 import { basename, extname, join, resolve } from 'path';
 import { homedir } from 'os';
 import { webcrypto } from 'node:crypto';
@@ -26,13 +27,16 @@ import nlp from 'compromise';
 const { subtle } = webcrypto;
 const getRandomValues = (arr) => webcrypto.getRandomValues(arr);
 
-const passphrase = process.argv[2];
-const sourceDirs = process.argv.slice(3).length
-  ? process.argv.slice(3).map(d => resolve(d))
+const args = process.argv.slice(2);
+const passphrase = args.find(a => !a.startsWith('--') && !a.startsWith('/') && !a.startsWith('~') && !a.startsWith('.'));
+const reslug = args.includes('--reslug');
+const sourceDirArgs = args.filter(a => !a.startsWith('--') && a !== passphrase);
+const sourceDirs = sourceDirArgs.length
+  ? sourceDirArgs.map(d => resolve(d))
   : [join(homedir(), 'Documents/Writing/MD Files')];
 
 if (!passphrase) {
-  console.error('Usage: node scripts/encrypt-journals.mjs <passphrase> [source-dir ...]');
+  console.error('Usage: node scripts/encrypt-journals.mjs <passphrase> [--reslug] [source-dir ...]');
   process.exit(1);
 }
 
@@ -85,27 +89,70 @@ async function decryptData(obj) {
 
 // ── helpers ───────────────────────────────────────────────────────────────
 
-function generateSlugSync(text, existingSlugs) {
-  const plain = text
+const STOPWORDS = new Set([
+  'the', 'this', 'that', 'these', 'those',
+  'they', 'them', 'their', 'theirs',
+  'you', 'your', 'yours',
+  'our', 'ours', 'we', 'us',
+  'its', 'his', 'her', 'hers',
+  'and', 'but', 'for', 'not', 'nor', 'yet', 'with', 'also',
+  'has', 'have', 'had', 'having',
+  'can', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'shall',
+  'are', 'was', 'were', 'been', 'being',
+  'all', 'any', 'each', 'both', 'few', 'more', 'most', 'other', 'some',
+  'than', 'too', 'very', 'just', 'one', 'two', 'new', 'own',
+  // Zim wiki / metadata terms
+  'content', 'type', 'wiki', 'format', 'creation', 'modified', 'notebook', 'zim',
+]);
+
+const VOWELS = /[aeiou]/;
+
+function preprocess(text) {
+  return text
+    // Strip Zim wiki metadata headers
+    .replace(/^[\w-]+:\s*\S[^\n]*/gm, (line) =>
+      /^(content-type|wiki-format|creation-date|modified|tags|notebook)/i.test(line) ? '' : line
+    )
     .replace(/^#{1,6}\s+/gm, '')
-    .replace(/[*_`~\[\]()>]/g, '')
+    // Replace word-splitting punctuation with spaces so "text/x-zim-wiki" → "text x zim wiki"
+    .replace(/[/\-_:]/g, ' ')
+    .replace(/[*`~[\]()>]/g, '')
     .replace(/https?:\S+/g, '');
-  const doc = nlp(plain);
+}
+
+function generateSlugSync(text, usedSlugs) {
+  const doc = nlp(preprocess(text));
   const nouns = doc.nouns().out('array');
+
   const freq = {};
-  for (const w of nouns) {
-    const key = w.toLowerCase().replace(/[^a-z]/g, '');
-    if (key.length >= 3) freq[key] = (freq[key] ?? 0) + 1;
+  for (const phrase of nouns) {
+    for (const word of phrase.split(/\s+/)) {
+      const key = word.toLowerCase().replace(/[^a-z]/g, '');
+      if (key.length >= 3 && key.length <= 14 && !STOPWORDS.has(key) && VOWELS.test(key)) {
+        freq[key] = (freq[key] ?? 0) + 1;
+      }
+    }
   }
-  const top = Object.entries(freq)
+
+  const ranked = Object.entries(freq)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
     .map(([w]) => w);
-  while (top.length < 2) top.push(Math.random().toString(16).slice(2, 6));
-  let base = top.join('-');
-  if (!existingSlugs.includes(base)) return base;
+
+  const pool = ranked.slice(0, 6);
+  while (pool.length < 2) pool.push(Math.random().toString(16).slice(2, 6));
+
+  const top = pool.slice(0, Math.min(3, pool.length));
+  const base = top.join('-');
+
+  if (!usedSlugs.includes(base)) return base;
+
+  for (let i = top.length; i < pool.length; i++) {
+    const alt = [...top.slice(0, -1), pool[i]].join('-');
+    if (!usedSlugs.includes(alt)) return alt;
+  }
+
   let n = 2;
-  while (existingSlugs.includes(`${base}-${n}`)) n++;
+  while (usedSlugs.includes(`${base}-${n}`)) n++;
   return `${base}-${n}`;
 }
 
@@ -124,7 +171,7 @@ function extractDate(filename, statObj) {
   return statObj.mtime.toISOString().slice(0, 10);
 }
 
-// ── load existing index to preserve slugs ─────────────────────────────────
+// ── load existing index ───────────────────────────────────────────────────
 
 let existingIndex = [];
 if (existsSync(INDEX_PATH)) {
@@ -134,12 +181,13 @@ if (existsSync(INDEX_PATH)) {
     existingIndex = JSON.parse(json);
     console.log(`Loaded existing index: ${existingIndex.length} entries\n`);
   } catch {
-    console.warn('Could not decrypt existing index — will generate fresh slugs for all entries.\n');
+    console.warn('Could not decrypt existing index — check your passphrase.\n');
+    process.exit(1);
   }
 }
 
-// title → existing slug map
-const titleToSlug = new Map(existingIndex.map(e => [e.title, e.slug]));
+// title → existing entry map (used when NOT reslugging)
+const titleToEntry = new Map(existingIndex.map(e => [e.title, e]));
 
 // ── main ──────────────────────────────────────────────────────────────────
 
@@ -147,7 +195,12 @@ mkdirSync(JOURNALS_DIR, { recursive: true });
 
 const EXTS = new Set(['.md', '.txt']);
 const index = [];
-const usedSlugs = [...existingIndex.map(e => e.slug)];
+const usedSlugs = [];
+
+// Track which existing entries were covered by a source file
+const coveredSlugs = new Set();
+
+// ── pass 1: process source files ──────────────────────────────────────────
 
 for (const sourceDir of sourceDirs) {
   let sourceFiles;
@@ -170,22 +223,71 @@ for (const sourceDir of sourceDirs) {
     const title    = extractTitle(content, file);
     const date     = extractDate(file, stat);
 
-    // Reuse existing slug if title matches, otherwise generate a new word slug
-    let slug = titleToSlug.get(title);
-    if (!slug) {
+    let slug;
+    if (!reslug && titleToEntry.has(title)) {
+      slug = titleToEntry.get(title).slug;
+    } else {
       slug = generateSlugSync(content, usedSlugs);
-      usedSlugs.push(slug);
     }
+    usedSlugs.push(slug);
+    coveredSlugs.add(slug);
 
     const encrypted = await encryptData(content);
     writeFileSync(join(JOURNALS_DIR, `${slug}.enc`), JSON.stringify(encrypted));
 
     index.push({ slug, title, date });
-    const isNew = !titleToSlug.has(title);
-    console.log(`${isNew ? '+' : '✓'} ${file}`);
-    console.log(`    slug: ${slug}   date: ${date}${isNew ? '  [new]' : ''}`);
+    const changed = reslug || !titleToEntry.has(title);
+    console.log(`${changed ? '+' : '✓'} ${file}`);
+    console.log(`    slug: ${slug}   date: ${date}`);
   }
   console.log('');
+}
+
+// ── pass 2: reslug existing .enc-only entries (not from source files) ──────
+
+if (reslug && existingIndex.length > 0) {
+  const encOnlyEntries = existingIndex.filter(e => !coveredSlugs.has(e.slug));
+  if (encOnlyEntries.length > 0) {
+    console.log(`Reslugging ${encOnlyEntries.length} browser-created entries...\n`);
+    for (const entry of encOnlyEntries) {
+      const encPath = join(JOURNALS_DIR, `${entry.slug}.enc`);
+      if (!existsSync(encPath)) {
+        console.warn(`  ! missing file for "${entry.title}" (${entry.slug}) — skipping`);
+        continue;
+      }
+      let content;
+      try {
+        const raw = JSON.parse(readFileSync(encPath, 'utf8'));
+        content = await decryptData(raw);
+      } catch {
+        console.warn(`  ! could not decrypt "${entry.title}" (${entry.slug}) — skipping`);
+        continue;
+      }
+
+      const newSlug = generateSlugSync(content, usedSlugs);
+      usedSlugs.push(newSlug);
+
+      const reencrypted = await encryptData(content);
+      writeFileSync(join(JOURNALS_DIR, `${newSlug}.enc`), JSON.stringify(reencrypted));
+
+      // Delete old file if slug changed
+      if (newSlug !== entry.slug) {
+        unlinkSync(encPath);
+      }
+
+      index.push({ slug: newSlug, title: entry.title, date: entry.date });
+      console.log(`+ ${entry.title}`);
+      console.log(`    ${entry.slug} → ${newSlug}`);
+    }
+    console.log('');
+  }
+} else if (!reslug) {
+  // Preserve existing entries not covered by source files
+  const encOnlyEntries = existingIndex.filter(e => !coveredSlugs.has(e.slug));
+  for (const entry of encOnlyEntries) {
+    usedSlugs.push(entry.slug);
+    index.push(entry);
+  }
 }
 
 // Encrypt the entire index so titles are not visible in the repo
