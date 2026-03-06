@@ -8,6 +8,10 @@ export interface PlantSegment {
 	thick:     number;
 	color:     string;
 	children:  PlantSegment[];
+	wx0: number;  // segment start x (world) — written by drawSeg each frame
+	wy0: number;
+	wx:  number;  // segment tip x (world)
+	wy:  number;
 }
 
 export interface PlantInstance {
@@ -55,6 +59,7 @@ export function makeGrassTuft(
 			thick:     thick * 0.48,
 			color,
 			children: [],
+			wx0: 0, wy0: 0, wx: 0, wy: 0,
 		};
 
 		strands.push({
@@ -65,6 +70,7 @@ export function makeGrassTuft(
 			thick,
 			color,
 			children: [tip],
+			wx0: 0, wy0: 0, wx: 0, wy: 0,
 		});
 	}
 
@@ -73,6 +79,7 @@ export function makeGrassTuft(
 		restAngle: 0, angle: 0, angVel: 0,
 		len: 0, thick: 0, color: '',
 		children: strands,
+		wx0: 0, wy0: 0, wx: 0, wy: 0,
 	};
 	return { x, y, kind: 'grass', root };
 }
@@ -93,6 +100,7 @@ export function makeFern(
 			thick,
 			color,
 			children: [],
+			wx0: 0, wy0: 0, wx: 0, wy: 0,
 		};
 
 		if (depth > 0) {
@@ -120,6 +128,7 @@ export function makeFern(
 		restAngle: 0, angle: 0, angVel: 0,
 		len: 0, thick: 0, color: '',
 		children: [makeNode(4, maxHeight * 0.55, 2.4, 0)],
+		wx0: 0, wy0: 0, wx: 0, wy: 0,
 	};
 	return { x, y, kind: 'fern', root };
 }
@@ -166,6 +175,8 @@ function drawSeg(
 	const ex     = x + Math.cos(radDir) * seg.len;
 	const ey     = y + Math.sin(radDir) * seg.len;
 
+	seg.wx0 = x; seg.wy0 = y; seg.wx = ex; seg.wy = ey;
+
 	ctx.beginPath();
 	ctx.moveTo(x, y);
 	ctx.lineTo(ex, ey);
@@ -183,4 +194,30 @@ export function drawPlants(ctx: CanvasRenderingContext2D, plants: PlantInstance[
 		for (const child of plant.root.children) drawSeg(ctx, plant.x, plant.y, -90, child);
 	}
 	ctx.restore();
+}
+
+// ── mouse/touch interaction ────────────────────────────────────────────────
+function applyForceSeg(seg: PlantSegment, mx: number, my: number, radius: number): void {
+	if (seg.len > 0) {
+		const midX = (seg.wx0 + seg.wx) * 0.5;
+		const midY = (seg.wy0 + seg.wy) * 0.5;
+		const dx   = mx - midX;
+		const dy   = my - midY;
+		const dist = Math.sqrt(dx * dx + dy * dy);
+		if (dist < radius && dist > 0) {
+			// 2D cross product: segment dir × cursor-to-mid vector → sign = which side
+			const sdx   = seg.wx - seg.wx0;
+			const sdy   = seg.wy - seg.wy0;
+			const cross = sdx * dy - sdy * dx;
+			const str   = (1 - dist / radius) * 90;
+			seg.angVel += (cross > 0 ? -1 : 1) * str;
+		}
+	}
+	for (const child of seg.children) applyForceSeg(child, mx, my, radius);
+}
+
+export function applyMouseForce(plants: PlantInstance[], mx: number, my: number, radius = 90): void {
+	for (const plant of plants) {
+		for (const child of plant.root.children) applyForceSeg(child, mx, my, radius);
+	}
 }

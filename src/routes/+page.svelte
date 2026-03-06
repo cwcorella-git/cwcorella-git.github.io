@@ -80,7 +80,7 @@
 	:global(.prose p) {
 		font-size: 1rem;
 		line-height: 1.9;
-		color: #4a3820;
+		color: var(--clr-text-prose);
 		margin-bottom: 1.5rem;
 		margin-top: 0;
 	}
@@ -90,14 +90,14 @@
 		border: none;
 		font-size: 1rem;
 		line-height: 1.9;
-		color: #8a6a40;
+		color: var(--clr-text-secondary);
 		font-style: italic;
 	}
 	:global(.prose blockquote p) {
 		margin: 0;
-		color: #8a6a40;
+		color: var(--clr-text-secondary);
 	}
-	:global(.prose strong) { color: #5a4020; font-weight: normal; letter-spacing: 0.01em; }
+	:global(.prose strong) { color: var(--clr-text-prose); font-weight: normal; letter-spacing: 0.01em; }
 	:global(.prose em) { font-style: italic; }
 
 	.edit-btn {

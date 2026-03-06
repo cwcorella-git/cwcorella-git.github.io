@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { makeGrassTuft, makeFern, tickWind, drawPlants, type PlantInstance } from '$lib/garden/plants';
+	import { makeGrassTuft, makeFern, tickWind, drawPlants, applyMouseForce, type PlantInstance } from '$lib/garden/plants';
 	import { generateTree, loadTreeFromCache, saveTreeToCache, drawTree, type TreeSegment } from '$lib/garden/tree';
 	import { loadGardenState, saveGardenState, creditVisit, accrueElapsedDays, growthFactor } from '$lib/garden/state';
 
@@ -494,6 +494,59 @@
 		}
 	}
 
+	// ── day/night theme ────────────────────────────────────────────────────────
+	// Interpolates CSS vars on :root so all glass panels and text adapt to the sky.
+	// Day (alt ≥ 6°): white glass + dark warm text.
+	// Night (alt ≤ −12°): dark glass + warm off-white text.
+	let lastThemeAlt = 9999;
+
+	function updateTheme(altDeg: number): void {
+		if (Math.abs(altDeg - lastThemeAlt) < 0.4) return;
+		lastThemeAlt = altDeg;
+		const dl = Math.max(0, Math.min(1, (altDeg + 12) / 18)); // 0 = night, 1 = day
+
+		function ri(d: number, n: number): number { return Math.round(d + (n - d) * (1 - dl)); }
+
+		const r = document.documentElement;
+		// Glass surfaces
+		const gr = ri(255, 8), gg = ri(255, 6), gb = ri(255, 2);
+		r.style.setProperty('--glass-bg',      `rgba(${gr},${gg},${gb},${(0.22*dl + 0.42*(1-dl)).toFixed(2)})`);
+		r.style.setProperty('--glass-border',  `rgba(${gr},${gg},${gb},${(0.40*dl + 0.15*(1-dl)).toFixed(2)})`);
+		r.style.setProperty('--glass-nav-bg',  `rgba(${gr},${gg},${gb},${(0.30*dl + 0.52*(1-dl)).toFixed(2)})`);
+		// Text
+		r.style.setProperty('--clr-text-primary',   `rgb(${ri(61,224)},${ri(46,210)},${ri(26,190)})`);
+		r.style.setProperty('--clr-text-prose',      `rgb(${ri(74,212)},${ri(56,198)},${ri(32,178)})`);
+		r.style.setProperty('--clr-text-secondary',  `rgb(${ri(138,185)},${ri(106,162)},${ri(64,118)})`);
+		r.style.setProperty('--clr-text-muted',      `rgb(${ri(154,168)},${ri(122,148)},${ri(80,108)})`);
+		r.style.setProperty('--clr-text-faint',      `rgb(${ri(176,148)},${ri(144,130)},${ri(112,98)})`);
+		r.style.setProperty('--clr-accent-dim',      `rgb(${ri(138,200)},${ri(106,164)},${ri(64,96)})`);
+	}
+
+	// ── cursor tracking ────────────────────────────────────────────────────────
+	let rawMouseX  = -9999;
+	let rawMouseY  = -9999;
+	let smMouseX   = -9999;
+	let smMouseY   = -9999;
+	let cursorActive = false;
+	let cursorTimeout = 0;
+
+	function onMouseMove(e: MouseEvent): void {
+		rawMouseX = e.clientX;
+		rawMouseY = e.clientY;
+		cursorActive = true;
+		clearTimeout(cursorTimeout);
+		cursorTimeout = window.setTimeout(() => { cursorActive = false; }, 2000);
+	}
+
+	function onTouchMove(e: TouchEvent): void {
+		const t = e.touches[0];
+		rawMouseX = t.clientX;
+		rawMouseY = t.clientY;
+		cursorActive = true;
+		clearTimeout(cursorTimeout);
+		cursorTimeout = window.setTimeout(() => { cursorActive = false; }, 2000);
+	}
+
 	// ── main loop ─────────────────────────────────────────────────────────────
 	let animFrame  = 0;
 	let frameCount = 0;
@@ -509,10 +562,11 @@
 		const altDeg  = sunAltitudeDeg(now);
 		const sxn     = sunXNorm(now);
 		const isNight = altDeg < -8;
+		updateTheme(altDeg);
 
 		// Day: draw at ~4fps (every 15 frames). Night: draw at ~30fps (every 2 frames).
-		// This keeps stars twinkling smoothly at night while staying light on CPU by day.
-		const skip = isNight ? 2 : 15;
+		// Boost to every frame when cursor is active so interaction feels responsive.
+		const skip = cursorActive ? 1 : isNight ? 2 : 15;
 		if (frameCount % skip !== 0) {
 			animFrame = requestAnimationFrame(draw);
 			return;
@@ -522,9 +576,15 @@
 		const dt   = lastStamp > 0 ? Math.min((timestamp - lastStamp) / 1000, 0.1) : 0.016;
 		lastStamp  = timestamp;
 
+		// Smooth cursor (exponential lerp, ~12 frame lag)
+		const alpha = 1 - Math.pow(0.75, dt * 60);
+		smMouseX = smMouseX < -9000 ? rawMouseX : smMouseX + (rawMouseX - smMouseX) * alpha;
+		smMouseY = smMouseY < -9000 ? rawMouseY : smMouseY + (rawMouseY - smMouseY) * alpha;
+
 		// Wind: slow noise-driven oscillation (degrees/s²)
 		const windForce = noise1D(time / 6) * 28;
 		tickWind(plants, windForce, dt);
+		if (cursorActive) applyMouseForce(plants, smMouseX, smMouseY);
 
 		ctx.clearRect(0, 0, W, H);
 
@@ -566,6 +626,8 @@
 
 		animFrame = requestAnimationFrame(draw);
 		window.addEventListener('resize', resize);
+		window.addEventListener('mousemove', onMouseMove);
+		window.addEventListener('touchmove', onTouchMove, { passive: true });
 
 		// Load tree from cache, or generate on first visit (deferred so first
 		// frame paints before the ~200ms generation runs).
@@ -582,6 +644,9 @@
 		return () => {
 			cancelAnimationFrame(animFrame);
 			window.removeEventListener('resize', resize);
+			window.removeEventListener('mousemove', onMouseMove);
+			window.removeEventListener('touchmove', onTouchMove);
+			clearTimeout(cursorTimeout);
 		};
 	});
 </script>

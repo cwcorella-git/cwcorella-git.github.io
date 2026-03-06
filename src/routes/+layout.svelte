@@ -83,7 +83,10 @@
 		--glass-bg-dark:      rgba(12, 8, 2, 0.72);
 		--glass-border-dark:  rgba(200, 150, 60, 0.22);
 
-		/* Text */
+		/* Glass — nav (day default; updated dynamically at night) */
+		--glass-nav-bg:       rgba(255, 255, 255, 0.30);
+
+		/* Text (day defaults; updated dynamically by Garden.svelte) */
 		--clr-text-primary:   #3d2e1a;
 		--clr-text-prose:     #4a3820;
 		--clr-text-secondary: #8a6a40;
@@ -119,6 +122,13 @@
 		position: relative;
 		z-index: 1;
 	}
+	/* Smooth day→night transitions on glass panels and text */
+	:global(.inner), :global(.content-panel) {
+		transition: background 1.5s, border-color 1.5s;
+	}
+	:global(body) {
+		transition: color 1.5s;
+	}
 
 	nav {
 		position: fixed;
@@ -128,18 +138,19 @@
 		display: flex;
 		gap: 2rem;
 		align-items: center;
-		background: rgba(255, 255, 255, 0.30);
+		background: var(--glass-nav-bg);
 		backdrop-filter: blur(20px);
 		-webkit-backdrop-filter: blur(20px);
-		border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+		border-bottom: 1px solid var(--glass-border);
+		transition: background 1s, border-color 1s;
 	}
 	nav a {
 		font-size: 0.82rem;
-		color: #8a6a40;
+		color: var(--clr-text-secondary);
 		text-decoration: none;
 		transition: color 0.2s;
 		letter-spacing: 0.02em;
 	}
-	nav a:hover { color: #7a5020; }
-	nav a.active { color: #7a5020; }
+	nav a:hover { color: var(--clr-accent-active); }
+	nav a.active { color: var(--clr-accent-active); }
 </style>

@@ -261,10 +261,10 @@
 		background: none; border: none; outline: none; flex: 1;
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.78rem; letter-spacing: 0.06em;
-		color: #3d2e1a; padding: 0.3rem 0;
-		caret-color: #7a5020;
+		color: var(--clr-text-primary); padding: 0.3rem 0;
+		caret-color: var(--clr-accent-active);
 	}
-	.search-input::placeholder { color: #b09070; }
+	.search-input::placeholder { color: var(--clr-text-faint); }
 
 	.tag-chip {
 		display: inline-flex; align-items: center; gap: 0.4rem;
@@ -347,14 +347,14 @@
 
 	.title {
 		font-size: 0.95rem;
-		color: #3d2e1a;
+		color: var(--clr-text-primary);
 		line-height: 1.4;
 	}
 	.meta {
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.62rem;
 		letter-spacing: 0.06em;
-		color: #8a6a40;
+		color: var(--clr-text-secondary);
 	}
 
 	.read-toggle {
@@ -365,14 +365,14 @@
 		font-size: 0.55rem;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
-		color: #b09070;
+		color: var(--clr-text-faint);
 		padding: 0 0.6rem;
 		transition: color 0.15s;
 		flex-shrink: 0;
 		white-space: nowrap;
 	}
-	.read-toggle:hover:not(:disabled) { color: #7a5020; }
-	.read-toggle.is-read { color: #7a5020; }
+	.read-toggle:hover:not(:disabled) { color: var(--clr-accent-active); }
+	.read-toggle.is-read { color: var(--clr-accent-dim); }
 	.read-toggle:disabled { opacity: 0.4; cursor: not-allowed; }
 
 	.edit-pencil {
@@ -383,31 +383,31 @@
 		font-size: 0.55rem;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
-		color: #b09070;
+		color: var(--clr-text-faint);
 		padding: 0 0.6rem;
 		transition: color 0.15s;
 		flex-shrink: 0;
 		white-space: nowrap;
 	}
-	.edit-pencil:hover { color: #7a5020; }
+	.edit-pencil:hover { color: var(--clr-accent-active); }
 
 	.cat-label {
 		background: none; border: none; cursor: pointer;
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.55rem; letter-spacing: 0.08em;
-		text-transform: uppercase; color: #b09070;
+		text-transform: uppercase; color: var(--clr-text-faint);
 		padding: 0 0 0 1rem; white-space: nowrap;
 		flex-shrink: 0; text-align: right; transition: color 0.15s;
 	}
-	.cat-label:hover { color: #7a5020; }
-	.cat-label.active-cat { color: #7a5020; }
+	.cat-label:hover { color: var(--clr-accent-active); }
+	.cat-label.active-cat { color: var(--clr-accent-dim); }
 
 	.count {
 		margin-top: 2rem;
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.62rem;
 		letter-spacing: 0.1em;
-		color: #9a7a50;
+		color: var(--clr-text-muted);
 	}
 
 	/* ── context menu ────────────────────────────────────────── */

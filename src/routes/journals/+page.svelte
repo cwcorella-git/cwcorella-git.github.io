@@ -327,21 +327,21 @@
 	.heading {
 		font-family: Georgia, 'Times New Roman', Times, serif;
 		font-size: 1rem; font-weight: normal;
-		letter-spacing: 0.12em; color: #7a5020; margin: 0;
+		letter-spacing: 0.12em; color: var(--clr-accent-dim); margin: 0;
 	}
 	.new-btn {
 		background: none;
 		border: 1px solid rgba(100, 75, 40, 0.25);
-		color: #8a6a40;
+		color: var(--clr-text-secondary);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase;
 		padding: 0.3rem 0.75rem; cursor: pointer; transition: all 0.15s;
 	}
 	.new-btn:hover { color: #7a5020; border-color: rgba(100, 75, 40, 0.5); }
 
-	.status { font-family: 'Courier New', Courier, monospace; font-size: 0.65rem; letter-spacing: 0.08em; color: #9a7a50; }
+	.status { font-family: 'Courier New', Courier, monospace; font-size: 0.65rem; letter-spacing: 0.08em; color: var(--clr-text-muted); }
 	.status.error { color: #c07050; }
-	.dim { font-family: 'Courier New', Courier, monospace; font-size: 0.6rem; letter-spacing: 0.06em; color: #b09070; }
+	.dim { font-family: 'Courier New', Courier, monospace; font-size: 0.6rem; letter-spacing: 0.06em; color: var(--clr-text-faint); }
 
 	/* ── list ─────────────────────────────────────────────── */
 	.list { list-style: none; margin: 0; padding: 0; }
@@ -361,11 +361,11 @@
 
 	.entry-title {
 		font-family: var(--font-prose);
-		font-size: 0.95rem; color: #3d2e1a; line-height: 1.4;
+		font-size: 0.95rem; color: var(--clr-text-primary); line-height: 1.4;
 	}
 	.entry-meta {
 		font-family: var(--font-ui);
-		font-size: 0.62rem; letter-spacing: 0.06em; color: #8a6a40;
+		font-size: 0.62rem; letter-spacing: 0.06em; color: var(--clr-text-secondary);
 	}
 
 	.row-actions {
@@ -376,7 +376,7 @@
 		background: none; border: none; cursor: pointer;
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.52rem; letter-spacing: 0.08em; text-transform: uppercase;
-		color: #b09070; padding: 0 0.3rem; transition: color 0.15s;
+		color: var(--clr-text-faint); padding: 0 0.3rem; transition: color 0.15s;
 	}
 	.action-btn:hover:not(:disabled) { color: #7a5020; }
 	.action-btn.danger:hover:not(:disabled) { color: #c07050; }
@@ -384,7 +384,7 @@
 
 	.count {
 		margin-top: 2rem; font-family: 'Courier New', Courier, monospace;
-		font-size: 0.62rem; letter-spacing: 0.1em; color: #9a7a50;
+		font-size: 0.62rem; letter-spacing: 0.1em; color: var(--clr-text-muted);
 	}
 
 	/* ── overlays shared ──────────────────────────────────── */
