@@ -295,13 +295,17 @@
 		const crng = makePRNG(0xC10DE00F);
 		clouds = [];
 		for (let i = 0; i < CLOUD_COUNT; i++) {
+			const xFrac    = crng();
+			const yFrac    = 0.06 + crng() * 0.34;
+			const size     = 55 + crng() * 90;
+			const alpha    = 0.62 + crng() * 0.28;
+			const prngseed = Math.floor(crng() * 0x7FFFFFFF);
+			const speed    = 8 + crng() * 18;
 			clouds.push({
-				xFrac:    crng(),
-				yFrac:    0.06 + crng() * 0.34,
-				size:     55 + crng() * 90,
-				alpha:    0.62 + crng() * 0.28,
-				prngseed: Math.floor(crng() * 0x7FFFFFFF),
-				speed:    8 + crng() * 18,
+				xFrac, yFrac, size, alpha, prngseed, speed,
+				lobes:         genLobes(makePRNG(prngseed), size),
+				cache:         null,
+				cacheColorKey: '',
 			});
 		}
 
@@ -702,7 +706,8 @@
 	}
 
 	// ── draw: cirrus ───────────────────────────────────────────────────────────
-	// High-altitude ice-crystal streaks — drawn before cumulus so they sit behind.
+	// High-altitude ice-crystal streaks rendered as tapered quadratic bezier strands.
+	// Multiple overlapping passes per strand give a soft, feathered edge.
 	function drawCirrus(ctx: CanvasRenderingContext2D, altDeg: number): void {
 		const alphaBase = Math.max(0, Math.min(1, (altDeg + 8) / 6));
 		if (alphaBase <= 0) return;
@@ -711,7 +716,7 @@
 		const { top } = getCloudColors(altDeg);
 
 		ctx.save();
-		ctx.fillStyle = css(top);
+		ctx.lineCap = 'round';
 
 		for (const c of cirrus) {
 			const rawX = (c.xFrac * W + minutesSinceEpoch * c.speed) % (W + c.width * 2);
@@ -721,21 +726,133 @@
 			ctx.save();
 			ctx.translate(cx, cy);
 			ctx.rotate(c.angle);
-			ctx.globalAlpha = c.alpha * alphaBase;
 
 			const rng = makePRNG(c.prngseed);
-			for (let i = 0; i < 5; i++) {
-				const ox = (rng() - 0.5) * c.width * 0.55;
-				const oy = (rng() - 0.4) * 10;
-				const w  = c.width * (0.28 + rng() * 0.72);
-				const h  = 2.5 + rng() * 5.5;
-				ctx.beginPath();
-				ctx.ellipse(ox, oy, w, h, 0, 0, Math.PI * 2);
-				ctx.fill();
+			// 8 strands per cluster — varying length, angle, origin
+			for (let i = 0; i < 8; i++) {
+				const x0   = (rng() - 0.5) * c.width * 0.80;
+				const y0   = (rng() - 0.5) * 14;
+				const len  = c.width * (0.28 + rng() * 0.58);
+				const cpx  = x0 + len * 0.45 + (rng() - 0.5) * len * 0.30;
+				const cpy  = y0 + (rng() - 0.5) * 12;
+				const x1   = x0 + len;
+				const y1   = y0 + (rng() - 0.5) * 10;
+				const strandAlpha = c.alpha * alphaBase * (0.40 + rng() * 0.60);
+
+				// Three passes: core (narrow) → mid → halo (wide, faint)
+				const passes = [
+					{ w: 0.8 + rng() * 1.2, a: strandAlpha },
+					{ w: 2.0 + rng() * 1.5, a: strandAlpha * 0.38 },
+					{ w: 4.0 + rng() * 2.0, a: strandAlpha * 0.14 },
+				];
+				for (const p of passes) {
+					ctx.beginPath();
+					ctx.moveTo(x0, y0);
+					ctx.quadraticCurveTo(cpx, cpy, x1, y1);
+					ctx.strokeStyle = css(top);
+					ctx.lineWidth   = p.w;
+					ctx.globalAlpha = p.a;
+					ctx.stroke();
+				}
 			}
 			ctx.restore();
 		}
 		ctx.restore();
+	}
+
+	// ── cloud: offscreen renderer ─────────────────────────────────────────────
+	// Renders one cloud to an HTMLCanvasElement. Called only when the color key
+	// changes (slow sky transitions), never per-frame. drawClouds just drawImage.
+	function renderCloudToCanvas(cloud: CloudDef, topRGB: RGB, shadowRGB: RGB): HTMLCanvasElement {
+		const s   = cloud.size;
+		const CW  = Math.ceil(s * 5.2);
+		const CH  = Math.ceil(s * 3.0);
+		const ccx = CW / 2;
+		const ccy = s * 1.5;   // cloud center y — lobes grow upward from here
+
+		const c   = document.createElement('canvas');
+		c.width = CW; c.height = CH;
+		const c2  = c.getContext('2d')!;
+
+		// Pass 1 — shadow body: all lobes at full size
+		for (const l of cloud.lobes) {
+			const lx = ccx + l.ox, ly = ccy + l.oy;
+			const g  = c2.createRadialGradient(lx, ly + l.r * 0.12, 0, lx, ly - l.r * 0.05, l.r);
+			g.addColorStop(0.00, css(shadowRGB, 0.92));
+			g.addColorStop(0.55, css(shadowRGB, 0.75));
+			g.addColorStop(0.82, css(shadowRGB, 0.28));
+			g.addColorStop(1.00, css(shadowRGB, 0));
+			c2.beginPath();
+			c2.arc(lx, ly, l.r, 0, Math.PI * 2);
+			c2.fillStyle = g;
+			c2.fill();
+		}
+
+		// Pass 2 — lit body: lobes shifted up 10%, scaled down 8%
+		for (const l of cloud.lobes) {
+			const lx = ccx + l.ox;
+			const ly = ccy + l.oy - l.r * 0.10;
+			const r  = l.r * 0.92;
+			const g  = c2.createRadialGradient(lx, ly - r * 0.38, 0, lx, ly + r * 0.05, r);
+			g.addColorStop(0.00, css(topRGB, 1.00));
+			g.addColorStop(0.55, css(topRGB, 0.88));
+			g.addColorStop(0.82, css(topRGB, 0.38));
+			g.addColorStop(1.00, css(topRGB, 0));
+			c2.beginPath();
+			c2.arc(lx, ly, r, 0, Math.PI * 2);
+			c2.fillStyle = g;
+			c2.fill();
+		}
+
+		// Pass 3 — AO shadows at overlapping lobe junctions
+		for (let i = 0; i < cloud.lobes.length; i++) {
+			for (let j = i + 1; j < cloud.lobes.length; j++) {
+				const a = cloud.lobes[i], b = cloud.lobes[j];
+				const dx = b.ox - a.ox, dy = b.oy - a.oy;
+				if (Math.sqrt(dx * dx + dy * dy) < (a.r + b.r) * 0.80) {
+					const t  = a.r / (a.r + b.r);
+					const ix = ccx + a.ox + dx * t;
+					const iy = ccy + a.oy + dy * t;
+					const ir = Math.min(a.r, b.r) * 0.52;
+					const g  = c2.createRadialGradient(ix, iy, 0, ix, iy, ir);
+					g.addColorStop(0,   'rgba(38,48,72,0.42)');
+					g.addColorStop(0.6, 'rgba(38,48,72,0.18)');
+					g.addColorStop(1,   'rgba(38,48,72,0)');
+					c2.beginPath();
+					c2.arc(ix, iy, ir, 0, Math.PI * 2);
+					c2.fillStyle = g;
+					c2.fill();
+				}
+			}
+		}
+
+		// Pass 4 — bright highlight on top 2 highest lobes
+		const topLobes = [...cloud.lobes].sort((a, b) => a.oy - b.oy).slice(0, 2);
+		for (const l of topLobes) {
+			const lx = ccx + l.ox, ly = ccy + l.oy;
+			const hr = l.r * 0.30;
+			const g  = c2.createRadialGradient(lx, ly - l.r * 0.42, 0, lx, ly - l.r * 0.28, hr);
+			g.addColorStop(0, 'rgba(255,255,255,0.54)');
+			g.addColorStop(1, 'rgba(255,255,255,0)');
+			c2.beginPath();
+			c2.arc(lx, ly - l.r * 0.35, hr, 0, Math.PI * 2);
+			c2.fillStyle = g;
+			c2.fill();
+		}
+
+		// Pass 5 — dissolve flat base via destination-out gradient
+		c2.save();
+		c2.globalCompositeOperation = 'destination-out';
+		const featherTop = ccy + s * 0.32;
+		const fade = c2.createLinearGradient(0, featherTop, 0, CH);
+		fade.addColorStop(0.00, 'rgba(0,0,0,0)');
+		fade.addColorStop(0.42, 'rgba(0,0,0,0.62)');
+		fade.addColorStop(1.00, 'rgba(0,0,0,1)');
+		c2.fillStyle = fade;
+		c2.fillRect(0, featherTop, CW, CH - featherTop);
+		c2.restore();
+
+		return c;
 	}
 
 	// ── draw: clouds ───────────────────────────────────────────────────────────
@@ -745,40 +862,23 @@
 
 		const minutesSinceEpoch = Date.now() / 60000;
 		const { top, shadow } = getCloudColors(altDeg);
+		const colorKey = quantizeColorKey(top, shadow);
 
 		ctx.save();
 		for (const cloud of clouds) {
+			// Rebuild offscreen bitmap only when time-of-day color quantizes to new step
+			if (!cloud.cache || cloud.cacheColorKey !== colorKey) {
+				cloud.cache = renderCloudToCanvas(cloud, top, shadow);
+				cloud.cacheColorKey = colorKey;
+			}
 			const rawX = (cloud.xFrac * W + minutesSinceEpoch * cloud.speed) % (W + cloud.size * 3);
 			const cx   = rawX - cloud.size * 1.5;
 			const cy   = cloud.yFrac * horizonY * 0.82;
 			ctx.globalAlpha = cloud.alpha * cloudAlpha;
-			drawCloudBlob(ctx, cx, cy, cloud.size, cloud.prngseed, top, shadow);
+			// Draw centered on (cx, cy) — matches ccx/ccy in renderCloudToCanvas
+			ctx.drawImage(cloud.cache, cx - cloud.size * 2.6, cy - cloud.size * 1.5);
 		}
 		ctx.restore();
-	}
-
-	// Each puff gets a radial gradient: bright top → darker underside.
-	function drawCloudBlob(
-		ctx: CanvasRenderingContext2D,
-		cx: number, cy: number, size: number, seed: number,
-		topRGB: RGB, shadowRGB: RGB
-	): void {
-		const rng = makePRNG(seed);
-		for (let i = 0; i < 9; i++) {
-			const ox = (rng() - 0.5) * size * 1.6;
-			const oy = (rng() - 0.5) * size * 0.38;
-			const rx = size * (0.35 + rng() * 0.65);
-			const ry = rx * 0.56;
-			const px = cx + ox, py = cy + oy;
-			// Gradient: inner center is slightly above puff center (lit from above)
-			const grad = ctx.createRadialGradient(px, py - ry * 0.4, 0, px, py + ry * 0.3, rx * 1.1);
-			grad.addColorStop(0, css(topRGB));
-			grad.addColorStop(1, css(shadowRGB));
-			ctx.beginPath();
-			ctx.ellipse(px, py, rx, ry, 0, 0, Math.PI * 2);
-			ctx.fillStyle = grad;
-			ctx.fill();
-		}
 	}
 
 	// ── day/night theme ────────────────────────────────────────────────────────
