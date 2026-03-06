@@ -166,44 +166,6 @@
 		return kfs[kfs.length - 1];
 	}
 
-	// ── cloud lobe generator ──────────────────────────────────────────────────
-	// Builds a tightly-overlapping lobe cluster. Individual lobes should NOT be
-	// visible — they accumulate as density through soft gradient overlap.
-	// Coordinates are relative to cloud center (0,0); negative oy = upward.
-	function genLobes(rng: () => number, size: number): Lobe[] {
-		const lobes: Lobe[] = [];
-
-		// Primary body lobe — moderately sized anchor
-		const pr = size * (0.28 + rng() * 0.14);
-		const px = (rng() - 0.5) * size * 0.15;
-		lobes.push({ ox: px, oy: 0, r: pr });
-
-		// Secondary lobes: tightly clustered on upper arc (short dist so they merge)
-		const numSec = 6 + Math.floor(rng() * 4);
-		for (let i = 0; i < numSec; i++) {
-			const angle = -(rng() * Math.PI);
-			const dist  = pr * (0.28 + rng() * 0.42);   // close enough to overlap heavily
-			const r     = pr * (0.30 + rng() * 0.45);
-			lobes.push({
-				ox: px + Math.cos(angle) * dist * (0.8 + rng() * 0.4),
-				oy: Math.sin(angle) * dist,
-				r,
-			});
-		}
-
-		// 2–3 background mid-body lobes for bulk/density (slightly below center)
-		const numBg = 2 + Math.floor(rng() * 2);
-		for (let i = 0; i < numBg; i++) {
-			lobes.push({
-				ox: px + (rng() - 0.5) * pr * 1.1,
-				oy: pr * (0.08 + rng() * 0.22),
-				r:  pr * (0.20 + rng() * 0.25),
-			});
-		}
-
-		return lobes;
-	}
-
 	// Cache key: quantize RGB to 8-step bins so slow sky transitions don't
 	// trigger a rebuild every single frame.
 	function quantizeColorKey(top: RGB, shadow: RGB): string {
@@ -221,16 +183,14 @@
 		isMilkyWay: boolean;
 	}
 
-	interface Lobe { ox: number; oy: number; r: number; }
-
 	interface CloudDef {
 		xFrac:         number;   // initial x fraction (0–1)
-		yFrac:         number;   // y fraction in sky area (0–1)
-		size:          number;
+		yFrac:         number;   // 0 = high in sky, ~0.38 = near horizon
+		size:          number;   // body width in px
+		aspectRatio:   number;   // height÷width — near-horizon ~0.10, overhead ~0.42
 		alpha:         number;
 		prngseed:      number;
 		speed:         number;   // px / minute
-		lobes:         Lobe[];
 		cache:         HTMLCanvasElement | null;
 		cacheColorKey: string;
 	}
@@ -258,7 +218,8 @@
 	let stars: Star[]               = [];
 	let clouds: CloudDef[]          = [];
 	let cirrus: CirrusDef[]         = [];
-	let plants: PlantInstance[]     = [];
+	let bgPlants: PlantInstance[]   = [];  // drawn before midground trees (far, near horizon)
+	let fgPlants: PlantInstance[]   = [];  // drawn after trees (near, foreground)
 	let treeSegments: TreeSegment[] = [];
 	let gardenAgeUnits              = 11315;   // default; overwritten from localStorage on mount
 	let W = 0, H = 0, horizonY = 0;
@@ -300,15 +261,19 @@
 		const crng = makePRNG(0xC10DE00F);
 		clouds = [];
 		for (let i = 0; i < CLOUD_COUNT; i++) {
-			const xFrac    = crng();
-			const yFrac    = 0.06 + crng() * 0.34;
-			const size     = 55 + crng() * 90;
-			const alpha    = 0.62 + crng() * 0.28;
-			const prngseed = Math.floor(crng() * 0x7FFFFFFF);
-			const speed    = 8 + crng() * 18;
+			const xFrac  = crng();
+			const yFrac  = 0.05 + crng() * 0.33;  // 0 = high, 0.38 = near horizon
+
+			// Perspective: clouds high in sky are taller + more opaque.
+			// perspFrac = 1 overhead, 0 near horizon.
+			const perspFrac  = 1 - yFrac / 0.38;
+			const size       = (110 + crng() * 130) * (0.50 + perspFrac * 0.50);
+			const aspectRatio = 0.10 + perspFrac * 0.34;   // 0.10 flat sliver → 0.44 tall dome
+			const alpha      = (0.52 + crng() * 0.32) * (0.38 + perspFrac * 0.62);
+			const prngseed   = Math.floor(crng() * 0x7FFFFFFF);
+			const speed      = 6 + crng() * 16;
 			clouds.push({
-				xFrac, yFrac, size, alpha, prngseed, speed,
-				lobes:         genLobes(makePRNG(prngseed), size),
+				xFrac, yFrac, size, aspectRatio, alpha, prngseed, speed,
 				cache:         null,
 				cacheColorKey: '',
 			});
@@ -330,35 +295,42 @@
 
 		// ── plants ──────────────────────────────────────────────────────────────────────────
 		const prng = makePRNG(0xBADC0FFE);
-		plants = [];
 
-		// Plants scatter across 60% of the ground band. Depth fraction is biased toward
-		// the foreground so near plants are denser. Height scales with depth: small/faint
-		// at the horizon, large/bold near the viewer.
-		const groundBand = (ch - hy) * 0.60;
+		// Plants scatter across 65% of the ground band. yFrac=0 is at the horizon (far/small),
+		// yFrac=1 is deep foreground (large/opaque). Split at yFrac=0.28 into bg/fg layers so
+		// background grass draws behind midground trees, foreground grass draws in front.
+		const groundBand = (ch - hy) * 0.65;
+		const bgCut = 0.28;   // yFrac threshold separating bg from fg
 
-		for (let i = 0; i < 62; i++) {
-			const yFrac  = Math.pow(prng(), 1.5);       // bias: more plants near viewer
+		bgPlants = [];
+		fgPlants = [];
+
+		// Grass — 85 total, weighted toward the foreground but with a healthy far population
+		for (let i = 0; i < 85; i++) {
+			const yFrac  = Math.pow(prng(), 1.4);
 			const x      = prng() * cw;
 			const y      = hy + yFrac * groundBand;
 			const bornAt = prng() * 4000;
 			const scale  = growthFactor(Math.max(0, gardenAgeUnits - bornAt));
-			const depth  = 0.38 + yFrac * 1.55;         // 0.38× (far) → 1.93× (near)
-			const h      = (22 + prng() * 42) * scale * depth;
+			const depth  = 0.35 + yFrac * 1.60;
+			const h      = (20 + prng() * 40) * scale * depth;
 			const seed   = Math.floor(prng() * 0x7FFFFFFF);
-			plants.push(makeGrassTuft(x, y, h, seed));
+			const plant  = makeGrassTuft(x, y, h, seed);
+			(yFrac < bgCut ? bgPlants : fgPlants).push(plant);
 		}
 
-		for (let i = 0; i < 12; i++) {
-			const yFrac  = Math.pow(prng(), 1.2) * 0.75 + 0.08; // keep ferns off the very horizon
+		// Ferns — 14 total, kept off the very horizon
+		for (let i = 0; i < 14; i++) {
+			const yFrac  = Math.pow(prng(), 1.2) * 0.78 + 0.06;
 			const x      = prng() * cw;
 			const y      = hy + yFrac * groundBand;
 			const bornAt = prng() * 6000;
 			const scale  = growthFactor(Math.max(0, gardenAgeUnits - bornAt));
 			const depth  = 0.40 + yFrac * 1.40;
-			const h      = (52 + prng() * 52) * scale * depth;
+			const h      = (50 + prng() * 50) * scale * depth;
 			const seed   = Math.floor(prng() * 0x7FFFFFFF);
-			plants.push(makeFern(x, y, h, seed));
+			const plant  = makeFern(x, y, h, seed);
+			(yFrac < bgCut ? bgPlants : fgPlants).push(plant);
 		}
 	}
 
@@ -611,7 +583,7 @@
 		const hillColor = isNight    ? 'rgba(6,8,16,0.92)'
 		                : isTwilight ? 'rgba(40,44,32,0.90)'
 		                :              'rgba(70,82,46,0.88)';
-		fillHillRange(ctx, 8.1, horizonY * 0.14, hillColor, horizon, hazeBase * 0.24);
+		fillHillRange(ctx, 8.1, horizonY * 0.32, hillColor, horizon, hazeBase * 0.24);
 	}
 
 	function fillMountainRange(
@@ -643,11 +615,20 @@
 		seed: number, heightScale: number, color: string,
 		hazeRGB: RGB = [255, 255, 255], hazeAlpha = 0
 	): void {
+		// Two broad sinusoidal crests define the large-scale hillscape; fBm adds
+		// organic micro-texture on top. The result reads as a hillside you're standing
+		// on that sweeps up to a crest and rolls away into the next terrain layer.
 		ctx.save();
 		ctx.beginPath();
 		ctx.moveTo(0, H);
-		for (let px = 0; px <= W; px += 4) {
-			const h = fbm1D((px / W) * 4.5 + seed) * heightScale;
+		for (let px = 0; px <= W; px += 3) {
+			const t = px / W;
+			// Two offset hill crests — pow sharpens the peaks, keeping valleys flat
+			const crest1 = Math.pow(Math.max(0, Math.sin(t * Math.PI * 1.9 + 0.5)), 1.6) * 0.55;
+			const crest2 = Math.pow(Math.max(0, Math.sin(t * Math.PI * 1.1 + 2.6)), 1.4) * 0.38;
+			// fBm texture layered on top (reduced contribution vs. before)
+			const detail = fbm1D(t * 5.0 + seed) * 0.16;
+			const h = (crest1 + crest2 + detail) * heightScale;
 			ctx.lineTo(px, horizonY - h);
 		}
 		ctx.lineTo(W, H);
@@ -866,59 +847,101 @@
 	}
 
 	// ── cloud: offscreen renderer ─────────────────────────────────────────────
-	// 3-pass approach: lobes accumulate density as overlapping soft discs (no
-	// per-lobe shading — that creates the "sphere" look). One global source-atop
-	// gradient applies directional lighting to the whole cloud mass.
+	// Slab model: flat base + bumpy top. All lobe centers sit ABOVE the base line.
+	// Their sphere-tops create the cauliflower bumps; everything below the base is
+	// erased, giving the characteristic flat-bottomed cumulus shape. Perspective
+	// is baked in via aspectRatio: near-horizon clouds are thin slabs (~0.10),
+	// overhead clouds are tall domes (~0.42).
 	function renderCloudToCanvas(cloud: CloudDef, topRGB: RGB, shadowRGB: RGB): HTMLCanvasElement {
-		const s   = cloud.size;
-		const CW  = Math.ceil(s * 5.2);
-		const CH  = Math.ceil(s * 3.0);
-		const ccx = CW / 2;
-		const ccy = s * 1.5;
+		const rng      = makePRNG(cloud.prngseed);
+		const totalW   = cloud.size;
+		const totalH   = Math.max(cloud.size * cloud.aspectRatio, 8);
+
+		// Padding: horizontal for side feathering, vertical top for lobe overflow
+		const padX = totalW * 0.14;
+		const padT = totalH * 0.85;   // room above base for lobe tops
+		const padB = Math.max(totalH * 0.22, 6);  // small gap below base for feather
+
+		const CW    = Math.ceil(totalW + padX * 2);
+		const CH    = Math.ceil(totalH + padT + padB);
+		const baseY = CH - padB;   // flat base sits here in offscreen canvas
 
 		const c  = document.createElement('canvas');
-		c.width = CW; c.height = CH;
-		const c2 = c.getContext('2d')!;
+		c.width  = CW;
+		c.height = CH;
+		const ctx = c.getContext('2d')!;
 
-		// Pass 1 — soft discs in topRGB; overlapping regions accumulate opacity
-		// naturally, creating denser cores without visible sphere edges.
-		for (const l of cloud.lobes) {
-			const lx = ccx + l.ox, ly = ccy + l.oy;
-			const g  = c2.createRadialGradient(lx, ly, 0, lx, ly, l.r);
-			g.addColorStop(0.00, css(topRGB, 0.92));
-			g.addColorStop(0.52, css(topRGB, 0.68));
-			g.addColorStop(0.78, css(topRGB, 0.20));
-			g.addColorStop(1.00, css(topRGB, 0));
-			c2.beginPath();
-			c2.arc(lx, ly, l.r, 0, Math.PI * 2);
-			c2.fillStyle = g;
-			c2.fill();
+		// Generate lobes — all centers anchored above baseY.
+		// They spread evenly across the width; edge lobes are shorter than central ones.
+		const numLobes = 4 + Math.floor(rng() * 4);
+		for (let i = 0; i < numLobes; i++) {
+			const xFrac    = (i + 0.15 + rng() * 0.70) / numLobes;
+			const cx       = padX + xFrac * totalW;
+			const edgeness = Math.abs(xFrac - 0.5) * 2;   // 0 center → 1 edge
+			// Radius: central lobes taller, edge lobes shorter — gives the dome silhouette
+			const r = Math.max(totalH * (0.42 + rng() * 0.30) * (1 - edgeness * 0.30), 5);
+			// Center: placed so the circle's bottom reaches baseY (or slightly past)
+			const cy = baseY - r * (0.52 + rng() * 0.36);
+
+			// Soft gradient disc — overlapping discs merge into dense body;
+			// the rounded tops of each disc ARE the cauliflower bumps.
+			const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+			g.addColorStop(0.00, css(topRGB, 0.90));
+			g.addColorStop(0.52, css(topRGB, 0.72));
+			g.addColorStop(0.80, css(topRGB, 0.22));
+			g.addColorStop(1.00, css(topRGB, 0.00));
+			ctx.beginPath();
+			ctx.arc(cx, cy, r, 0, Math.PI * 2);
+			ctx.fillStyle = g;
+			ctx.fill();
 		}
 
-		// Pass 2 — global directional shading via source-atop:
-		// shadows the bottom portion of the cloud mass without touching transparency.
-		c2.save();
-		c2.globalCompositeOperation = 'source-atop';
-		const shade = c2.createLinearGradient(0, ccy - s * 0.25, 0, ccy + s * 0.55);
-		shade.addColorStop(0.00, css(shadowRGB, 0.00));
-		shade.addColorStop(0.58, css(shadowRGB, 0.00));
-		shade.addColorStop(0.80, css(shadowRGB, 0.28));
-		shade.addColorStop(1.00, css(shadowRGB, 0.52));
-		c2.fillStyle = shade;
-		c2.fillRect(0, 0, CW, CH);
-		c2.restore();
+		// Pass 2: erase everything at and below baseY → creates the flat base
+		ctx.save();
+		ctx.globalCompositeOperation = 'destination-out';
+		ctx.fillStyle = 'rgba(0,0,0,1)';
+		ctx.fillRect(0, baseY, CW, CH - baseY);
+		ctx.restore();
 
-		// Pass 3 — dissolve flat base via destination-out
-		c2.save();
-		c2.globalCompositeOperation = 'destination-out';
-		const featherTop = ccy + s * 0.30;
-		const fade = c2.createLinearGradient(0, featherTop, 0, CH);
-		fade.addColorStop(0.00, 'rgba(0,0,0,0)');
-		fade.addColorStop(0.40, 'rgba(0,0,0,0.65)');
-		fade.addColorStop(1.00, 'rgba(0,0,0,1)');
-		c2.fillStyle = fade;
-		c2.fillRect(0, featherTop, CW, CH - featherTop);
-		c2.restore();
+		// Pass 3: directional top→base shading (source-atop so it only touches
+		// the cloud mass, not the transparent background).
+		// Top stays bright (lit by sun); base zone darkens to shadowRGB.
+		ctx.save();
+		ctx.globalCompositeOperation = 'source-atop';
+		const shadeTop = Math.max(0, baseY - totalH * 1.2);
+		const shade    = ctx.createLinearGradient(0, shadeTop, 0, baseY);
+		shade.addColorStop(0.00, css(shadowRGB, 0.00));
+		shade.addColorStop(0.52, css(shadowRGB, 0.00));
+		shade.addColorStop(0.76, css(shadowRGB, 0.28));
+		shade.addColorStop(1.00, css(shadowRGB, 0.58));
+		ctx.fillStyle = shade;
+		ctx.fillRect(0, 0, CW, CH);
+		ctx.restore();
+
+		// Pass 4: feather the base edge so the cloud dissolves into the sky
+		ctx.save();
+		ctx.globalCompositeOperation = 'destination-out';
+		const featherH   = Math.max(totalH * 0.22, 6);
+		const featherTop = baseY - featherH * 0.25;
+		const feather    = ctx.createLinearGradient(0, featherTop, 0, baseY + padB * 0.5);
+		feather.addColorStop(0.00, 'rgba(0,0,0,0)');
+		feather.addColorStop(0.50, 'rgba(0,0,0,0.50)');
+		feather.addColorStop(1.00, 'rgba(0,0,0,1)');
+		ctx.fillStyle = feather;
+		ctx.fillRect(0, featherTop, CW, baseY + padB * 0.5 - featherTop);
+		ctx.restore();
+
+		// Pass 5: feather left/right sides so clouds trail off softly
+		ctx.save();
+		ctx.globalCompositeOperation = 'destination-out';
+		const sw = padX * 1.15;
+		const lf = ctx.createLinearGradient(0, 0, sw, 0);
+		lf.addColorStop(0, 'rgba(0,0,0,1)'); lf.addColorStop(1, 'rgba(0,0,0,0)');
+		ctx.fillStyle = lf; ctx.fillRect(0, 0, sw, CH);
+		const rf = ctx.createLinearGradient(CW - sw, 0, CW, 0);
+		rf.addColorStop(0, 'rgba(0,0,0,0)'); rf.addColorStop(1, 'rgba(0,0,0,1)');
+		ctx.fillStyle = rf; ctx.fillRect(CW - sw, 0, sw, CH);
+		ctx.restore();
 
 		return c;
 	}
@@ -934,17 +957,25 @@
 
 		ctx.save();
 		for (const cloud of clouds) {
-			// Rebuild offscreen bitmap only when time-of-day color quantizes to new step
 			if (!cloud.cache || cloud.cacheColorKey !== colorKey) {
 				cloud.cache = renderCloudToCanvas(cloud, top, shadow);
 				cloud.cacheColorKey = colorKey;
 			}
-			const rawX = (cloud.xFrac * W + minutesSinceEpoch * cloud.speed) % (W + cloud.size * 3);
-			const cx   = rawX - cloud.size * 1.5;
-			const cy   = cloud.yFrac * horizonY * 0.82;
+
+			// Compute where in the offscreen canvas the flat base sits, so we can
+			// align it to the cloud's vertical position in the main canvas.
+			const totalH = Math.max(cloud.size * cloud.aspectRatio, 8);
+			const padB   = Math.max(totalH * 0.22, 6);
+			const CH     = cloud.cache.height;
+			const baseY  = CH - padB;   // base y within offscreen canvas
+
+			const rawX = (cloud.xFrac * W + minutesSinceEpoch * cloud.speed) % (W + cloud.cache.width);
+			const drawX = rawX - cloud.cache.width / 2;
+			const skyY  = cloud.yFrac * horizonY * 0.84;   // base sits at this y in main canvas
+			const drawY = skyY - baseY;
+
 			ctx.globalAlpha = cloud.alpha * cloudAlpha;
-			// Draw centered on (cx, cy) — matches ccx/ccy in renderCloudToCanvas
-			ctx.drawImage(cloud.cache, cx - cloud.size * 2.6, cy - cloud.size * 1.5);
+			ctx.drawImage(cloud.cache, drawX, drawY);
 		}
 		ctx.restore();
 	}
@@ -1049,8 +1080,12 @@
 
 		// Wind: slow noise-driven oscillation (degrees/s²)
 		const windForce = noise1D(time / 6) * 28;
-		tickWind(plants, windForce, dt);
-		if (cursorActive) applyMouseForce(plants, smMouseX, smMouseY);
+		tickWind(bgPlants, windForce, dt);
+		tickWind(fgPlants, windForce, dt);
+		if (cursorActive) {
+			applyMouseForce(bgPlants, smMouseX, smMouseY);
+			applyMouseForce(fgPlants, smMouseX, smMouseY);
+		}
 
 		ctx.clearRect(0, 0, W, H);
 
@@ -1064,10 +1099,13 @@
 		drawPurpleLight(ctx, altDeg, sxn);
 		drawGround(ctx, altDeg);
 		drawTerrain(ctx, altDeg);
+		drawPlants(ctx, bgPlants, horizonY, H);   // far grass — behind midground trees
+		drawMidgroundTrees(ctx, altDeg);
 		drawCirrus(ctx, altDeg);
 		drawClouds(ctx, altDeg);
+		drawTreeShadow(ctx, altDeg);
 		if (treeSegments.length > 0) drawTree(ctx, treeSegments, W, H);
-		drawPlants(ctx, plants, horizonY, H);
+		drawPlants(ctx, fgPlants, horizonY, H);   // near grass — in front of everything
 
 		animFrame = requestAnimationFrame(draw);
 	}
