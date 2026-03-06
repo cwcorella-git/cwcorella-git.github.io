@@ -64,7 +64,6 @@
 		if (next.has(id)) next.delete(id); else next.add(id);
 		completed = next;
 		if (browser) localStorage.setItem('cwc-read', JSON.stringify([...next]));
-		menu = null;
 	}
 
 	// ── context menu ─────────────────────────────────────────────
@@ -115,15 +114,6 @@
 {#if menu}
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div class="menu" style="top:{menu.y}px; left:{menu.x}px" role="dialog">
-		<button class="menu-toggle" onclick={() => toggleRead(menu!.book.id)}>
-			{completed.has(menu.book.id) ? '✓ mark unread' : 'mark as read'}
-		</button>
-		{#if adminState.active && adminState.editMode}
-			<button class="menu-toggle" onclick={() => { bookFormState.openEdit(menu!.book); closeMenu(); }}>
-				✎ edit book
-			</button>
-		{/if}
-		<div class="menu-divider"></div>
 		{#if hasLinks(menu.book)}
 			{#each menu.book.links! as link}
 				<a href={link.url} target="_blank" rel="noopener noreferrer">{link.name} ↗</a>
@@ -189,6 +179,12 @@
 							<span class="title">{book.title}</span>
 							<span class="meta">{book.author}{book.year ? ` · ${book.year}` : ''}</span>
 						</div>
+						<button
+							class="read-toggle"
+							class:is-read={completed.has(book.id)}
+							onclick={() => toggleRead(book.id)}
+							aria-label={completed.has(book.id) ? 'Mark as unread' : 'Mark as read'}
+						>✓</button>
 						{#if adminState.editMode}
 							<button
 								class="edit-pencil"
@@ -351,6 +347,19 @@
 		letter-spacing: 0.06em;
 		color: #6a5a40;
 	}
+
+	.read-toggle {
+		background: none;
+		border: none;
+		cursor: pointer;
+		color: #2e2820;
+		font-size: 0.85rem;
+		padding: 0 0.4rem;
+		transition: color 0.15s;
+		flex-shrink: 0;
+	}
+	.read-toggle:hover { color: #7a6a48; }
+	.read-toggle.is-read { color: #c8a060; }
 
 	.edit-pencil {
 		background: none;
