@@ -1,7 +1,90 @@
 import type { Book } from '$lib/types';
 import allBooksStatic from '$lib/books.json';
+import { commitFiles } from '$lib/admin/github';
 
 export const ADMIN_SEQUENCE = '```';
+
+// ── Write queue ───────────────────────────────────────────────────────────────
+
+type DomainPayload =
+	| { domain: 'books'; books: Book[]; extraUpdates?: { path: string; content: string }[]; deletions?: string[] }
+	| { domain: 'home'; content: string }
+	| { domain: 'journals-index'; encIndexJson: string; extraUpdates: { path: string; content: string }[]; deletions: string[]; message: string };
+
+type SyncStatus = 'idle' | 'dirty' | 'saving' | 'error';
+
+let _pending = $state<Map<string, DomainPayload>>(new Map());
+let _syncStatus = $state<SyncStatus>('idle');
+let _syncError = $state('');
+let _debounceTimer: ReturnType<typeof setTimeout> | null = null;
+let _flushing = false;
+
+async function _commitDomain(payload: DomainPayload, pat: string): Promise<void> {
+	if (payload.domain === 'books') {
+		await commitFiles(
+			pat,
+			[{ path: 'src/lib/books.json', content: JSON.stringify(payload.books) }, ...(payload.extraUpdates ?? [])],
+			'update books.json',
+			payload.deletions ?? []
+		);
+	} else if (payload.domain === 'home') {
+		await commitFiles(
+			pat,
+			[{ path: 'src/lib/content/home.json', content: JSON.stringify({ content: payload.content }, null, '\t') }],
+			'update home content'
+		);
+	} else {
+		await commitFiles(
+			pat,
+			[{ path: 'static/docs/private/journals-index.enc', content: payload.encIndexJson }, ...payload.extraUpdates],
+			payload.message,
+			payload.deletions
+		);
+	}
+}
+
+export const writeQueue = {
+	get status(): SyncStatus { return _syncStatus; },
+	get error(): string { return _syncError; },
+	get isDirty(): boolean { return _pending.size > 0; },
+
+	push(payload: DomainPayload): void {
+		_pending = new Map(_pending).set(payload.domain, payload);
+		_syncStatus = 'dirty';
+		if (_debounceTimer !== null) clearTimeout(_debounceTimer);
+		_debounceTimer = setTimeout(() => { writeQueue.flush(); }, 10_000);
+	},
+
+	async flush(): Promise<void> {
+		if (_flushing || _pending.size === 0) return;
+		_flushing = true;
+		_syncStatus = 'saving';
+		if (_debounceTimer !== null) { clearTimeout(_debounceTimer); _debounceTimer = null; }
+
+		const snapshot = new Map(_pending);
+		_pending = new Map();
+
+		const pat = _pat;
+		try {
+			for (const payload of snapshot.values()) {
+				await _commitDomain(payload, pat);
+			}
+			_syncStatus = _pending.size > 0 ? 'dirty' : 'idle';
+			_syncError = '';
+		} catch (e: unknown) {
+			// restore snapshot entries that weren't yet pushed during this flush
+			const restored = new Map(_pending);
+			for (const [k, v] of snapshot) {
+				if (!restored.has(k)) restored.set(k, v);
+			}
+			_pending = restored;
+			_syncStatus = 'error';
+			_syncError = e instanceof Error ? e.message : 'Sync failed.';
+		} finally {
+			_flushing = false;
+		}
+	}
+};
 
 // ── Shared books state ────────────────────────────────────────────────────────
 // Reading page derives from this; BookForm writes to it on save.
@@ -32,7 +115,8 @@ export const adminState = {
 		sessionStorage.setItem('cwc-admin-key', key);
 	},
 
-	logout() {
+	async logout() {
+		await writeQueue.flush();
 		_active = false;
 		_editMode = false;
 		_pat = '';

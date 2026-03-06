@@ -1,8 +1,7 @@
 <script lang="ts">
 	import homeContent from '$lib/content/home.json';
 	import HomeEditor from '$lib/components/HomeEditor.svelte';
-	import { adminState } from '$lib/admin/state.svelte';
-	import { commitFiles } from '$lib/admin/github';
+	import { adminState, writeQueue } from '$lib/admin/state.svelte';
 	import { marked } from 'marked';
 
 	let content = $state(homeContent.content);
@@ -11,14 +10,10 @@
 	// Render markdown → HTML for display
 	let rendered = $derived(marked(content) as string);
 
-	async function save(newContent: string) {
-		await commitFiles(
-			adminState.pat,
-			[{ path: 'src/lib/content/home.json', content: JSON.stringify({ content: newContent }, null, '\t') }],
-			'update home content'
-		);
+	function save(newContent: string) {
 		content = newContent;
 		editing = false;
+		writeQueue.push({ domain: 'home', content: newContent });
 	}
 </script>
 

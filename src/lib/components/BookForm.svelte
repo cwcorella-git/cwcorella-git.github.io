@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import type { Book, BookDoc, BookLink } from '$lib/types';
-	import { adminState, booksState } from '$lib/admin/state.svelte';
-	import { updateBooksJson, putFileWithFreshSha } from '$lib/admin/github';
+	import { adminState, booksState, writeQueue } from '$lib/admin/state.svelte';
 	import { encryptDoc } from '$lib/admin/crypto';
 	import { toast } from '$lib/admin/toast.svelte';
 	import allBooksStatic from '$lib/books.json';
@@ -67,23 +66,14 @@
 			const slug = `${newId}-${slugify(title)}`;
 
 			let doc: BookDoc | undefined = book?.doc;
+			const extraUpdates: { path: string; content: string }[] = [];
 
 			if (docContent.trim()) {
 				if (docVisibility === 'admin') {
 					const encrypted = await encryptDoc(docContent.trim(), adminState.contentKey);
-					await putFileWithFreshSha(
-						adminState.pat,
-						`static/docs/private/${slug}.enc`,
-						JSON.stringify(encrypted),
-						`update doc: ${slug}`
-					);
+					extraUpdates.push({ path: `static/docs/private/${slug}.enc`, content: JSON.stringify(encrypted) });
 				} else {
-					await putFileWithFreshSha(
-						adminState.pat,
-						`static/docs/public/${slug}.md`,
-						docContent.trim(),
-						`update doc: ${slug}`
-					);
+					extraUpdates.push({ path: `static/docs/public/${slug}.md`, content: docContent.trim() });
 				}
 				doc = { file: slug, visibility: docVisibility };
 			}
@@ -109,7 +99,7 @@
 				updatedBooks = books.map((b) => (b.id === newId ? entry : b));
 			}
 
-			await updateBooksJson(adminState.pat, updatedBooks);
+			writeQueue.push({ domain: 'books', books: updatedBooks, extraUpdates });
 			booksState.set(updatedBooks);
 			onSaved(updatedBooks);
 		} catch (e: unknown) {
@@ -125,7 +115,7 @@
 		try {
 			const books: Book[] = booksState.books;
 			const updatedBooks = books.filter((b) => b.id !== book!.id);
-			await updateBooksJson(adminState.pat, updatedBooks);
+			writeQueue.push({ domain: 'books', books: updatedBooks });
 			booksState.set(updatedBooks);
 			onSaved(updatedBooks);
 		} catch (e: unknown) {

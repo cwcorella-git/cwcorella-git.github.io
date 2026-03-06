@@ -1,8 +1,7 @@
 <script lang="ts">
 	import type { Book } from '$lib/types';
 	import allBooksStatic from '$lib/books.json';
-	import { adminState, bookFormState, booksState } from '$lib/admin/state.svelte';
-	import { updateBooksJson } from '$lib/admin/github';
+	import { adminState, bookFormState, booksState, writeQueue } from '$lib/admin/state.svelte';
 	import { toast } from '$lib/admin/toast.svelte';
 	import DocReader from '$lib/components/DocReader.svelte';
 
@@ -51,26 +50,12 @@
 	}
 
 	// ── read state (stored in books.json, admin-only toggle) ─────
-	let togglingId = $state<number | null>(null);
-
-	async function toggleRead(book: Book) {
-		if (togglingId !== null) return;
-		togglingId = book.id;
+	function toggleRead(book: Book) {
 		const updated = booksState.books.map(b =>
 			b.id === book.id ? { ...b, read: !b.read || undefined } : b
 		);
 		booksState.set(updated);
-		try {
-			await updateBooksJson(adminState.pat, updated);
-		} catch (e: unknown) {
-			// revert on failure
-			booksState.set(booksState.books.map(b =>
-				b.id === book.id ? { ...b, read: book.read } : b
-			));
-			toast.error(e instanceof Error ? e.message : 'Failed to save.');
-		} finally {
-			togglingId = null;
-		}
+		writeQueue.push({ domain: 'books', books: updated });
 	}
 
 	// ── context menu ─────────────────────────────────────────────
@@ -190,7 +175,6 @@
 							<button
 								class="read-toggle"
 								class:is-read={book.read}
-								disabled={togglingId === book.id}
 								onclick={() => toggleRead(book)}
 								aria-label={book.read ? 'Mark as unread' : 'Mark as read'}
 							>{book.read ? 'unmark' : 'mark read'}</button>

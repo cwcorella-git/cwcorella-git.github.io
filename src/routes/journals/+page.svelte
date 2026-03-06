@@ -2,7 +2,7 @@
 	import { adminState } from '$lib/admin/state.svelte';
 	import { encryptDoc, decryptDoc } from '$lib/admin/crypto';
 	import { renderMarkdown } from '$lib/admin/markdown';
-	import { commitFiles } from '$lib/admin/github';
+	import { writeQueue } from '$lib/admin/state.svelte';
 	import { toast } from '$lib/admin/toast.svelte';
 
 	interface JournalMeta { slug: string; title: string; date: string | null; }
@@ -36,12 +36,13 @@
 
 	async function saveIndex(newIndex: JournalMeta[], message: string, extraUpdates: { path: string; content: string }[] = [], deletions: string[] = []) {
 		const encIndex = await encryptDoc(JSON.stringify(newIndex), adminState.contentKey);
-		await commitFiles(
-			adminState.pat,
-			[{ path: 'static/docs/private/journals-index.enc', content: JSON.stringify(encIndex) }, ...extraUpdates],
-			message,
-			deletions
-		);
+		writeQueue.push({
+			domain: 'journals-index',
+			encIndexJson: JSON.stringify(encIndex),
+			extraUpdates,
+			deletions,
+			message
+		});
 		index = newIndex;
 	}
 

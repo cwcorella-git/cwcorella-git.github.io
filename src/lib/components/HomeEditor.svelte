@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { toast } from '$lib/admin/toast.svelte';
 
 	let {
 		content,
@@ -8,23 +7,15 @@
 		onCancel
 	}: {
 		content: string;
-		onSave: (newContent: string) => Promise<void>;
+		onSave: (newContent: string) => void;
 		onCancel: () => void;
 	} = $props();
 
 	let draft = $state(untrack(() => content));
-	let saving = $state(false);
 	let textareaEl = $state<HTMLTextAreaElement>();
 
-	async function save() {
-		saving = true;
-		try {
-			await onSave(draft);
-		} catch (e: unknown) {
-			toast.error(e instanceof Error ? e.message : 'Save failed.');
-		} finally {
-			saving = false;
-		}
+	function save() {
+		onSave(draft);
 	}
 
 	function wrap(before: string, after: string) {
@@ -73,8 +64,8 @@
 		spellcheck="true"
 	></textarea>
 	<div class="actions">
-		<button class="cancel" onclick={onCancel} disabled={saving}>cancel</button>
-		<button class="save" onclick={save} disabled={saving}>{saving ? 'saving…' : 'save'}</button>
+		<button class="cancel" onclick={onCancel}>cancel</button>
+		<button class="save" onclick={save}>save</button>
 	</div>
 </div>
 
