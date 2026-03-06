@@ -185,6 +185,11 @@
 		}
 	}
 
+	// ── codename (opaque stable display id derived from slug) ─────────────
+	function codename(slug: string): string {
+		return `${slug.slice(0, 4)}-${slug.slice(4, 8)}-${slug.slice(8, 12)}`;
+	}
+
 	// ── actions ───────────────────────────────────────────────────────────
 	function focusOnMount(node: HTMLElement) { node.focus(); }
 
@@ -218,6 +223,7 @@
 			{#if readerLoading}
 				<p class="status">decrypting…</p>
 			{:else}
+				<h1 class="reader-doc-title">{readerEntry.title}</h1>
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 				{@html readerHtml}
 			{/if}
@@ -309,7 +315,7 @@
 									/>
 								{:else}
 									<button class="entry-title-btn" onclick={() => openReader(entry)}>
-										{entry.title}
+										{codename(entry.slug)}
 									</button>
 								{/if}
 								{#if entry.date}
@@ -454,6 +460,13 @@
 	.reader-body {
 		flex: 1; overflow-y: auto; padding: 2.5rem 3rem;
 		max-width: 72ch; margin: 0 auto; width: 100%;
+	}
+	.reader-doc-title {
+		font-family: Georgia, 'Times New Roman', Times, serif;
+		font-size: 1.3rem; font-weight: normal;
+		color: #d4b878; margin: 0 0 2rem; line-height: 1.3;
+		border-bottom: 1px solid rgba(200, 150, 60, 0.15);
+		padding-bottom: 1.2rem;
 	}
 	.reader-body :global(h1), .reader-body :global(h2), .reader-body :global(h3) {
 		font-family: Georgia, 'Times New Roman', Times, serif; font-weight: normal;

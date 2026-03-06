@@ -53,6 +53,9 @@
 <nav>
 	<a href="/" class:active={$page.url.pathname === '/'}>cwcorella</a>
 	<a href="/reading" class:active={$page.url.pathname === '/reading'}>reading</a>
+	{#if adminState.active}
+		<a href="/journals" class:active={$page.url.pathname === '/journals'}>journals</a>
+	{/if}
 	<AdminToolbar />
 </nav>
 
