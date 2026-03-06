@@ -246,8 +246,8 @@
 	// Stop positions [0, 0.25, 0.5, 0.75, 1] remapped: [0, 0.57, 0.76, 0.88, 1.0]
 	function drawSky(ctx: CanvasRenderingContext2D, altDeg: number): void {
 		const { zenith, mid, lower, horizon } = getSkyColors(altDeg);
-		// Bright segment: very subtle — just keeps the horizon from clipping
-		const bright = lerpRGB(horizon, [255, 255, 255] as RGB, 0.06);
+		// Bright segment: the actual horizon line is slightly lighter than horizon color
+		const bright = lerpRGB(horizon, [255, 255, 255] as RGB, 0.12);
 		const g = ctx.createLinearGradient(0, 0, 0, horizonY);
 		g.addColorStop(0,    css(zenith));
 		g.addColorStop(0.57, css(mid));
@@ -267,7 +267,7 @@
 		const sinAlt = Math.max(0, Math.sin(altDeg * Math.PI / 180));
 		const sunY   = horizonY - sinAlt * horizonY * 0.92;
 		// Fade at high altitudes; full intensity near horizon
-		const intensity = Math.max(0, 1 - Math.max(0, altDeg - 4) / 42) * 0.18;
+		const intensity = Math.max(0, 1 - Math.max(0, altDeg - 4) / 42) * 0.30;
 		// Color: warm orange-amber when low, cool white when high
 		const warmth = Math.max(0, 1 - altDeg / 22);
 		const cr = 255, cg = Math.round(238 - warmth * 38), cb = Math.round(212 - warmth * 82);
@@ -563,12 +563,11 @@
 		function ri(d: number, n: number): number { return Math.round(d + (n - d) * (1 - dl)); }
 
 		const r = document.documentElement;
-		// Glass: day = warm-cream at 65% (readable), night = near-black at 48%.
-		// Warm cream (255,252,242) prevents the cold bluish cast of pure white over a blue sky.
-		const gr = ri(255, 8), gg = ri(252, 6), gb = ri(242, 2);
-		r.style.setProperty('--glass-bg',      `rgba(${gr},${gg},${gb},${(0.65*dl + 0.48*(1-dl)).toFixed(2)})`);
-		r.style.setProperty('--glass-border',  `rgba(${gr},${gg},${gb},${(0.45*dl + 0.18*(1-dl)).toFixed(2)})`);
-		r.style.setProperty('--glass-nav-bg',  `rgba(${gr},${gg},${gb},${(0.55*dl + 0.58*(1-dl)).toFixed(2)})`);
+		// Glass surfaces
+		const gr = ri(255, 8), gg = ri(255, 6), gb = ri(255, 2);
+		r.style.setProperty('--glass-bg',      `rgba(${gr},${gg},${gb},${(0.22*dl + 0.42*(1-dl)).toFixed(2)})`);
+		r.style.setProperty('--glass-border',  `rgba(${gr},${gg},${gb},${(0.40*dl + 0.15*(1-dl)).toFixed(2)})`);
+		r.style.setProperty('--glass-nav-bg',  `rgba(${gr},${gg},${gb},${(0.30*dl + 0.52*(1-dl)).toFixed(2)})`);
 		// Text
 		r.style.setProperty('--clr-text-primary',   `rgb(${ri(61,224)},${ri(46,210)},${ri(26,190)})`);
 		r.style.setProperty('--clr-text-prose',      `rgb(${ri(74,212)},${ri(56,198)},${ri(32,178)})`);
