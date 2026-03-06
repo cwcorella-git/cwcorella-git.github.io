@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Book, BookDoc } from '$lib/types';
+	import type { Book, BookDoc, BookLink } from '$lib/types';
 	import { adminState, booksState } from '$lib/admin/state.svelte';
 	import { updateBooksJson, putFileWithFreshSha } from '$lib/admin/github';
 	import { encryptDoc } from '$lib/admin/crypto';
@@ -27,10 +27,11 @@
 	let author = $state(book?.author ?? '');
 	let year = $state(book?.year?.toString() ?? '');
 	let category = $state(book?.category ?? '');
-	let linkOpenlibrary = $state(book?.links?.openlibrary ?? '');
-	let linkAnna = $state(book?.links?.anna ?? '');
-	let linkGoodreads = $state(book?.links?.goodreads ?? '');
+	let links = $state<BookLink[]>(book?.links ? [...book.links.map(l => ({ ...l }))] : []);
 	let notes = $state(book?.notes ?? '');
+
+	function addLink() { links = [...links, { name: '', url: '' }]; }
+	function removeLink(i: number) { links = links.filter((_, idx) => idx !== i); }
 	let docVisibility = $state<'public' | 'admin'>(book?.doc?.visibility ?? 'public');
 	let docContent = $state('');
 
@@ -84,21 +85,16 @@
 				doc = { file: slug, visibility: docVisibility };
 			}
 
+			const validLinks = links.filter(l => l.name.trim() && l.url.trim())
+				.map(l => ({ name: l.name.trim(), url: l.url.trim() }));
+
 			const entry: Book = {
 				id: newId,
 				title: title.trim(),
 				author: author.trim(),
 				year: year ? parseInt(year, 10) : null,
 				category: category.trim(),
-				...(linkOpenlibrary.trim() || linkAnna.trim() || linkGoodreads.trim()
-					? {
-							links: {
-								...(linkOpenlibrary.trim() ? { openlibrary: linkOpenlibrary.trim() } : {}),
-								...(linkAnna.trim() ? { anna: linkAnna.trim() } : {}),
-								...(linkGoodreads.trim() ? { goodreads: linkGoodreads.trim() } : {})
-							}
-						}
-					: {}),
+				...(validLinks.length ? { links: validLinks } : {}),
 				...(notes.trim() ? { notes: notes.trim() } : {}),
 				...(doc ? { doc } : {})
 			};
@@ -199,19 +195,15 @@
 			</div>
 
 			<fieldset>
-				<legend>Links</legend>
-				<label>
-					<span>Open Library</span>
-					<input type="url" bind:value={linkOpenlibrary} placeholder="https://openlibrary.org/…" />
-				</label>
-				<label>
-					<span>Anna's Archive</span>
-					<input type="url" bind:value={linkAnna} placeholder="https://annas-archive.org/…" />
-				</label>
-				<label>
-					<span>Goodreads</span>
-					<input type="url" bind:value={linkGoodreads} placeholder="https://www.goodreads.com/…" />
-				</label>
+				<legend>Sources</legend>
+				{#each links as link, i}
+					<div class="link-row">
+						<input type="text" bind:value={link.name} placeholder="Source name" />
+						<input type="url" bind:value={link.url} placeholder="https://…" />
+						<button type="button" class="remove-link" onclick={() => removeLink(i)} aria-label="Remove source">×</button>
+					</div>
+				{/each}
+				<button type="button" class="add-link" onclick={addLink}>+ add source</button>
 			</fieldset>
 
 			<label>
@@ -367,6 +359,41 @@
 		flex-direction: column;
 		gap: 0.7rem;
 	}
+
+	.link-row {
+		display: grid;
+		grid-template-columns: 1fr 2fr auto;
+		gap: 0.4rem;
+		align-items: center;
+	}
+	.link-row input { width: 100%; }
+
+	.remove-link {
+		background: none;
+		border: none;
+		color: #6a5a40;
+		font-size: 1rem;
+		cursor: pointer;
+		padding: 0 0.2rem;
+		line-height: 1;
+		transition: color 0.15s;
+		flex-shrink: 0;
+	}
+	.remove-link:hover { color: #c07060; }
+
+	.add-link {
+		background: none;
+		border: 1px dashed rgba(200, 150, 60, 0.2);
+		color: #6a5a40;
+		font-family: 'Courier New', Courier, monospace;
+		font-size: 0.6rem;
+		letter-spacing: 0.08em;
+		padding: 0.3rem 0.7rem;
+		cursor: pointer;
+		transition: all 0.15s;
+		align-self: flex-start;
+	}
+	.add-link:hover { color: #c8a060; border-color: rgba(200, 150, 60, 0.45); }
 
 	.visibility-row {
 		display: flex;

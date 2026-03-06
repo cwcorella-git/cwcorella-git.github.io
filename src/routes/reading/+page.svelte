@@ -82,6 +82,10 @@
 		return `https://www.goodreads.com/search?q=${q}`;
 	}
 
+	function hasLinks(book: Book) {
+		return book.links && book.links.length > 0;
+	}
+
 	// ── doc reader ───────────────────────────────────────────────
 	let docReaderBook = $state<Book | null>(null);
 
@@ -117,14 +121,10 @@
 			</button>
 		{/if}
 		<div class="menu-divider"></div>
-		{#if menu.book.links?.openlibrary}
-			<a href={menu.book.links.openlibrary} target="_blank" rel="noopener noreferrer">Open Library ↗</a>
-		{/if}
-		{#if menu.book.links?.anna}
-			<a href={menu.book.links.anna} target="_blank" rel="noopener noreferrer">Anna's Archive ↗</a>
-		{/if}
-		{#if menu.book.links?.goodreads}
-			<a href={menu.book.links.goodreads} target="_blank" rel="noopener noreferrer">Goodreads ↗</a>
+		{#if hasLinks(menu.book)}
+			{#each menu.book.links! as link}
+				<a href={link.url} target="_blank" rel="noopener noreferrer">{link.name} ↗</a>
+			{/each}
 		{:else}
 			<a href={goodreadsUrl(menu.book)} target="_blank" rel="noopener noreferrer">Goodreads ↗</a>
 		{/if}
