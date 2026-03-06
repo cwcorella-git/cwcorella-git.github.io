@@ -305,12 +305,73 @@
 		ctx.restore();
 	}
 
+	// ── draw: crepuscular rays ────────────────────────────────────────────────
+	// Fan of light shafts radiating from the sun at horizon crossing.
+	// Uses rotate+translate so each strip gets a proper linear gradient.
+	function drawCrepuscularRays(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
+		if (altDeg < -3 || altDeg > 10) return;
+		const intensity = Math.max(0, 1 - Math.abs(altDeg - 2.5) / 6) * 0.20;
+		if (intensity < 0.01) return;
+
+		const sunX = sxn * W;
+		const sunY = horizonY;
+
+		const rng = makePRNG(0xC0FFEE);
+		ctx.save();
+		ctx.beginPath();
+		ctx.rect(0, 0, W, horizonY);   // clip rays to sky area
+		ctx.clip();
+		ctx.globalCompositeOperation = 'screen';
+
+		for (let i = 0; i < 10; i++) {
+			const angle  = (rng() - 0.5) * 1.3;           // ±0.65 rad around vertical
+			const len    = H * (0.45 + rng() * 0.55);
+			const width  = 10 + rng() * 30;
+			const alpha  = intensity * (0.35 + rng() * 0.65);
+
+			ctx.save();
+			ctx.translate(sunX, sunY);
+			ctx.rotate(angle);                             // 0 = straight up
+
+			const grad = ctx.createLinearGradient(0, 0, 0, -len);
+			grad.addColorStop(0,   `rgba(255,210,140,${alpha.toFixed(3)})`);
+			grad.addColorStop(0.4, `rgba(255,200,120,${(alpha * 0.35).toFixed(3)})`);
+			grad.addColorStop(1,   'rgba(255,200,120,0)');
+
+			ctx.fillStyle = grad;
+			ctx.fillRect(-width / 2, -len, width, len);
+			ctx.restore();
+		}
+		ctx.restore();
+	}
+
 	// ── draw: ground ──────────────────────────────────────────────────────────
-	function drawGround(ctx: CanvasRenderingContext2D): void {
+	// Ground color tracks sky state: warm sandy by day, amber at sunset, dark at night.
+	function drawGround(ctx: CanvasRenderingContext2D, altDeg: number): void {
+		const dl  = Math.max(0, Math.min(1, (altDeg + 8) / 16));   // 0=night, 1=full-day
+		const slt = Math.max(0, Math.min(1, 1 - Math.abs(altDeg - 3) / 7)); // sunset peak ~alt 3°
+
+		const dayTop:    RGB = [200, 182, 148];
+		const sunsetTop: RGB = [196, 122,  56];
+		const nightTop:  RGB = [ 22,  22,  36];
+		const dayBot:    RGB = [172, 150, 110];
+		const sunsetBot: RGB = [158,  92,  42];
+		const nightBot:  RGB = [ 12,  12,  24];
+
+		let topColor: RGB, botColor: RGB;
+		if (dl > 0.5) {
+			const t = slt * 0.45;
+			topColor = lerpRGB(dayTop, sunsetTop, t);
+			botColor = lerpRGB(dayBot, sunsetBot, t);
+		} else {
+			topColor = lerpRGB(nightTop, dayTop, dl * 2);
+			botColor = lerpRGB(nightBot, dayBot, dl * 2);
+		}
+
 		const g = ctx.createLinearGradient(0, horizonY, 0, H);
-		g.addColorStop(0,   '#e8d5b0');
-		g.addColorStop(0.4, '#d4bc90');
-		g.addColorStop(1,   '#c0a878');
+		g.addColorStop(0,   css(topColor));
+		g.addColorStop(0.4, css(lerpRGB(topColor, botColor, 0.5)));
+		g.addColorStop(1,   css(botColor));
 		ctx.fillStyle = g;
 		ctx.fillRect(0, horizonY, W, H - horizonY);
 	}
@@ -397,29 +458,38 @@
 		const isTwilight = altDeg > -10 && altDeg < 12;
 		const isNight    = altDeg < -14;
 
+		// Aerial perspective haze: ramps from near-zero at night to ~0.36 at midday.
+		// Each layer uses a fraction of hazeBase — far = most, hills = least.
+		const hazeBase = isNight
+			? 0.03
+			: Math.max(0.06, Math.min(0.36, (altDeg + 8) / 28));
+		const { horizon } = getSkyColors(altDeg);
+
 		// Far mountains (most atmospheric haze)
 		const farColor = isNight    ? 'rgba(12,15,30,0.84)'
 		               : isTwilight ? 'rgba(95,82,100,0.82)'
 		               :              'rgba(155,142,124,0.78)';
-		fillMountainRange(ctx, 2.3, horizonY * 0.20, farColor);
+		fillMountainRange(ctx, 2.3, horizonY * 0.20, farColor, horizon, hazeBase * 0.85);
 
 		// Near mountains
 		const nearColor = isNight    ? 'rgba(8,10,22,0.90)'
 		                : isTwilight ? 'rgba(58,46,62,0.88)'
 		                :              'rgba(95,82,62,0.88)';
-		fillMountainRange(ctx, 5.7, horizonY * 0.33, nearColor);
+		fillMountainRange(ctx, 5.7, horizonY * 0.33, nearColor, horizon, hazeBase * 0.48);
 
 		// Rolling hills (fBm — softer, greener)
 		const hillColor = isNight    ? 'rgba(6,8,16,0.92)'
 		                : isTwilight ? 'rgba(40,44,32,0.90)'
 		                :              'rgba(70,82,46,0.88)';
-		fillHillRange(ctx, 8.1, horizonY * 0.14, hillColor);
+		fillHillRange(ctx, 8.1, horizonY * 0.14, hillColor, horizon, hazeBase * 0.22);
 	}
 
 	function fillMountainRange(
 		ctx: CanvasRenderingContext2D,
-		seed: number, heightScale: number, color: string
+		seed: number, heightScale: number, color: string,
+		hazeRGB: RGB = [255, 255, 255], hazeAlpha = 0
 	): void {
+		ctx.save();
 		ctx.beginPath();
 		ctx.moveTo(0, H);
 		for (let px = 0; px <= W; px += 3) {
@@ -430,12 +500,20 @@
 		ctx.closePath();
 		ctx.fillStyle = color;
 		ctx.fill();
+		if (hazeAlpha > 0.005) {
+			ctx.clip();
+			ctx.fillStyle = css(hazeRGB, hazeAlpha);
+			ctx.fillRect(0, 0, W, H);
+		}
+		ctx.restore();
 	}
 
 	function fillHillRange(
 		ctx: CanvasRenderingContext2D,
-		seed: number, heightScale: number, color: string
+		seed: number, heightScale: number, color: string,
+		hazeRGB: RGB = [255, 255, 255], hazeAlpha = 0
 	): void {
+		ctx.save();
 		ctx.beginPath();
 		ctx.moveTo(0, H);
 		for (let px = 0; px <= W; px += 4) {
@@ -446,6 +524,12 @@
 		ctx.closePath();
 		ctx.fillStyle = color;
 		ctx.fill();
+		if (hazeAlpha > 0.005) {
+			ctx.clip();
+			ctx.fillStyle = css(hazeRGB, hazeAlpha);
+			ctx.fillRect(0, 0, W, H);
+		}
+		ctx.restore();
 	}
 
 	// ── draw: sun ─────────────────────────────────────────────────────────────
@@ -653,7 +737,8 @@
 
 		drawSky(ctx, altDeg);
 		drawCircumsolarGlow(ctx, altDeg, sxn);
-		drawGround(ctx);
+		drawCrepuscularRays(ctx, altDeg, sxn);
+		drawGround(ctx, altDeg);
 		drawStars(ctx, altDeg, time);
 		drawMoon(ctx, altDeg, sxn);
 		drawTerrain(ctx, altDeg);
