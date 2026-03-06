@@ -20,6 +20,9 @@
 		{:else if writeQueue.status === 'error'}
 			<button class="sync-btn error" onclick={handleSync} title={writeQueue.error}>⚠ retry</button>
 		{/if}
+		<button class="edit-btn" class:active={adminState.editMode} onclick={() => adminState.toggleEditMode()}>
+			{adminState.editMode ? '✎ editing' : '✎ edit'}
+		</button>
 		<button onclick={handleLogout}>× logout</button>
 	</div>
 {/if}
@@ -67,6 +70,11 @@
 		border-color: rgba(190, 80, 60, 0.45);
 	}
 	.sync-btn.error:hover { color: var(--clr-danger); border-color: rgba(190, 80, 60, 0.7); }
+
+	.edit-btn.active {
+		opacity: 1;
+		background: rgba(var(--ui-rgb), 0.10);
+	}
 
 	@media (max-width: 480px) {
 		.label { display: none; }
