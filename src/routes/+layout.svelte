@@ -87,11 +87,11 @@
 		--glass-nav-bg:       rgba(255, 255, 255, 0.30);
 
 		/* Text (day defaults; updated dynamically by Garden.svelte) */
-		--clr-text-primary:   #121110;
-		--clr-text-prose:     #1c1814;
-		--clr-text-secondary: #58524a;
-		--clr-text-muted:     #80786e;
-		--clr-text-faint:     #a8a098;
+		--clr-text-primary:   #080808;
+		--clr-text-prose:     #0f0f0f;
+		--clr-text-secondary: #373737;
+		--clr-text-muted:     #555555;
+		--clr-text-faint:     #737373;
 
 		/* Accent */
 		--clr-accent:         #c8a060;

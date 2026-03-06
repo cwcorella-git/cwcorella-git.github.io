@@ -568,12 +568,14 @@
 		r.style.setProperty('--glass-bg',      `rgba(${gr},${gg},${gb},${(0.22*dl + 0.42*(1-dl)).toFixed(2)})`);
 		r.style.setProperty('--glass-border',  `rgba(${gr},${gg},${gb},${(0.40*dl + 0.15*(1-dl)).toFixed(2)})`);
 		r.style.setProperty('--glass-nav-bg',  `rgba(${gr},${gg},${gb},${(0.30*dl + 0.52*(1-dl)).toFixed(2)})`);
-		// Text — neutral scale: near-black in day, warm off-white at night
-		r.style.setProperty('--clr-text-primary',   `rgb(${ri(18,230)},${ri(16,224)},${ri(14,212)})`);
-		r.style.setProperty('--clr-text-prose',      `rgb(${ri(28,222)},${ri(24,216)},${ri(20,204)})`);
-		r.style.setProperty('--clr-text-secondary',  `rgb(${ri(88,185)},${ri(82,174)},${ri(74,156)})`);
-		r.style.setProperty('--clr-text-muted',      `rgb(${ri(128,148)},${ri(120,138)},${ri(110,122)})`);
-		r.style.setProperty('--clr-text-faint',      `rgb(${ri(168,110)},${ri(160,102)},${ri(148,90)})`);
+		// Text — high-contrast neutral scale
+		// Day:   8 / 15 / 55 / 85 / 115  (dark → readable on light glass)
+		// Night: 248 / 238 / 210 / 175 / 140  (light → readable on dark glass)
+		r.style.setProperty('--clr-text-primary',   `rgb(${ri(8,248)},${ri(8,246)},${ri(8,242)})`);
+		r.style.setProperty('--clr-text-prose',      `rgb(${ri(15,238)},${ri(15,235)},${ri(15,228)})`);
+		r.style.setProperty('--clr-text-secondary',  `rgb(${ri(55,210)},${ri(55,207)},${ri(55,200)})`);
+		r.style.setProperty('--clr-text-muted',      `rgb(${ri(85,175)},${ri(85,172)},${ri(85,165)})`);
+		r.style.setProperty('--clr-text-faint',      `rgb(${ri(115,140)},${ri(115,137)},${ri(115,130)})`);
 	}
 
 	// ── cursor tracking ────────────────────────────────────────────────────────
