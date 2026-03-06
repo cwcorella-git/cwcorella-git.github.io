@@ -6,8 +6,9 @@
  *   static/docs/private/journals-index.enc  — encrypted index (titles + slugs)
  *   static/docs/private/journals/<slug>.enc  — encrypted content per file
  *
- * Slugs are SHA-256 hashes of the filename (12 hex chars) — deterministic,
- * so re-running updates existing files rather than orphaning old ones.
+ * Slugs are word-based (top nouns from content via compromise NLP) for new
+ * entries. Existing entries preserve their slugs — matched by title — so
+ * re-running updates content without orphaning files.
  * Titles are encrypted in the index, so no plaintext metadata is in the repo.
  *
  * Usage:
@@ -16,10 +17,11 @@
  * source-dir defaults to ~/Documents/Writing/MD Files
  */
 
-import { readFileSync, writeFileSync, readdirSync, mkdirSync, statSync } from 'fs';
+import { readFileSync, writeFileSync, readdirSync, mkdirSync, statSync, existsSync } from 'fs';
 import { basename, extname, join, resolve } from 'path';
 import { homedir } from 'os';
-import { webcrypto, createHash } from 'node:crypto';
+import { webcrypto } from 'node:crypto';
+import nlp from 'compromise';
 
 const { subtle } = webcrypto;
 const getRandomValues = (arr) => webcrypto.getRandomValues(arr);
@@ -44,6 +46,10 @@ function toB64(buf) {
   return Buffer.from(buf).toString('base64');
 }
 
+function fromB64(str) {
+  return Uint8Array.from(Buffer.from(str, 'base64'));
+}
+
 async function encryptData(text) {
   const enc = new TextEncoder();
   const salt = getRandomValues(new Uint8Array(16));
@@ -61,10 +67,46 @@ async function encryptData(text) {
   return { iv: toB64(iv), ct: toB64(ct), salt: toB64(salt) };
 }
 
+async function decryptData(obj) {
+  const enc = new TextEncoder();
+  const dec = new TextDecoder();
+  const keyMaterial = await subtle.importKey(
+    'raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey']
+  );
+  const key = await subtle.deriveKey(
+    { name: 'PBKDF2', salt: fromB64(obj.salt), iterations: 200000, hash: 'SHA-256' },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false, ['decrypt']
+  );
+  const pt = await subtle.decrypt({ name: 'AES-GCM', iv: fromB64(obj.iv) }, key, fromB64(obj.ct));
+  return dec.decode(pt);
+}
+
 // ── helpers ───────────────────────────────────────────────────────────────
 
-function fileSlug(filename) {
-  return createHash('sha256').update(basename(filename)).digest('hex').slice(0, 12);
+function generateSlugSync(text, existingSlugs) {
+  const plain = text
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/[*_`~\[\]()>]/g, '')
+    .replace(/https?:\S+/g, '');
+  const doc = nlp(plain);
+  const nouns = doc.nouns().out('array');
+  const freq = {};
+  for (const w of nouns) {
+    const key = w.toLowerCase().replace(/[^a-z]/g, '');
+    if (key.length >= 3) freq[key] = (freq[key] ?? 0) + 1;
+  }
+  const top = Object.entries(freq)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([w]) => w);
+  while (top.length < 2) top.push(Math.random().toString(16).slice(2, 6));
+  let base = top.join('-');
+  if (!existingSlugs.includes(base)) return base;
+  let n = 2;
+  while (existingSlugs.includes(`${base}-${n}`)) n++;
+  return `${base}-${n}`;
 }
 
 function extractTitle(content, filename) {
@@ -82,12 +124,30 @@ function extractDate(filename, statObj) {
   return statObj.mtime.toISOString().slice(0, 10);
 }
 
+// ── load existing index to preserve slugs ─────────────────────────────────
+
+let existingIndex = [];
+if (existsSync(INDEX_PATH)) {
+  try {
+    const enc = JSON.parse(readFileSync(INDEX_PATH, 'utf8'));
+    const json = await decryptData(enc);
+    existingIndex = JSON.parse(json);
+    console.log(`Loaded existing index: ${existingIndex.length} entries\n`);
+  } catch {
+    console.warn('Could not decrypt existing index — will generate fresh slugs for all entries.\n');
+  }
+}
+
+// title → existing slug map
+const titleToSlug = new Map(existingIndex.map(e => [e.title, e.slug]));
+
 // ── main ──────────────────────────────────────────────────────────────────
 
 mkdirSync(JOURNALS_DIR, { recursive: true });
 
 const EXTS = new Set(['.md', '.txt']);
 const index = [];
+const usedSlugs = [...existingIndex.map(e => e.slug)];
 
 for (const sourceDir of sourceDirs) {
   let sourceFiles;
@@ -109,14 +169,21 @@ for (const sourceDir of sourceDirs) {
     const stat     = statSync(filePath);
     const title    = extractTitle(content, file);
     const date     = extractDate(file, stat);
-    const slug     = fileSlug(file);
+
+    // Reuse existing slug if title matches, otherwise generate a new word slug
+    let slug = titleToSlug.get(title);
+    if (!slug) {
+      slug = generateSlugSync(content, usedSlugs);
+      usedSlugs.push(slug);
+    }
 
     const encrypted = await encryptData(content);
     writeFileSync(join(JOURNALS_DIR, `${slug}.enc`), JSON.stringify(encrypted));
 
     index.push({ slug, title, date });
-    console.log(`✓ ${file}`);
-    console.log(`    slug: ${slug}   date: ${date}`);
+    const isNew = !titleToSlug.has(title);
+    console.log(`${isNew ? '+' : '✓'} ${file}`);
+    console.log(`    slug: ${slug}   date: ${date}${isNew ? '  [new]' : ''}`);
   }
   console.log('');
 }

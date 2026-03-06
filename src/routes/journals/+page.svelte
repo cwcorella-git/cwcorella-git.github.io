@@ -4,6 +4,7 @@
 	import { renderMarkdown } from '$lib/admin/markdown';
 	import { writeQueue } from '$lib/admin/state.svelte';
 	import { toast } from '$lib/admin/toast.svelte';
+	import { generateJournalSlug } from '$lib/admin/slug';
 
 	interface JournalMeta { slug: string; title: string; date: string | null; }
 
@@ -72,33 +73,6 @@
 
 	function closeReader() { readerEntry = null; readerHtml = ''; }
 
-	// ── inline rename ─────────────────────────────────────────────────────
-	let renamingSlug = $state<string | null>(null);
-	let renameValue = $state('');
-	let renameSaving = $state(false);
-
-	function startRename(entry: JournalMeta) {
-		renamingSlug = entry.slug;
-		renameValue = entry.title;
-	}
-
-	async function commitRename(entry: JournalMeta) {
-		const newTitle = renameValue.trim();
-		if (!newTitle || newTitle === entry.title) { renamingSlug = null; return; }
-		renameSaving = true;
-		try {
-			await saveIndex(
-				index.map(e => e.slug === entry.slug ? { ...e, title: newTitle } : e),
-				`rename journal: ${newTitle}`
-			);
-			renamingSlug = null;
-		} catch (e: unknown) {
-			toast.error(e instanceof Error ? e.message : 'Rename failed.');
-		} finally {
-			renameSaving = false;
-		}
-	}
-
 	// ── editor (create / edit) ────────────────────────────────────────────
 	let editorMode = $state<'none' | 'create' | 'edit'>('none');
 	let editorEntry = $state<JournalMeta | null>(null);
@@ -143,7 +117,7 @@
 		editorSaving = true;
 		try {
 			const slug = editorMode === 'create'
-				? Array.from(crypto.getRandomValues(new Uint8Array(6))).map(b => b.toString(16).padStart(2, '0')).join('')
+				? await generateJournalSlug(editorContent, index.map(e => e.slug))
 				: editorEntry!.slug;
 
 			const encContent = await encryptDoc(editorContent, adminState.contentKey);
@@ -186,11 +160,6 @@
 		}
 	}
 
-	// ── codename (opaque stable display id derived from slug) ─────────────
-	function codename(slug: string): string {
-		return `${slug.slice(0, 4)}-${slug.slice(4, 8)}-${slug.slice(8, 12)}`;
-	}
-
 	// ── actions ───────────────────────────────────────────────────────────
 	function focusOnMount(node: HTMLElement) { node.focus(); }
 
@@ -199,7 +168,7 @@
 		if (e.key === 'Escape') {
 			if (readerEntry) closeReader();
 			else if (editorMode !== 'none') closeEditor();
-			else { renamingSlug = null; confirmingSlug = null; }
+			else { confirmingSlug = null; }
 		}
 	}
 </script>
@@ -237,7 +206,12 @@
 	<div class="overlay-backdrop" role="presentation" onclick={closeEditor}></div>
 	<div class="editor" role="dialog" aria-modal="true">
 		<div class="overlay-header">
-			<span class="overlay-label">{editorMode === 'create' ? 'new entry' : 'edit entry'}</span>
+			<div class="editor-header-meta">
+				<span class="overlay-label">{editorMode === 'create' ? 'new entry' : 'edit entry'}</span>
+				{#if editorMode === 'edit' && editorEntry}
+					<span class="editor-slug-line dim">{editorEntry.slug}{editorEntry.date ? ' · ' + editorEntry.date : ''}</span>
+				{/if}
+			</div>
 			<button class="close-btn" onclick={closeEditor} aria-label="Close">×</button>
 		</div>
 		<div class="editor-body">
@@ -304,26 +278,13 @@
 							</div>
 						{:else}
 							<div class="entry-row">
-								{#if renamingSlug === entry.slug}
-									<input
-										class="rename-input"
-										type="text"
-										bind:value={renameValue}
-										onkeydown={(e) => { if (e.key === 'Enter') commitRename(entry); if (e.key === 'Escape') renamingSlug = null; }}
-										onblur={() => commitRename(entry)}
-										disabled={renameSaving}
-										use:focusOnMount
-									/>
-								{:else}
-									<button class="entry-title-btn" onclick={() => openReader(entry)}>
-										{codename(entry.slug)}
-									</button>
-								{/if}
+								<button class="entry-title-btn" onclick={() => openReader(entry)}>
+									{entry.slug}
+								</button>
 								{#if entry.date}
 									<span class="entry-date dim">{entry.date}</span>
 								{/if}
 								<div class="row-actions">
-									<button class="action-btn" onclick={() => startRename(entry)} title="Rename">rename</button>
 									<button class="action-btn" onclick={() => startEdit(entry)} title="Edit content">edit</button>
 									<button class="action-btn danger" onclick={() => confirmingSlug = entry.slug} title="Delete">×</button>
 								</div>
@@ -404,13 +365,6 @@
 
 	.entry-date { flex-shrink: 0; white-space: nowrap; }
 
-	.rename-input {
-		flex: 1; background: rgba(200, 150, 60, 0.04);
-		border: none; border-bottom: 1px solid rgba(200, 150, 60, 0.4);
-		color: #c0b088; font-size: 0.95rem; padding: 0.1rem 0.2rem;
-		outline: none; font-family: inherit;
-	}
-
 	.row-actions {
 		display: flex; gap: 0.5rem; flex-shrink: 0; margin-left: auto;
 	}
@@ -441,6 +395,8 @@
 		border-bottom: 1px solid rgba(200, 150, 60, 0.12);
 		flex-shrink: 0;
 	}
+	.editor-header-meta { display: flex; flex-direction: column; gap: 0.2rem; }
+	.editor-slug-line { font-size: 0.58rem; letter-spacing: 0.06em; }
 	.overlay-label {
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; color: #c8a060;
