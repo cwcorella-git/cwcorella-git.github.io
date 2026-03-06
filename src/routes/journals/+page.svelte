@@ -327,17 +327,17 @@
 	.heading {
 		font-family: Georgia, 'Times New Roman', Times, serif;
 		font-size: 1rem; font-weight: normal;
-		letter-spacing: 0.12em; color: var(--clr-accent-dim); margin: 0;
+		letter-spacing: 0.12em; color: var(--clr-text-secondary); margin: 0;
 	}
 	.new-btn {
 		background: none;
-		border: 1px solid rgba(100, 75, 40, 0.25);
+		border: 1px solid var(--glass-border);
 		color: var(--clr-text-secondary);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase;
 		padding: 0.3rem 0.75rem; cursor: pointer; transition: all 0.15s;
 	}
-	.new-btn:hover { color: #7a5020; border-color: rgba(100, 75, 40, 0.5); }
+	.new-btn:hover { color: var(--clr-text-primary); border-color: var(--glass-border); }
 
 	.status { font-family: 'Courier New', Courier, monospace; font-size: 0.65rem; letter-spacing: 0.08em; color: var(--clr-text-muted); }
 	.status.error { color: #c07050; }
@@ -357,7 +357,7 @@
 		text-align: left; padding: 0.85rem 0; transition: color 0.15s;
 		display: flex; flex-direction: column; gap: 0.15rem;
 	}
-	.entry-title-btn:hover .entry-title { color: #7a5020; }
+	.entry-title-btn:hover .entry-title { color: var(--clr-text-primary); }
 
 	.entry-title {
 		font-family: var(--font-prose);
@@ -378,7 +378,7 @@
 		font-size: 0.52rem; letter-spacing: 0.08em; text-transform: uppercase;
 		color: var(--clr-text-faint); padding: 0 0.3rem; transition: color 0.15s;
 	}
-	.action-btn:hover:not(:disabled) { color: #7a5020; }
+	.action-btn:hover:not(:disabled) { color: var(--clr-text-primary); }
 	.action-btn.danger:hover:not(:disabled) { color: #c07050; }
 	.action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 

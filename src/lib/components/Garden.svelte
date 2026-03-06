@@ -574,7 +574,6 @@
 		r.style.setProperty('--clr-text-secondary',  `rgb(${ri(88,185)},${ri(82,174)},${ri(74,156)})`);
 		r.style.setProperty('--clr-text-muted',      `rgb(${ri(128,148)},${ri(120,138)},${ri(110,122)})`);
 		r.style.setProperty('--clr-text-faint',      `rgb(${ri(168,110)},${ri(160,102)},${ri(148,90)})`);
-		r.style.setProperty('--clr-accent-dim',      `rgb(${ri(110,200)},${ri(88,166)},${ri(48,100)})`);
 	}
 
 	// ── cursor tracking ────────────────────────────────────────────────────────
