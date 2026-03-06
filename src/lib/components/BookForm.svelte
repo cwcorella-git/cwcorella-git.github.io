@@ -5,6 +5,7 @@
 	import { encryptDoc } from '$lib/admin/crypto';
 	import { toast } from '$lib/admin/toast.svelte';
 	import allBooksStatic from '$lib/books.json';
+	import YearPicker from '$lib/components/YearPicker.svelte';
 
 	let {
 		book,
@@ -184,7 +185,7 @@
 			<div class="row">
 				<label>
 					<span>Year</span>
-					<input type="number" bind:value={year} min="1" max="2100" />
+					<YearPicker value={year ? parseInt(year) : null} onchange={(y) => year = y?.toString() ?? ''} />
 				</label>
 				<label>
 					<span>Category *</span>
@@ -339,7 +340,6 @@
 
 	input[type="text"],
 	input[type="url"],
-	input[type="number"],
 	textarea {
 		background: rgba(200, 150, 60, 0.04);
 		border: 1px solid rgba(200, 150, 60, 0.18);
