@@ -104,6 +104,8 @@
 	}
 
 	:global(*, *::before, *::after) { box-sizing: border-box; }
+	/* Buttons don't inherit font by default in browsers — fix globally */
+	:global(button, input, textarea, select) { font: inherit; }
 	:global(body, html) {
 		margin: 0; padding: 0;
 		background: #e8d5b0; /* ground fallback before canvas paints */

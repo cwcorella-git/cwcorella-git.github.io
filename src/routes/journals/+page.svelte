@@ -286,11 +286,9 @@
 						{:else}
 							<div class="entry-row">
 								<button class="entry-title-btn" onclick={() => openReader(entry)}>
-									{entry.slug}
+									<span class="entry-title">{entry.title}</span>
+									<span class="entry-meta">{entry.slug}{entry.date ? ' · ' + entry.date : ''}</span>
 								</button>
-								{#if entry.date}
-									<span class="entry-date dim">{entry.date}</span>
-								{/if}
 								<div class="row-actions">
 									<button class="action-btn" onclick={() => startEdit(entry)} title="Edit content">edit</button>
 									<button class="action-btn danger" onclick={() => confirmingSlug = entry.slug} title="Delete">×</button>
@@ -351,18 +349,24 @@
 	.entry-row {
 		display: flex; align-items: center; gap: 1rem;
 		border-bottom: 1px solid rgba(100, 75, 40, 0.09);
-		padding: 0.6rem 0; min-height: 2.6rem;
 	}
 	.confirm-row { gap: 1.5rem; }
 
 	.entry-title-btn {
 		flex: 1; background: none; border: none; cursor: pointer;
-		text-align: left; color: #3d2e1a; font-size: 0.95rem; line-height: 1.4;
-		padding: 0; transition: color 0.15s;
+		text-align: left; padding: 0.85rem 0; transition: color 0.15s;
+		display: flex; flex-direction: column; gap: 0.15rem;
 	}
-	.entry-title-btn:hover { color: #7a5020; }
+	.entry-title-btn:hover .entry-title { color: #7a5020; }
 
-	.entry-date { flex-shrink: 0; white-space: nowrap; }
+	.entry-title {
+		font-family: var(--font-prose);
+		font-size: 0.95rem; color: #3d2e1a; line-height: 1.4;
+	}
+	.entry-meta {
+		font-family: var(--font-ui);
+		font-size: 0.62rem; letter-spacing: 0.06em; color: #8a6a40;
+	}
 
 	.row-actions {
 		display: flex; gap: 0.5rem; flex-shrink: 0; margin-left: auto;
