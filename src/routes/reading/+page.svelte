@@ -189,7 +189,7 @@
 								class="edit-pencil"
 								onclick={() => bookFormState.openEdit(book)}
 								aria-label="Edit {book.title}"
-							>✎</button>
+							edit</button>
 						{/if}
 						<button
 							class="cat-label"
@@ -391,13 +391,17 @@
 		background: none;
 		border: none;
 		cursor: pointer;
-		color: #6a5a40;
-		font-size: 0.85rem;
-		padding: 0 0.5rem;
+		font-family: 'Courier New', Courier, monospace;
+		font-size: 0.55rem;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: #4a3e2c;
+		padding: 0 0.6rem;
 		transition: color 0.15s;
 		flex-shrink: 0;
+		white-space: nowrap;
 	}
-	.edit-pencil:hover { color: #c8a060; }
+	.edit-pencil:hover { color: #8a7858; }
 
 	.cat-label {
 		background: none; border: none; cursor: pointer;
