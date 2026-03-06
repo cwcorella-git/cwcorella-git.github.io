@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Book, BookDoc } from '$lib/types';
 	import { adminState, booksState } from '$lib/admin/state.svelte';
-	import { updateBooksJson, getFile, putFile } from '$lib/admin/github';
+	import { updateBooksJson, putFileWithFreshSha } from '$lib/admin/github';
 	import { encryptDoc } from '$lib/admin/crypto';
 	import { toast } from '$lib/admin/toast.svelte';
 	import allBooksStatic from '$lib/books.json';
@@ -66,30 +66,17 @@
 			if (docContent.trim()) {
 				if (docVisibility === 'admin') {
 					const encrypted = await encryptDoc(docContent.trim(), adminState.contentKey);
-					const encJson = JSON.stringify(encrypted);
-					let sha: string | null = null;
-					try {
-						const existing = await getFile(adminState.pat, `static/docs/private/${slug}.enc`);
-						sha = existing.sha;
-					} catch { /* new file */ }
-					await putFile(
+					await putFileWithFreshSha(
 						adminState.pat,
 						`static/docs/private/${slug}.enc`,
-						encJson,
-						sha,
+						JSON.stringify(encrypted),
 						`update doc: ${slug}`
 					);
 				} else {
-					let sha: string | null = null;
-					try {
-						const existing = await getFile(adminState.pat, `static/docs/public/${slug}.md`);
-						sha = existing.sha;
-					} catch { /* new file */ }
-					await putFile(
+					await putFileWithFreshSha(
 						adminState.pat,
 						`static/docs/public/${slug}.md`,
 						docContent.trim(),
-						sha,
 						`update doc: ${slug}`
 					);
 				}

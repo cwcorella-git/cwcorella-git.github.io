@@ -56,18 +56,41 @@ export async function putFile(
 	});
 	if (!res.ok) {
 		const err = await res.json().catch(() => ({}));
-		throw new Error(err.message || `GitHub API error: ${res.status}`);
+		throw new Error(err.message || `GitHub API error: ${res.status}`, { cause: res.status });
 	}
 }
 
-export async function updateBooksJson(pat: string, books: Book[]): Promise<void> {
+export async function putFileWithFreshSha(
+	pat: string,
+	path: string,
+	content: string,
+	message: string
+): Promise<void> {
 	let sha: string | null = null;
 	try {
-		const existing = await getFile(pat, 'src/lib/books.json');
+		const existing = await getFile(pat, path);
 		sha = existing.sha;
 	} catch (e: unknown) {
 		if (e instanceof Error && e.message !== 'FILE_NOT_FOUND') throw e;
 	}
+	try {
+		await putFile(pat, path, content, sha, message);
+	} catch (e: unknown) {
+		// 409 = SHA conflict (concurrent write). Retry once with a fresh SHA.
+		if (e instanceof Error && (e as Error & { cause?: unknown }).cause === 409) {
+			let retrySha: string | null = null;
+			try {
+				const fresh = await getFile(pat, path);
+				retrySha = fresh.sha;
+			} catch { /* file may not exist */ }
+			await putFile(pat, path, content, retrySha, message);
+		} else {
+			throw e;
+		}
+	}
+}
+
+export async function updateBooksJson(pat: string, books: Book[]): Promise<void> {
 	const content = JSON.stringify(books);
-	await putFile(pat, 'src/lib/books.json', content, sha, 'update books.json');
+	await putFileWithFreshSha(pat, 'src/lib/books.json', content, 'update books.json');
 }

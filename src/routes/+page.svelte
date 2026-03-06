@@ -1,38 +1,25 @@
 <script lang="ts">
 	import homeContent from '$lib/content/home.json';
-	import InlineEditor from '$lib/components/InlineEditor.svelte';
+	import HomeEditor from '$lib/components/HomeEditor.svelte';
 	import { adminState } from '$lib/admin/state.svelte';
-	import { getFile, putFile } from '$lib/admin/github';
+	import { putFileWithFreshSha } from '$lib/admin/github';
+	import { marked } from 'marked';
 
-	let paragraphs = $state([...homeContent.paragraphs]);
-	let blockquote = $state(homeContent.blockquote);
+	let content = $state(homeContent.content);
+	let editing = $state(false);
 
-	async function saveParagraph(index: number, newText: string) {
-		const updated = [...paragraphs];
-		updated[index] = newText;
-		const newContent = { paragraphs: updated, blockquote };
-		const { sha } = await getFile(adminState.pat, 'src/lib/content/home.json');
-		await putFile(
+	// Render markdown → HTML for display
+	let rendered = $derived(marked(content) as string);
+
+	async function save(newContent: string) {
+		await putFileWithFreshSha(
 			adminState.pat,
 			'src/lib/content/home.json',
-			JSON.stringify(newContent, null, '\t'),
-			sha,
+			JSON.stringify({ content: newContent }, null, '\t'),
 			'update home content'
 		);
-		paragraphs = updated;
-	}
-
-	async function saveBlockquote(newText: string) {
-		const newContent = { paragraphs, blockquote: newText };
-		const { sha } = await getFile(adminState.pat, 'src/lib/content/home.json');
-		await putFile(
-			adminState.pat,
-			'src/lib/content/home.json',
-			JSON.stringify(newContent, null, '\t'),
-			sha,
-			'update home content'
-		);
-		blockquote = newText;
+		content = newContent;
+		editing = false;
 	}
 </script>
 
@@ -45,23 +32,17 @@
 	<div class="glow" aria-hidden="true"></div>
 
 	<main>
-		{#each paragraphs as para, i}
-			<p>
-				{#if adminState.editMode}
-					<InlineEditor content={para} onSave={(t) => saveParagraph(i, t)} />
-				{:else}
-					{para}
-				{/if}
-			</p>
-		{/each}
-
-		<blockquote>
+		{#if editing}
+			<HomeEditor content={content} onSave={save} onCancel={() => (editing = false)} />
+		{:else}
+			<div class="prose">
+				<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+				{@html rendered}
+			</div>
 			{#if adminState.editMode}
-				<InlineEditor content={blockquote} onSave={saveBlockquote} />
-			{:else}
-				{blockquote}
+				<button class="edit-btn" onclick={() => (editing = true)}>✎ edit</button>
 			{/if}
-		</blockquote>
+		{/if}
 	</main>
 
 	<footer>
@@ -109,14 +90,15 @@
 		justify-content: center;
 	}
 
-	main p {
+	/* Prose styles for markdown-rendered content */
+	:global(.prose p) {
 		font-size: 1rem;
 		line-height: 1.9;
 		color: #b8a880;
 		margin-bottom: 1.5rem;
+		margin-top: 0;
 	}
-
-	blockquote {
+	:global(.prose blockquote) {
 		margin: 1.5rem 0 0;
 		padding: 0;
 		border: none;
@@ -125,6 +107,27 @@
 		color: #7a6a4a;
 		font-style: italic;
 	}
+	:global(.prose blockquote p) {
+		margin: 0;
+		color: #7a6a4a;
+	}
+	:global(.prose strong) { color: #c8b888; font-weight: normal; letter-spacing: 0.01em; }
+	:global(.prose em) { font-style: italic; }
+
+	.edit-btn {
+		background: none;
+		border: 1px solid rgba(200, 150, 60, 0.15);
+		color: #4e4232;
+		font-family: 'Courier New', Courier, monospace;
+		font-size: 0.6rem;
+		letter-spacing: 0.08em;
+		padding: 0.3rem 0.7rem;
+		cursor: pointer;
+		transition: all 0.15s;
+		align-self: flex-start;
+		margin-top: 0.5rem;
+	}
+	.edit-btn:hover { color: #c8a060; border-color: rgba(200, 150, 60, 0.4); }
 
 	footer {
 		position: relative;
