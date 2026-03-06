@@ -86,6 +86,10 @@
 		/* [theme: --ui-rgb] amber=160,120,60 | beige=140,120,90 | gray=128,128,128 | neutral=128,128,128 */
 		--ui-rgb: 128, 128, 128;
 
+		/* Seed: dark-panel chrome (inputs, buttons, separators inside dark overlays) */
+		/* [theme: --dark-panel-rgb] amber=200,150,60 | beige=155,130,95 | gray=190,195,210 | neutral=255,255,255 */
+		--dark-panel-rgb: 255, 255, 255;
+
 		/* Glass — light (day defaults; updated per-frame by Garden.svelte) */
 		--glass-bg:         rgba(255, 255, 255, 0.22);
 		--glass-bg-heavy:   rgba(255, 255, 255, 0.78);

@@ -30,12 +30,12 @@ export const PALETTES: Record<PaletteName, Palette> = {
 	amber: {
 		label: 'amber',
 		uiRgb:        '160, 120, 60',
-		darkPanelRgb: '200, 150, 60',    // amber-gold: inputs/buttons get warm amber tint
+		darkPanelRgb: '200, 150, 60',    // amber-gold tint on all dark-panel chrome
 		bodyBg:       '#e8d5b0',
 		clrDarkText:  '#c8b890',
-		glassBgDark:     'rgba(12, 8, 2, 0.85)',
-		glassBorderDark: 'rgba(200, 150, 60, 0.28)', // visible amber outer border
-		glassDay:   [255, 252, 242],
+		glassBgDark:     'rgba(45, 30, 6, 0.90)',    // dark amber-brown panel bg
+		glassBorderDark: 'rgba(200, 150, 60, 0.35)', // clearly visible amber border
+		glassDay:   [255, 220, 160],  // warm amber-golden → tints all glass panels visibly
 		glassNight: [12,  8,   2  ],
 		textDay:    [61,  46,  26 ],
 		textNight:  [248, 235, 210],
@@ -45,12 +45,12 @@ export const PALETTES: Record<PaletteName, Palette> = {
 	beige: {
 		label: 'beige',
 		uiRgb:        '140, 120, 90',
-		darkPanelRgb: '190, 170, 140',   // warm parchment tan for dark panel chrome
+		darkPanelRgb: '155, 130, 95',    // same hue as uiRgb for cross-context consistency
 		bodyBg:       '#e8e0d0',
 		clrDarkText:  '#c4bcb0',
-		glassBgDark:     'rgba(10, 9, 6, 0.80)',
-		glassBorderDark: 'rgba(190, 170, 140, 0.22)',
-		glassDay:   [255, 253, 248],
+		glassBgDark:     'rgba(32, 26, 12, 0.87)',   // warm dark beige-brown
+		glassBorderDark: 'rgba(155, 130, 95, 0.30)', // warm beige border
+		glassDay:   [255, 244, 224],  // warm cream → clearly warmer than neutral
 		glassNight: [10,  9,   6  ],
 		textDay:    [42,  34,  24 ],
 		textNight:  [240, 235, 225],
@@ -60,12 +60,12 @@ export const PALETTES: Record<PaletteName, Palette> = {
 	gray: {
 		label: 'gray',
 		uiRgb:        '128, 128, 128',
-		darkPanelRgb: '200, 205, 215',   // cool white-blue tint
+		darkPanelRgb: '190, 195, 210',   // cool blue-white tint
 		bodyBg:       '#d0d0d0',
 		clrDarkText:  '#bcc0c4',
-		glassBgDark:     'rgba(8, 10, 14, 0.84)',
-		glassBorderDark: 'rgba(190, 200, 215, 0.18)',
-		glassDay:   [255, 255, 255],
+		glassBgDark:     'rgba(12, 14, 22, 0.86)',   // cool blue-gray dark
+		glassBorderDark: 'rgba(180, 190, 210, 0.22)',
+		glassDay:   [244, 246, 255],  // slight cool blue-white → distinguishable from neutral
 		glassNight: [8,   10,  14 ],
 		textDay:    [8,   8,   8  ],
 		textNight:  [232, 235, 238],
@@ -75,7 +75,7 @@ export const PALETTES: Record<PaletteName, Palette> = {
 	neutral: {
 		label: 'neutral',
 		uiRgb:        '128, 128, 128',
-		darkPanelRgb: '255, 255, 255',   // pure white — preserves current appearance
+		darkPanelRgb: '255, 255, 255',   // pure white — baseline appearance
 		bodyBg:       '#d8d8d8',
 		clrDarkText:  '#c0c4c8',
 		glassBgDark:     'rgba(10, 12, 16, 0.78)',
@@ -124,6 +124,7 @@ export const themeState = {
 	restoreFromStorage(): void {
 		if (typeof localStorage === 'undefined') return;
 		const saved = localStorage.getItem(STORAGE_KEY) as PaletteName | null;
-		if (saved && PALETTES[saved]) applyPalette(saved);
+		// Always apply palette on init so all CSS vars (incl. --dark-panel-rgb) are set
+		applyPalette(saved && PALETTES[saved] ? saved : _active);
 	},
 };
