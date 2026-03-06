@@ -189,7 +189,7 @@
 								class="edit-pencil"
 								onclick={() => bookFormState.openEdit(book)}
 								aria-label="Edit {book.title}"
-							edit</button>
+							>edit</button>
 						{/if}
 						<button
 							class="cat-label"

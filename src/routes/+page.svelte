@@ -1,17 +1,17 @@
 <script lang="ts">
 	import homeContent from '$lib/content/home.json';
 	import HomeEditor from '$lib/components/HomeEditor.svelte';
-	import { adminState, writeQueue } from '$lib/admin/state.svelte';
+	import { homeState, adminState, writeQueue } from '$lib/admin/state.svelte';
 	import { marked } from 'marked';
 
-	let content = $state(homeContent.content);
 	let editing = $state(false);
 
-	// Render markdown → HTML for display
+	// Fall back to static build value if no draft has been restored
+	let content = $derived(homeState.content ?? homeContent.content);
 	let rendered = $derived(marked(content) as string);
 
 	function save(newContent: string) {
-		content = newContent;
+		homeState.set(newContent);
 		editing = false;
 		writeQueue.push({ domain: 'home', content: newContent });
 	}

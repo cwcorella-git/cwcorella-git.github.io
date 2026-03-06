@@ -1,6 +1,7 @@
 import type { Book } from '$lib/types';
 import allBooksStatic from '$lib/books.json';
 import { commitFiles } from '$lib/admin/github';
+import { draftStore } from '$lib/admin/draft';
 
 export const ADMIN_SEQUENCE = '```';
 
@@ -51,6 +52,7 @@ export const writeQueue = {
 	push(payload: DomainPayload): void {
 		_pending = new Map(_pending).set(payload.domain, payload);
 		_syncStatus = 'dirty';
+		draftStore.save(payload.domain, payload);
 		if (_debounceTimer !== null) clearTimeout(_debounceTimer);
 		_debounceTimer = setTimeout(() => { writeQueue.flush(); }, 10_000);
 	},
@@ -69,6 +71,9 @@ export const writeQueue = {
 			for (const payload of snapshot.values()) {
 				await _commitDomain(payload, pat);
 			}
+			for (const domain of snapshot.keys()) {
+				draftStore.clear(domain);
+			}
 			_syncStatus = _pending.size > 0 ? 'dirty' : 'idle';
 			_syncError = '';
 		} catch (e: unknown) {
@@ -83,6 +88,36 @@ export const writeQueue = {
 		} finally {
 			_flushing = false;
 		}
+	},
+
+	// Called on page load (after restoreFromSession). If admin is active and
+	// localStorage has unsaved drafts, restores them into memory and marks
+	// the queue dirty so the user can sync. Returns the number of domains restored.
+	restoreFromDraft(): number {
+		if (!_active) return 0;
+		let count = 0;
+
+		const booksDraft = draftStore.load<{ domain: 'books'; books: Book[] }>('books');
+		if (booksDraft) {
+			booksState.set(booksDraft.books);
+			_pending = new Map(_pending).set('books', booksDraft);
+			_syncStatus = 'dirty';
+			count++;
+		}
+
+		const homeDraft = draftStore.load<{ domain: 'home'; content: string }>('home');
+		if (homeDraft) {
+			homeState.set(homeDraft.content);
+			_pending = new Map(_pending).set('home', homeDraft);
+			_syncStatus = 'dirty';
+			count++;
+		}
+
+		if (count > 0 && _debounceTimer === null) {
+			_debounceTimer = setTimeout(() => { writeQueue.flush(); }, 10_000);
+		}
+
+		return count;
 	}
 };
 
@@ -93,6 +128,15 @@ let _books = $state<Book[]>([...(allBooksStatic as Book[])]);
 export const booksState = {
 	get books() { return _books; },
 	set(updated: Book[]) { _books = updated; }
+};
+
+// ── Shared home content state ─────────────────────────────────────────────────
+// null = no draft; +page.svelte falls back to the static build value.
+let _homeContent = $state<string | null>(null);
+
+export const homeState = {
+	get content(): string | null { return _homeContent; },
+	set(content: string) { _homeContent = content; }
 };
 
 // ── Admin state ───────────────────────────────────────────────────────────────

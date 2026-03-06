@@ -2,7 +2,8 @@
 	import { onMount } from 'svelte';
 	import favicon from '$lib/assets/favicon.svg';
 	import { page } from '$app/stores';
-	import { adminState, bookFormState, ADMIN_SEQUENCE } from '$lib/admin/state.svelte';
+	import { adminState, bookFormState, writeQueue, ADMIN_SEQUENCE } from '$lib/admin/state.svelte';
+	import { toast } from '$lib/admin/toast.svelte';
 	import AdminDrawer from '$lib/components/AdminDrawer.svelte';
 	import AdminToolbar from '$lib/components/AdminToolbar.svelte';
 	import BookForm from '$lib/components/BookForm.svelte';
@@ -26,6 +27,8 @@
 
 	onMount(() => {
 		adminState.restoreFromSession();
+		const restored = writeQueue.restoreFromDraft();
+		if (restored > 0) toast.success(`draft restored — pending sync`);
 	});
 
 	function handleBookSaved() {
