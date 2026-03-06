@@ -80,8 +80,8 @@
 		--glass-blur-heavy:blur(28px);
 
 		/* Glass — dark (admin panels) */
-		--glass-bg-dark:      rgba(12, 8, 2, 0.72);
-		--glass-border-dark:  rgba(200, 150, 60, 0.22);
+		--glass-bg-dark:      rgba(10, 12, 16, 0.78);
+		--glass-border-dark:  rgba(200, 210, 220, 0.15);
 
 		/* Glass — nav (day default; updated dynamically at night) */
 		--glass-nav-bg:       rgba(255, 255, 255, 0.30);
@@ -93,20 +93,15 @@
 		--clr-text-muted:     #555555;
 		--clr-text-faint:     #737373;
 
-		/* Accent */
-		--clr-accent:         #c8a060;
-		--clr-accent-dim:     #6e5830;
-		--clr-accent-active:  #5a4420;
-
 		/* Danger / Success */
 		--clr-danger:         #c07050;
 		--clr-danger-muted:   #8a4040;
 		--clr-success:        #70b880;
 
-		/* Dark-panel text (for components on dark glass backgrounds: BookForm, AdminDrawer, YearPicker) */
-		--clr-dark-text-primary:   #c0b088;
-		--clr-dark-text-secondary: #a09070;
-		--clr-dark-text-muted:     #7a6a50;
+		/* Dark-panel text (for components on dark glass: BookForm, AdminDrawer, YearPicker) */
+		--clr-dark-text-primary:   #bcc0c4;
+		--clr-dark-text-secondary: #8a9098;
+		--clr-dark-text-muted:     #606870;
 
 		/* Backdrop overlay */
 		--backdrop-overlay:   rgba(0, 0, 0, 0.45);

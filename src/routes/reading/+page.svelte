@@ -258,7 +258,7 @@
 		align-items: center;
 		gap: 0.5rem;
 		flex: 1;
-		border-bottom: 1px solid rgba(100, 75, 40, 0.22);
+		border-bottom: 1px solid rgba(128, 128, 128, 0.22);
 		padding-bottom: 0.4rem;
 	}
 
@@ -267,7 +267,7 @@
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.78rem; letter-spacing: 0.06em;
 		color: var(--clr-text-primary); padding: 0.3rem 0;
-		caret-color: var(--clr-accent-active);
+		caret-color: currentColor;
 	}
 	.search-input::placeholder { color: var(--clr-text-faint); }
 
@@ -314,8 +314,8 @@
 	}
 	li { border-bottom: none; }
 	li.done .row-wrap {
-		background: rgba(100, 75, 40, 0.06);
-		border-left: 2px solid rgba(100, 75, 40, 0.5);
+		background: rgba(128, 128, 128, 0.06);
+		border-left: 2px solid rgba(128, 128, 128, 0.50);
 		padding-left: 0.75rem;
 	}
 	li.done .title {
@@ -336,7 +336,7 @@
 
 	.row-wrap {
 		display: flex; align-items: center;
-		border-bottom: 1px solid rgba(100, 75, 40, 0.09);
+		border-bottom: 1px solid rgba(128, 128, 128, 0.09);
 	}
 
 	.row {
@@ -348,7 +348,7 @@
 		cursor: pointer;
 		transition: background 0.15s;
 	}
-	.row:hover { background: rgba(100, 75, 40, 0.03); }
+	.row:hover { background: rgba(128, 128, 128, 0.03); }
 
 	.title {
 		font-size: 0.95rem;
@@ -425,7 +425,7 @@
 		position: absolute;
 		z-index: 200;
 		background: #120e04;
-		border: 1px solid rgba(200, 150, 60, 0.25);
+		border: 1px solid rgba(255, 255, 255, 0.18);
 		padding: 0.3rem 0;
 		min-width: 180px;
 		display: flex;
@@ -447,7 +447,7 @@
 		width: 100%;
 	}
 	.menu a:hover {
-		color: var(--clr-accent);
-		background: rgba(200, 150, 60, 0.07);
+		color: var(--clr-dark-text-primary);
+		background: rgba(255, 255, 255, 0.06);
 	}
 </style>

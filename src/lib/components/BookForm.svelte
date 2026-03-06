@@ -281,7 +281,7 @@
 		justify-content: space-between;
 		align-items: center;
 		padding: 1.2rem 1.6rem;
-		border-bottom: 1px solid rgba(200, 150, 60, 0.12);
+		border-bottom: 1px solid rgba(255, 255, 255, 0.10);
 		flex-shrink: 0;
 	}
 
@@ -290,7 +290,7 @@
 		font-size: 0.7rem;
 		letter-spacing: 0.12em;
 		text-transform: uppercase;
-		color: var(--clr-accent);
+		color: var(--clr-dark-text-primary);
 	}
 
 	.close-btn {
@@ -303,7 +303,7 @@
 		line-height: 1;
 		transition: color 0.15s;
 	}
-	.close-btn:hover { color: var(--clr-accent); }
+	.close-btn:hover { color: var(--clr-dark-text-primary); }
 
 	.modal-body {
 		overflow-y: auto;
@@ -336,8 +336,8 @@
 	input[type="text"],
 	input[type="url"],
 	textarea {
-		background: rgba(200, 150, 60, 0.04);
-		border: 1px solid rgba(200, 150, 60, 0.18);
+		background: rgba(255, 255, 255, 0.04);
+		border: 1px solid rgba(255, 255, 255, 0.14);
 		color: var(--clr-dark-text-primary);
 		font-family: var(--font-ui);
 		font-size: 0.88rem;
@@ -346,7 +346,7 @@
 		transition: border-color 0.15s;
 		width: 100%;
 	}
-	input:focus, textarea:focus { border-color: rgba(200, 150, 60, 0.45); }
+	input:focus, textarea:focus { border-color: rgba(255, 255, 255, 0.32); }
 	textarea { resize: vertical; font-family: 'Courier New', Courier, monospace; font-size: 0.78rem; }
 
 	.row {
@@ -356,7 +356,7 @@
 	}
 
 	fieldset {
-		border: 1px solid rgba(200, 150, 60, 0.12);
+		border: 1px solid rgba(255, 255, 255, 0.10);
 		padding: 0.9rem;
 		display: flex;
 		flex-direction: column;
@@ -386,7 +386,7 @@
 
 	.add-link {
 		background: none;
-		border: 1px dashed rgba(200, 150, 60, 0.2);
+		border: 1px dashed rgba(255, 255, 255, 0.15);
 		color: var(--clr-dark-text-secondary);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
@@ -396,7 +396,7 @@
 		transition: all 0.15s;
 		align-self: flex-start;
 	}
-	.add-link:hover { color: var(--clr-accent); border-color: rgba(200, 150, 60, 0.45); }
+	.add-link:hover { color: var(--clr-dark-text-primary); border-color: rgba(255, 255, 255, 0.32); }
 
 	.visibility-row {
 		display: flex;
@@ -430,7 +430,7 @@
 		justify-content: space-between;
 		align-items: center;
 		padding-top: 0.8rem;
-		border-top: 1px solid rgba(200, 150, 60, 0.08);
+		border-top: 1px solid rgba(255, 255, 255, 0.06);
 	}
 
 	.footer-right {
@@ -441,7 +441,7 @@
 
 	button {
 		background: none;
-		border: 1px solid rgba(200, 150, 60, 0.2);
+		border: 1px solid rgba(255, 255, 255, 0.15);
 		color: var(--clr-dark-text-secondary);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
@@ -450,13 +450,13 @@
 		cursor: pointer;
 		transition: all 0.15s;
 	}
-	button:hover:not(:disabled) { color: var(--clr-accent); border-color: rgba(200, 150, 60, 0.45); }
+	button:hover:not(:disabled) { color: var(--clr-dark-text-primary); border-color: rgba(255, 255, 255, 0.32); }
 	button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 	.save-btn {
-		background: rgba(200, 150, 60, 0.08);
-		border-color: rgba(200, 150, 60, 0.35);
-		color: var(--clr-accent);
+		background: rgba(255, 255, 255, 0.06);
+		border-color: rgba(255, 255, 255, 0.25);
+		color: var(--clr-dark-text-primary);
 	}
 
 	.delete-btn {

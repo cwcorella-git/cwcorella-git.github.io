@@ -353,7 +353,7 @@
 
 	.entry-row {
 		display: flex; align-items: center; gap: 1rem;
-		border-bottom: 1px solid rgba(100, 75, 40, 0.09);
+		border-bottom: 1px solid rgba(128, 128, 128, 0.09);
 	}
 	.confirm-row { gap: 1.5rem; }
 
@@ -400,7 +400,7 @@
 	.overlay-header {
 		display: flex; align-items: center; justify-content: space-between;
 		padding: 1.2rem 2rem;
-		border-bottom: 1px solid rgba(100, 75, 40, 0.12);
+		border-bottom: 1px solid rgba(128, 128, 128, 0.12);
 		flex-shrink: 0;
 	}
 	.editor-header-meta { display: flex; flex-direction: column; gap: 0.2rem; }
@@ -433,7 +433,7 @@
 		font-family: Georgia, 'Times New Roman', Times, serif;
 		font-size: 1.3rem; font-weight: normal;
 		color: var(--clr-text-primary); margin: 0 0 2rem; line-height: 1.3;
-		border-bottom: 1px solid rgba(100, 75, 40, 0.15);
+		border-bottom: 1px solid rgba(128, 128, 128, 0.15);
 		padding-bottom: 1.2rem;
 	}
 	.reader-body :global(h1), .reader-body :global(h2), .reader-body :global(h3) {
@@ -444,11 +444,11 @@
 	.reader-body :global(h2) { font-size: 1rem; }
 	.reader-body :global(h3) { font-size: 0.9rem; color: var(--clr-text-secondary); }
 	.reader-body :global(p) { color: var(--clr-text-prose); font-size: 0.95rem; line-height: 1.85; margin: 0 0 1.1rem; }
-	.reader-body :global(blockquote) { border-left: 2px solid rgba(100,75,40,0.25); margin: 1.2rem 0; padding: 0.1rem 1.2rem; color: var(--clr-text-muted); font-style: italic; }
-	.reader-body :global(code) { font-family: 'Courier New', Courier, monospace; font-size: 0.82em; background: rgba(100,75,40,0.07); padding: 0.1em 0.35em; color: var(--clr-text-secondary); }
-	.reader-body :global(pre) { background: rgba(100,75,40,0.04); border: 1px solid rgba(100,75,40,0.12); padding: 1rem 1.2rem; overflow-x: auto; margin: 1.2rem 0; }
+	.reader-body :global(blockquote) { border-left: 2px solid rgba(128,128,128,0.25); margin: 1.2rem 0; padding: 0.1rem 1.2rem; color: var(--clr-text-muted); font-style: italic; }
+	.reader-body :global(code) { font-family: 'Courier New', Courier, monospace; font-size: 0.82em; background: rgba(128,128,128,0.07); padding: 0.1em 0.35em; color: var(--clr-text-secondary); }
+	.reader-body :global(pre) { background: rgba(128,128,128,0.04); border: 1px solid rgba(128,128,128,0.12); padding: 1rem 1.2rem; overflow-x: auto; margin: 1.2rem 0; }
 	.reader-body :global(ul), .reader-body :global(ol) { color: var(--clr-text-prose); font-size: 0.95rem; line-height: 1.85; padding-left: 1.5rem; margin: 0 0 1rem; }
-	.reader-body :global(hr) { border: none; border-top: 1px solid rgba(100,75,40,0.12); margin: 2rem 0; }
+	.reader-body :global(hr) { border: none; border-top: 1px solid rgba(128,128,128,0.12); margin: 2rem 0; }
 
 	/* ── editor ───────────────────────────────────────────── */
 	.editor {
@@ -466,26 +466,26 @@
 	.field-label { font-family: 'Courier New', Courier, monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--clr-text-muted); }
 	.editor-fields input[type="text"],
 	.editor-fields textarea {
-		background: rgba(100, 75, 40, 0.04);
-		border: 1px solid rgba(100, 75, 40, 0.18);
+		background: rgba(128, 128, 128, 0.04);
+		border: 1px solid rgba(128, 128, 128, 0.18);
 		color: var(--clr-text-primary);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.85rem; padding: 0.45rem 0.6rem; outline: none;
 		transition: border-color 0.15s; width: 100%;
 	}
-	.editor-fields input:focus, .editor-fields textarea:focus { border-color: rgba(100, 75, 40, 0.4); }
+	.editor-fields input:focus, .editor-fields textarea:focus { border-color: rgba(128, 128, 128, 0.40); }
 	.editor-fields textarea { resize: vertical; line-height: 1.6; min-height: 400px; }
 	.editor-footer {
 		display: flex; gap: 0.5rem; justify-content: flex-end; padding-top: 0.8rem;
-		border-top: 1px solid rgba(100, 75, 40, 0.1); max-width: 860px;
+		border-top: 1px solid rgba(128, 128, 128, 0.10); max-width: 860px;
 	}
 	.editor-footer button {
-		background: none; border: 1px solid rgba(100, 75, 40, 0.2);
+		background: none; border: 1px solid rgba(128, 128, 128, 0.20);
 		color: var(--clr-text-secondary); font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem; letter-spacing: 0.08em;
 		padding: 0.35rem 0.8rem; cursor: pointer; transition: all 0.15s;
 	}
-	.editor-footer button:hover:not(:disabled) { color: var(--clr-text-primary); border-color: rgba(100, 75, 40, 0.4); }
+	.editor-footer button:hover:not(:disabled) { color: var(--clr-text-primary); border-color: rgba(128, 128, 128, 0.40); }
 	.editor-footer button:disabled { opacity: 0.5; cursor: not-allowed; }
-	.save-btn { background: rgba(100,75,40,0.07) !important; border-color: rgba(100,75,40,0.3) !important; color: var(--clr-text-primary) !important; }
+	.save-btn { background: rgba(128,128,128,0.07) !important; border-color: rgba(128,128,128,0.25) !important; color: var(--clr-text-primary) !important; }
 </style>

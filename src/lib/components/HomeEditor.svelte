@@ -81,12 +81,12 @@
 		align-items: center;
 		gap: 0.3rem;
 		padding: 0.3rem 0;
-		border-bottom: 1px solid rgba(200, 150, 60, 0.12);
+		border-bottom: 1px solid rgba(255, 255, 255, 0.10);
 	}
 
 	.toolbar button {
 		background: none;
-		border: 1px solid rgba(200, 150, 60, 0.15);
+		border: 1px solid rgba(255, 255, 255, 0.12);
 		color: var(--clr-text-secondary);
 		font-family: var(--font-ui);
 		font-size: 0.75rem;
@@ -99,13 +99,13 @@
 		justify-content: center;
 		padding: 0;
 	}
-	.toolbar button:hover { color: var(--clr-text-primary); border-color: rgba(200, 150, 60, 0.4); }
+	.toolbar button:hover { color: var(--clr-text-primary); border-color: rgba(255, 255, 255, 0.28); }
 	.toolbar button.italic { font-style: italic; }
 
 	.sep {
 		width: 1px;
 		height: 1rem;
-		background: rgba(200, 150, 60, 0.15);
+		background: rgba(255, 255, 255, 0.12);
 		margin: 0 0.2rem;
 	}
 
@@ -119,8 +119,8 @@
 
 	textarea {
 		width: 100%;
-		background: rgba(200, 150, 60, 0.04);
-		border: 1px solid rgba(200, 150, 60, 0.2);
+		background: rgba(255, 255, 255, 0.04);
+		border: 1px solid rgba(255, 255, 255, 0.15);
 		color: var(--clr-text-prose);
 		font-family: var(--font-prose);
 		font-size: 1rem;
@@ -130,7 +130,7 @@
 		outline: none;
 		transition: border-color 0.15s;
 	}
-	textarea:focus { border-color: rgba(200, 150, 60, 0.45); }
+	textarea:focus { border-color: rgba(255, 255, 255, 0.32); }
 
 	.actions {
 		display: flex;
@@ -141,7 +141,7 @@
 	button.cancel,
 	button.save {
 		background: none;
-		border: 1px solid rgba(200, 150, 60, 0.2);
+		border: 1px solid rgba(255, 255, 255, 0.15);
 		color: var(--clr-text-secondary);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
@@ -150,12 +150,12 @@
 		cursor: pointer;
 		transition: all 0.15s;
 	}
-	button.cancel:hover:not(:disabled) { color: var(--clr-text-primary); border-color: rgba(200, 150, 60, 0.45); }
+	button.cancel:hover:not(:disabled) { color: var(--clr-text-primary); border-color: rgba(255, 255, 255, 0.32); }
 	button.save {
-		background: rgba(200, 150, 60, 0.08);
-		border-color: rgba(200, 150, 60, 0.35);
+		background: rgba(255, 255, 255, 0.06);
+		border-color: rgba(255, 255, 255, 0.25);
 		color: var(--clr-text-primary);
 	}
-	button.save:hover:not(:disabled) { background: rgba(200, 150, 60, 0.15); }
+	button.save:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
 	button:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>

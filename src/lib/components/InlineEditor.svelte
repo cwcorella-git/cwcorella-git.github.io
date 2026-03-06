@@ -61,10 +61,10 @@
 <style>
 	.editable {
 		cursor: text;
-		border-bottom: 1px dashed rgba(200, 150, 60, 0.3);
+		border-bottom: 1px dashed rgba(255, 255, 255, 0.22);
 		transition: border-color 0.15s;
 	}
-	.editable:hover { border-color: rgba(200, 150, 60, 0.6); }
+	.editable:hover { border-color: rgba(255, 255, 255, 0.40); }
 
 	.editor {
 		display: flex;
@@ -74,9 +74,9 @@
 
 	textarea {
 		width: 100%;
-		background: rgba(200, 150, 60, 0.04);
-		border: 1px solid rgba(200, 150, 60, 0.25);
-		color: #c0b088;
+		background: rgba(255, 255, 255, 0.04);
+		border: 1px solid rgba(255, 255, 255, 0.18);
+		color: var(--clr-dark-text-primary);
 		font-family: Georgia, 'Times New Roman', Times, serif;
 		font-size: 1rem;
 		line-height: 1.9;
@@ -84,7 +84,7 @@
 		resize: vertical;
 		outline: none;
 	}
-	textarea:focus { border-color: rgba(200, 150, 60, 0.5); }
+	textarea:focus { border-color: rgba(255, 255, 255, 0.35); }
 
 	.actions {
 		display: flex;
@@ -94,8 +94,8 @@
 
 	button {
 		background: none;
-		border: 1px solid rgba(200, 150, 60, 0.2);
-		color: #6a5a40;
+		border: 1px solid rgba(255, 255, 255, 0.15);
+		color: var(--clr-dark-text-secondary);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
 		letter-spacing: 0.08em;
@@ -103,11 +103,11 @@
 		cursor: pointer;
 		transition: all 0.15s;
 	}
-	button:hover:not(:disabled) { color: #c8a060; border-color: rgba(200, 150, 60, 0.45); }
+	button:hover:not(:disabled) { color: var(--clr-dark-text-primary); border-color: rgba(255, 255, 255, 0.32); }
 	button.save {
-		background: rgba(200, 150, 60, 0.08);
-		border-color: rgba(200, 150, 60, 0.35);
-		color: #c8a060;
+		background: rgba(255, 255, 255, 0.06);
+		border-color: rgba(255, 255, 255, 0.25);
+		color: var(--clr-dark-text-primary);
 	}
 	button:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>

@@ -107,7 +107,7 @@
 
 	.edit-btn {
 		background: none;
-		border: 1px solid rgba(100, 75, 40, 0.15);
+		border: 1px solid rgba(128, 128, 128, 0.15);
 		color: var(--clr-text-muted);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
@@ -118,7 +118,7 @@
 		align-self: flex-start;
 		margin-top: 0.5rem;
 	}
-	.edit-btn:hover { color: var(--clr-text-primary); border-color: rgba(100, 75, 40, 0.4); }
+	.edit-btn:hover { color: var(--clr-text-primary); border-color: rgba(128, 128, 128, 0.40); }
 
 	footer {
 		position: relative;
