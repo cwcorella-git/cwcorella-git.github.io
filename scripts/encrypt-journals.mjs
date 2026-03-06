@@ -90,22 +90,64 @@ async function decryptData(obj) {
 // ── helpers ───────────────────────────────────────────────────────────────
 
 const STOPWORDS = new Set([
+  // Pronouns
   'the', 'this', 'that', 'these', 'those',
   'they', 'them', 'their', 'theirs',
   'you', 'your', 'yours',
   'our', 'ours', 'we', 'us',
   'its', 'his', 'her', 'hers',
-  'and', 'but', 'for', 'not', 'nor', 'yet', 'with', 'also',
+  'she', 'him', 'who', 'whom',
+  // Conjunctions / prepositions
+  'and', 'but', 'for', 'not', 'nor', 'yet', 'with', 'also', 'into', 'onto',
+  'about', 'above', 'after', 'before', 'between', 'during', 'from', 'over',
+  'under', 'upon', 'without',
+  // Auxiliaries / modals
   'has', 'have', 'had', 'having',
   'can', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'shall',
   'are', 'was', 'were', 'been', 'being',
+  // Determiners / quantifiers
   'all', 'any', 'each', 'both', 'few', 'more', 'most', 'other', 'some',
   'than', 'too', 'very', 'just', 'one', 'two', 'new', 'own',
+  // Contractions with apostrophe stripped
+  'weve', 'ive', 'youre', 'theyre', 'shes', 'hes', 'dont', 'wont',
+  'cant', 'ill', 'didnt', 'isnt', 'wouldnt', 'couldnt', 'shouldnt',
+  'havent', 'hasnt', 'wasnt', 'werent', 'thats', 'whats', 'theres',
+  // Vague / generic nouns
+  'thing', 'things', 'something', 'anything', 'everything', 'nothing',
+  'someone', 'anyone', 'everyone',
+  'way', 'ways', 'kind', 'sort', 'part', 'parts', 'bit', 'bits',
+  'lot', 'lots', 'bunch', 'piece', 'pieces',
+  // Vague location / directional
+  'here', 'there', 'where', 'place', 'point',
+  // Question words
+  'how', 'what', 'when', 'why', 'which',
+  // Common weak verbs that slip through NLP
+  'said', 'says', 'say', 'got', 'get', 'gets', 'make', 'makes', 'made',
+  'take', 'takes', 'took', 'come', 'comes', 'came', 'look', 'looks',
+  'know', 'knew', 'think', 'thought', 'want', 'wants', 'need', 'needs',
+  'going', 'goes', 'went', 'see', 'seen', 'saw', 'felt', 'feel', 'feels',
+  // Informal / junk tokens
+  'unk', 'amp', 'wut', 'rando', 'lol', 'lmao', 'etc', 'aka',
+  // Known usernames in chat logs (Discord handles)
+  'amglitch', 'pmglitch', 'pmchris', 'daveshap', 'guillaume',
   // Zim wiki / metadata terms
   'content', 'type', 'wiki', 'format', 'creation', 'modified', 'notebook', 'zim',
 ]);
 
-const VOWELS = /[aeiou]/;
+// Valid English two-consonant word onsets — words starting with other
+// two-consonant combos (e.g. "pm", "gm") are likely usernames or junk
+const VALID_2_ONSET = new Set([
+  'bl','br','cl','cr','dr','dw','fl','fr','gl','gr','kl','kr','kn',
+  'pl','pr','sc','sf','sk','sl','sm','sn','sp','sq','st','sw','tr',
+  'tw','wr','ch','sh','th','wh','ph','gn','mn',
+]);
+const VOWEL_SET = new Set('aeiou');
+
+function hasValidOnset(word) {
+  if (VOWEL_SET.has(word[0])) return true;
+  if (!word[1] || VOWEL_SET.has(word[1])) return true;
+  return VALID_2_ONSET.has(word[0] + word[1]);
+}
 
 function preprocess(text) {
   return text
@@ -113,11 +155,16 @@ function preprocess(text) {
     .replace(/^[\w-]+:\s*\S[^\n]*/gm, (line) =>
       /^(content-type|wiki-format|creation-date|modified|tags|notebook)/i.test(line) ? '' : line
     )
+    // Strip bare URLs and domains
+    .replace(/https?:\S+/g, '')
+    .replace(/\bwww\.\S+/g, '')
+    .replace(/\b\w+\.(com|org|net|io|gov|edu|tv|co)\b/gi, '')
+    // Strip filename-with-extension tokens
+    .replace(/\b\w+\.(docx?|txt|text|pdf|md|png|jpe?g|gif)\b/gi, '')
     .replace(/^#{1,6}\s+/gm, '')
-    // Replace word-splitting punctuation with spaces so "text/x-zim-wiki" → "text x zim wiki"
+    // Replace word-splitting punctuation with spaces
     .replace(/[/\-_:]/g, ' ')
-    .replace(/[*`~[\]()>]/g, '')
-    .replace(/https?:\S+/g, '');
+    .replace(/[*`~[\]()>]/g, '');
 }
 
 function generateSlugSync(text, usedSlugs) {
@@ -128,7 +175,13 @@ function generateSlugSync(text, usedSlugs) {
   for (const phrase of nouns) {
     for (const word of phrase.split(/\s+/)) {
       const key = word.toLowerCase().replace(/[^a-z]/g, '');
-      if (key.length >= 3 && key.length <= 14 && !STOPWORDS.has(key) && VOWELS.test(key)) {
+      if (
+        key.length >= 3 &&
+        key.length <= 14 &&
+        !STOPWORDS.has(key) &&
+        /[aeiou]/.test(key) &&
+        hasValidOnset(key)
+      ) {
         freq[key] = (freq[key] ?? 0) + 1;
       }
     }
