@@ -92,5 +92,59 @@ export async function putFileWithFreshSha(
 
 export async function updateBooksJson(pat: string, books: Book[]): Promise<void> {
 	const content = JSON.stringify(books);
-	await putFileWithFreshSha(pat, 'src/lib/books.json', content, 'update books.json');
+	const b64 = toBase64(content);
+
+	const headers = {
+		Authorization: `Bearer ${pat}`,
+		Accept: 'application/vnd.github+json',
+		'Content-Type': 'application/json'
+	};
+
+	// Use low-level Git Data API — no blob SHA conflict, no 1MB content limit.
+	// 1. Current HEAD commit SHA
+	const refRes = await fetch(`${API}/repos/${REPO}/git/ref/heads/main`, { headers });
+	if (!refRes.ok) throw new Error(`Failed to get ref: ${refRes.status}`);
+	const headSha: string = (await refRes.json()).object.sha;
+
+	// 2. Current tree SHA
+	const commitRes = await fetch(`${API}/repos/${REPO}/git/commits/${headSha}`, { headers });
+	if (!commitRes.ok) throw new Error(`Failed to get commit: ${commitRes.status}`);
+	const treeSha: string = (await commitRes.json()).tree.sha;
+
+	// 3. Create blob
+	const blobRes = await fetch(`${API}/repos/${REPO}/git/blobs`, {
+		method: 'POST', headers,
+		body: JSON.stringify({ content: b64, encoding: 'base64' })
+	});
+	if (!blobRes.ok) throw new Error(`Failed to create blob: ${blobRes.status}`);
+	const blobSha: string = (await blobRes.json()).sha;
+
+	// 4. Create tree
+	const treeRes = await fetch(`${API}/repos/${REPO}/git/trees`, {
+		method: 'POST', headers,
+		body: JSON.stringify({
+			base_tree: treeSha,
+			tree: [{ path: 'src/lib/books.json', mode: '100644', type: 'blob', sha: blobSha }]
+		})
+	});
+	if (!treeRes.ok) throw new Error(`Failed to create tree: ${treeRes.status}`);
+	const newTreeSha: string = (await treeRes.json()).sha;
+
+	// 5. Create commit
+	const newCommitRes = await fetch(`${API}/repos/${REPO}/git/commits`, {
+		method: 'POST', headers,
+		body: JSON.stringify({ message: 'update books.json', tree: newTreeSha, parents: [headSha] })
+	});
+	if (!newCommitRes.ok) throw new Error(`Failed to create commit: ${newCommitRes.status}`);
+	const newCommitSha: string = (await newCommitRes.json()).sha;
+
+	// 6. Advance the ref (fast-forward)
+	const updateRes = await fetch(`${API}/repos/${REPO}/git/refs/heads/main`, {
+		method: 'PATCH', headers,
+		body: JSON.stringify({ sha: newCommitSha })
+	});
+	if (!updateRes.ok) {
+		const err = await updateRes.json().catch(() => ({}));
+		throw new Error(err.message || `Failed to update ref: ${updateRes.status}`);
+	}
 }
