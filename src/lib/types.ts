@@ -9,4 +9,5 @@ export interface Book {
 	links?: BookLink[];
 	notes?: string;
 	doc?: BookDoc;
+	read?: boolean;
 }

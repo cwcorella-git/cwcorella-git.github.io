@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { browser } from '$app/environment';
 	import type { Book } from '$lib/types';
 	import allBooksStatic from '$lib/books.json';
 	import { adminState, bookFormState, booksState } from '$lib/admin/state.svelte';
+	import { updateBooksJson } from '$lib/admin/github';
 	import { toast } from '$lib/admin/toast.svelte';
 	import DocReader from '$lib/components/DocReader.svelte';
 
@@ -51,19 +50,27 @@
 		if (e.key === 'Enter') { suggestionsDismissed = true; }
 	}
 
-	// ── completed state (localStorage) ──────────────────────────
-	let completed = $state(new Set<number>());
-	onMount(() => {
-		if (browser) {
-			completed = new Set(JSON.parse(localStorage.getItem('cwc-read') || '[]'));
-		}
-	});
+	// ── read state (stored in books.json, admin-only toggle) ─────
+	let togglingId = $state<number | null>(null);
 
-	function toggleRead(id: number) {
-		const next = new Set(completed);
-		if (next.has(id)) next.delete(id); else next.add(id);
-		completed = next;
-		if (browser) localStorage.setItem('cwc-read', JSON.stringify([...next]));
+	async function toggleRead(book: Book) {
+		if (togglingId !== null) return;
+		togglingId = book.id;
+		const updated = booksState.books.map(b =>
+			b.id === book.id ? { ...b, read: !b.read || undefined } : b
+		);
+		booksState.set(updated);
+		try {
+			await updateBooksJson(adminState.pat, updated);
+		} catch (e: unknown) {
+			// revert on failure
+			booksState.set(booksState.books.map(b =>
+				b.id === book.id ? { ...b, read: book.read } : b
+			));
+			toast.error(e instanceof Error ? e.message : 'Failed to save.');
+		} finally {
+			togglingId = null;
+		}
 	}
 
 	// ── context menu ─────────────────────────────────────────────
@@ -165,7 +172,7 @@
 
 		<ul class="list">
 			{#each filtered as book (book.id)}
-				<li class:done={completed.has(book.id)}>
+				<li class:done={book.read}>
 					<div class="row-wrap">
 						<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 						<div
@@ -179,12 +186,15 @@
 							<span class="title">{book.title}</span>
 							<span class="meta">{book.author}{book.year ? ` · ${book.year}` : ''}</span>
 						</div>
-						<button
-							class="read-toggle"
-							class:is-read={completed.has(book.id)}
-							onclick={() => toggleRead(book.id)}
-							aria-label={completed.has(book.id) ? 'Mark as unread' : 'Mark as read'}
-						>✓</button>
+						{#if adminState.active}
+							<button
+								class="read-toggle"
+								class:is-read={book.read}
+								disabled={togglingId === book.id}
+								onclick={() => toggleRead(book)}
+								aria-label={book.read ? 'Mark as unread' : 'Mark as read'}
+							>{book.read ? 'unmark' : 'mark read'}</button>
+						{/if}
 						{#if adminState.editMode}
 							<button
 								class="edit-pencil"
@@ -352,14 +362,19 @@
 		background: none;
 		border: none;
 		cursor: pointer;
-		color: #2e2820;
-		font-size: 0.85rem;
-		padding: 0 0.4rem;
+		font-family: 'Courier New', Courier, monospace;
+		font-size: 0.55rem;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: #4a3e2c;
+		padding: 0 0.6rem;
 		transition: color 0.15s;
 		flex-shrink: 0;
+		white-space: nowrap;
 	}
-	.read-toggle:hover { color: #7a6a48; }
+	.read-toggle:hover:not(:disabled) { color: #8a7858; }
 	.read-toggle.is-read { color: #c8a060; }
+	.read-toggle:disabled { opacity: 0.4; cursor: not-allowed; }
 
 	.edit-pencil {
 		background: none;
