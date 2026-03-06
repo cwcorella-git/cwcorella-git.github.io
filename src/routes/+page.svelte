@@ -28,13 +28,15 @@
 		{#if editing}
 			<HomeEditor content={content} onSave={save} onCancel={() => (editing = false)} />
 		{:else}
-			<div class="prose">
-				<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-				{@html rendered}
+			<div class="content-panel">
+				<div class="prose">
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+					{@html rendered}
+				</div>
+				{#if adminState.editMode}
+					<button class="edit-btn" onclick={() => (editing = true)}>✎ edit</button>
+				{/if}
 			</div>
-			{#if adminState.editMode}
-				<button class="edit-btn" onclick={() => (editing = true)}>✎ edit</button>
-			{/if}
 		{/if}
 	</main>
 
@@ -57,15 +59,21 @@
 		flex: 1;
 		max-width: 560px;
 		margin: 0 auto;
-		padding: 2.5rem 2.5rem 3rem;
+		padding: 2rem;
 		width: 100%;
 		display: flex;
 		flex-direction: column;
 		justify-content: center;
+	}
+
+	.content-panel {
 		background: rgba(255, 248, 231, 0.88);
 		backdrop-filter: blur(16px);
 		-webkit-backdrop-filter: blur(16px);
 		border: 1px solid rgba(180, 150, 100, 0.18);
+		padding: 2.5rem 2.5rem 2.5rem;
+		display: flex;
+		flex-direction: column;
 	}
 
 	/* Prose styles for markdown-rendered content */
