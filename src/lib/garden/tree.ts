@@ -9,7 +9,7 @@ const INFLUENCE_R    = 90;   // px — attractor influence radius
 const KILL_DIST      = 14;   // px — attractor consumed within this distance of a tip
 const NUM_ATTRACTORS = 900;
 const MAX_ITER       = 600;
-const CACHE_KEY      = 'cwc:tree-v1';
+const CACHE_KEY      = 'cwc:tree-v2';
 
 // ── types ─────────────────────────────────────────────────────────────────
 export interface TreeSegment {
@@ -195,21 +195,23 @@ export function generateTree(W: number, H: number, horizonY: number): TreeSegmen
 }
 
 // ── localStorage cache ────────────────────────────────────────────────────
-export function loadTreeFromCache(): TreeSegment[] | null {
+export function loadTreeFromCache(W: number, H: number): TreeSegment[] | null {
 	try {
 		const raw = localStorage.getItem(CACHE_KEY);
 		if (!raw) return null;
-		const cached = JSON.parse(raw) as { version: number; segments: TreeSegment[] };
-		if (cached.version !== 1) return null;
+		const cached = JSON.parse(raw) as { version: number; W: number; H: number; segments: TreeSegment[] };
+		if (cached.version !== 2) return null;
+		// Invalidate if viewport changed by more than 4px in either dimension
+		if (Math.abs(cached.W - W) > 4 || Math.abs(cached.H - H) > 4) return null;
 		return cached.segments;
 	} catch {
 		return null;
 	}
 }
 
-export function saveTreeToCache(segments: TreeSegment[]): void {
+export function saveTreeToCache(segments: TreeSegment[], W: number, H: number): void {
 	try {
-		localStorage.setItem(CACHE_KEY, JSON.stringify({ version: 1, segments }));
+		localStorage.setItem(CACHE_KEY, JSON.stringify({ version: 2, W, H, segments }));
 	} catch {
 		// localStorage full or unavailable — silently skip
 	}

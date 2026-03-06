@@ -643,6 +643,67 @@
 		ctx.restore();
 	}
 
+	// ── draw: horizon atmosphere blend ───────────────────────────────────────
+	// Soft sky-color wash straddling the horizon — dissolves the hard edge between
+	// sky and ground into the same atmospheric haze visible in pencil landscapes.
+	function drawHorizonBlend(ctx: CanvasRenderingContext2D, altDeg: number): void {
+		const { horizon } = getSkyColors(altDeg);
+		const band = Math.max(6, horizonY * 0.022);
+		const g = ctx.createLinearGradient(0, horizonY - band, 0, horizonY + band * 1.8);
+		g.addColorStop(0,   css(horizon, 0));
+		g.addColorStop(0.3, css(horizon, 0.32));
+		g.addColorStop(0.6, css(horizon, 0.18));
+		g.addColorStop(1,   css(horizon, 0));
+		ctx.fillStyle = g;
+		ctx.fillRect(0, horizonY - band, W, band * 2.8);
+	}
+
+	// ── draw: ground contour lines ────────────────────────────────────────────
+	// Faint wavy strokes receding to the horizon — quadratic y-spacing mimics
+	// perspective foreshortening: dense near the horizon, spread in the foreground.
+	function drawGroundContours(ctx: CanvasRenderingContext2D, altDeg: number): void {
+		const dl = Math.max(0, Math.min(1, (altDeg + 8) / 16));
+		const alpha = dl * 0.05;
+		if (alpha < 0.004) return;
+
+		const groundH   = H - horizonY;
+		const lineCount = 7;
+		ctx.save();
+		ctx.strokeStyle = `rgba(0,0,0,${alpha.toFixed(3)})`;
+		ctx.lineCap = 'round';
+
+		for (let i = 0; i < lineCount; i++) {
+			const t     = (i + 1) / (lineCount + 1);
+			const yFrac = t * t;                           // quadratic: crowd near horizon
+			const y     = horizonY + yFrac * groundH * 0.82;
+			const amp   = yFrac * H * 0.010;
+			ctx.lineWidth = Math.max(0.3, yFrac * 1.0);
+			ctx.beginPath();
+			ctx.moveTo(0, y);
+			for (let x = 0; x <= W; x += 10) {
+				ctx.lineTo(x, y + noise1D(x / 200 + i * 5.3) * amp);
+			}
+			ctx.stroke();
+		}
+		ctx.restore();
+	}
+
+	// ── draw: vignette ────────────────────────────────────────────────────────
+	// Soft dark radial gradient from the corners — frames the scene and adds
+	// the atmospheric edge-darkness present in every pencil landscape reference.
+	function drawVignette(ctx: CanvasRenderingContext2D): void {
+		const cx    = W / 2;
+		const cy    = H / 2;
+		const inner = Math.min(W, H) * 0.28;
+		const outer = Math.max(W, H) * 0.80;
+		const g = ctx.createRadialGradient(cx, cy, inner, cx, cy, outer);
+		g.addColorStop(0,    'rgba(0,0,0,0)');
+		g.addColorStop(0.55, 'rgba(0,0,0,0)');
+		g.addColorStop(1,    'rgba(0,0,0,0.42)');
+		ctx.fillStyle = g;
+		ctx.fillRect(0, 0, W, H);
+	}
+
 	// ── draw: midground tree silhouettes ─────────────────────────────────────
 	// Simple blob silhouettes between the terrain ridges and the foreground tree.
 	// Drawn at reduced scale and alpha to suggest atmospheric distance.
@@ -1079,12 +1140,14 @@
 		smMouseY = smMouseY < -9000 ? rawMouseY : smMouseY + (rawMouseY - smMouseY) * alpha;
 
 		// Wind: slow noise-driven oscillation (degrees/s²)
-		const windForce = noise1D(time / 6) * 28;
-		tickWind(bgPlants, windForce, dt);
-		tickWind(fgPlants, windForce, dt);
+		// groundBand matches buildScene so depth attenuation is consistent.
+		const windForce  = noise1D(time / 6) * 28;
+		const groundBand = (H - horizonY) * 0.65;
+		tickWind(bgPlants, windForce, dt, horizonY, groundBand);
+		tickWind(fgPlants, windForce, dt, horizonY, groundBand);
 		if (cursorActive) {
-			applyMouseForce(bgPlants, smMouseX, smMouseY);
-			applyMouseForce(fgPlants, smMouseX, smMouseY);
+			applyMouseForce(bgPlants, smMouseX, smMouseY, horizonY, groundBand);
+			applyMouseForce(fgPlants, smMouseX, smMouseY, horizonY, groundBand);
 		}
 
 		ctx.clearRect(0, 0, W, H);
@@ -1098,7 +1161,9 @@
 		drawBeltOfVenus(ctx, altDeg);
 		drawPurpleLight(ctx, altDeg, sxn);
 		drawGround(ctx, altDeg);
+		drawGroundContours(ctx, altDeg);
 		drawTerrain(ctx, altDeg);
+		drawHorizonBlend(ctx, altDeg);
 		drawPlants(ctx, bgPlants, horizonY, H);   // far grass — behind midground trees
 		drawMidgroundTrees(ctx, altDeg);
 		drawCirrus(ctx, altDeg);
@@ -1106,16 +1171,23 @@
 		drawTreeShadow(ctx, altDeg);
 		if (treeSegments.length > 0) drawTree(ctx, treeSegments, W, H);
 		drawPlants(ctx, fgPlants, horizonY, H);   // near grass — in front of everything
+		drawVignette(ctx);
 
 		animFrame = requestAnimationFrame(draw);
 	}
 
 	function resize(): void {
 		if (!canvas) return;
+		const prevW = W, prevH = H;
 		W        = canvas.width  = window.innerWidth;
 		H        = canvas.height = window.innerHeight;
 		horizonY = H * HORIZON_FRAC;
 		buildScene(W, H, horizonY);
+		// Regenerate tree whenever viewport changes — cached coords are absolute px
+		if (Math.abs(W - prevW) > 4 || Math.abs(H - prevH) > 4) {
+			treeSegments = generateTree(W, H, horizonY);
+			saveTreeToCache(treeSegments, W, H);
+		}
 	}
 
 	onMount(() => {
@@ -1139,13 +1211,13 @@
 
 		// Load tree from cache, or generate on first visit (deferred so first
 		// frame paints before the ~200ms generation runs).
-		const cached = loadTreeFromCache();
+		const cached = loadTreeFromCache(W, H);
 		if (cached) {
 			treeSegments = cached;
 		} else {
 			setTimeout(() => {
 				treeSegments = generateTree(W, H, horizonY);
-				saveTreeToCache(treeSegments);
+				saveTreeToCache(treeSegments, W, H);
 			}, 80);
 		}
 
