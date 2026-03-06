@@ -21,15 +21,16 @@ import { basename, extname, join, resolve } from 'path';
 import { homedir } from 'os';
 import { webcrypto, createHash } from 'node:crypto';
 
-const { subtle, getRandomValues } = webcrypto;
+const { subtle } = webcrypto;
+const getRandomValues = (arr) => webcrypto.getRandomValues(arr);
 
 const passphrase = process.argv[2];
-const sourceDir = process.argv[3]
-  ? resolve(process.argv[3])
-  : join(homedir(), 'Documents/Writing/MD Files');
+const sourceDirs = process.argv.slice(3).length
+  ? process.argv.slice(3).map(d => resolve(d))
+  : [join(homedir(), 'Documents/Writing/MD Files')];
 
 if (!passphrase) {
-  console.error('Usage: node scripts/encrypt-journals.mjs <passphrase> [source-dir]');
+  console.error('Usage: node scripts/encrypt-journals.mjs <passphrase> [source-dir ...]');
   process.exit(1);
 }
 
@@ -86,35 +87,38 @@ function extractDate(filename, statObj) {
 mkdirSync(JOURNALS_DIR, { recursive: true });
 
 const EXTS = new Set(['.md', '.txt']);
-let sourceFiles;
-try {
-  sourceFiles = readdirSync(sourceDir)
-    .filter(f => EXTS.has(extname(f).toLowerCase()))
-    .sort();
-} catch {
-  console.error(`Cannot read source directory: ${sourceDir}`);
-  process.exit(1);
-}
-
-console.log(`Source : ${sourceDir}`);
-console.log(`Found  : ${sourceFiles.length} files\n`);
-
 const index = [];
 
-for (const file of sourceFiles) {
-  const filePath = join(sourceDir, file);
-  const content  = readFileSync(filePath, 'utf8');
-  const stat     = statSync(filePath);
-  const title    = extractTitle(content, file);
-  const date     = extractDate(file, stat);
-  const slug     = fileSlug(file);
+for (const sourceDir of sourceDirs) {
+  let sourceFiles;
+  try {
+    sourceFiles = readdirSync(sourceDir)
+      .filter(f => EXTS.has(extname(f).toLowerCase()))
+      .sort();
+  } catch {
+    console.error(`Cannot read source directory: ${sourceDir}`);
+    process.exit(1);
+  }
 
-  const encrypted = await encryptData(content);
-  writeFileSync(join(JOURNALS_DIR, `${slug}.enc`), JSON.stringify(encrypted));
+  console.log(`Source : ${sourceDir}`);
+  console.log(`Found  : ${sourceFiles.length} files\n`);
 
-  index.push({ slug, title, date });
-  console.log(`✓ ${file}`);
-  console.log(`    slug: ${slug}   date: ${date}`);
+  for (const file of sourceFiles) {
+    const filePath = join(sourceDir, file);
+    const content  = readFileSync(filePath, 'utf8');
+    const stat     = statSync(filePath);
+    const title    = extractTitle(content, file);
+    const date     = extractDate(file, stat);
+    const slug     = fileSlug(file);
+
+    const encrypted = await encryptData(content);
+    writeFileSync(join(JOURNALS_DIR, `${slug}.enc`), JSON.stringify(encrypted));
+
+    index.push({ slug, title, date });
+    console.log(`✓ ${file}`);
+    console.log(`    slug: ${slug}   date: ${date}`);
+  }
+  console.log('');
 }
 
 // Encrypt the entire index so titles are not visible in the repo
