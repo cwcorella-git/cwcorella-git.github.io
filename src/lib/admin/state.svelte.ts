@@ -50,6 +50,16 @@ export const writeQueue = {
 	get isDirty(): boolean { return _pending.size > 0; },
 
 	push(payload: DomainPayload): void {
+		// Journals: merge extraUpdates/deletions so rapid saves don't drop earlier .enc files
+		if (payload.domain === 'journals-index') {
+			const existing = _pending.get('journals-index') as Extract<DomainPayload, { domain: 'journals-index' }> | undefined;
+			if (existing) {
+				const mergedUpdates = new Map(existing.extraUpdates.map(u => [u.path, u]));
+				for (const u of payload.extraUpdates) mergedUpdates.set(u.path, u);
+				const mergedDeletions = [...new Set([...existing.deletions, ...payload.deletions])];
+				payload = { ...payload, extraUpdates: [...mergedUpdates.values()], deletions: mergedDeletions };
+			}
+		}
 		_pending = new Map(_pending).set(payload.domain, payload);
 		_syncStatus = 'dirty';
 		draftStore.save(payload.domain, payload);
@@ -113,12 +123,29 @@ export const writeQueue = {
 			count++;
 		}
 
+		const journalsDraft = draftStore.load<Extract<DomainPayload, { domain: 'journals-index' }>>('journals-index');
+		if (journalsDraft) {
+			_pending = new Map(_pending).set('journals-index', journalsDraft);
+			_syncStatus = 'dirty';
+			count++;
+		}
+
 		if (count > 0 && _debounceTimer === null) {
 			_debounceTimer = setTimeout(() => { writeQueue.flush(); }, 10_000);
 		}
 
 		return count;
 	}
+};
+
+// ── Journal content cache ─────────────────────────────────────────────────────
+// Plaintext content of entries saved this session but not yet on GitHub Pages.
+// Lets the reader/editor open entries before the write queue commits.
+// Not persisted — cleared on page reload (content key required to decrypt anyway).
+const _journalCache = new Map<string, string>();
+export const journalCache = {
+	set(slug: string, content: string) { _journalCache.set(slug, content); },
+	get(slug: string): string | undefined { return _journalCache.get(slug); },
 };
 
 // ── Shared books state ────────────────────────────────────────────────────────

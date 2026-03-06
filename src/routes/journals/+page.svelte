@@ -5,6 +5,7 @@
 	import { writeQueue } from '$lib/admin/state.svelte';
 	import { toast } from '$lib/admin/toast.svelte';
 	import { generateJournalSlug } from '$lib/admin/slug';
+	import { journalCache } from '$lib/admin/state.svelte';
 
 	interface JournalMeta { slug: string; title: string; date: string | null; }
 
@@ -57,6 +58,11 @@
 		readerHtml = '';
 		readerLoading = true;
 		try {
+			const cached = journalCache.get(entry.slug);
+			if (cached) {
+				readerHtml = renderMarkdown(cached);
+				return;
+			}
 			const res = await fetch(`/docs/private/journals/${entry.slug}.enc`);
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			const markdown = await decryptDoc(await res.json(), adminState.contentKey);
@@ -98,6 +104,11 @@
 		editorContent = '';
 		editorLoading = true;
 		try {
+			const cached = journalCache.get(entry.slug);
+			if (cached) {
+				editorContent = cached;
+				return;
+			}
 			const res = await fetch(`/docs/private/journals/${entry.slug}.enc`);
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			editorContent = await decryptDoc(await res.json(), adminState.contentKey);
@@ -120,6 +131,7 @@
 				? await generateJournalSlug(editorContent, index.map(e => e.slug))
 				: editorEntry!.slug;
 
+			journalCache.set(slug, editorContent);
 			const encContent = await encryptDoc(editorContent, adminState.contentKey);
 			const meta: JournalMeta = { slug, title, date: editorDate.trim() || null };
 			const newIndex = editorMode === 'create'
