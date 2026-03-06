@@ -63,7 +63,7 @@
 		const decl = 23.45 * Math.sin(rad * (360 / 365) * (doy - 81));
 		const hour = date.getHours() + date.getMinutes() / 60 + date.getSeconds() / 3600;
 		const ha   = 15 * (hour - 12);
-		const lat  = themeState.lat * rad;
+		const lat  = 39.53 * rad;  // Reno, NV
 		const sinAlt =
 			Math.sin(lat) * Math.sin(decl * rad) +
 			Math.cos(lat) * Math.cos(decl * rad) * Math.cos(ha * rad);
@@ -332,22 +332,31 @@
 		const prng = makePRNG(0xBADC0FFE);
 		plants = [];
 
-		for (let i = 0; i < 50; i++) {
+		// Plants scatter across 60% of the ground band. Depth fraction is biased toward
+		// the foreground so near plants are denser. Height scales with depth: small/faint
+		// at the horizon, large/bold near the viewer.
+		const groundBand = (ch - hy) * 0.60;
+
+		for (let i = 0; i < 62; i++) {
+			const yFrac  = Math.pow(prng(), 1.5);       // bias: more plants near viewer
 			const x      = prng() * cw;
-			const y      = hy + prng() * 12;
-			const bornAt = prng() * 4000;   // plants born at random points during pre-history
+			const y      = hy + yFrac * groundBand;
+			const bornAt = prng() * 4000;
 			const scale  = growthFactor(Math.max(0, gardenAgeUnits - bornAt));
-			const h      = (22 + prng() * 42) * scale;
+			const depth  = 0.38 + yFrac * 1.55;         // 0.38× (far) → 1.93× (near)
+			const h      = (22 + prng() * 42) * scale * depth;
 			const seed   = Math.floor(prng() * 0x7FFFFFFF);
 			plants.push(makeGrassTuft(x, y, h, seed));
 		}
 
-		for (let i = 0; i < 8; i++) {
+		for (let i = 0; i < 12; i++) {
+			const yFrac  = Math.pow(prng(), 1.2) * 0.75 + 0.08; // keep ferns off the very horizon
 			const x      = prng() * cw;
-			const y      = hy + prng() * 8;
-			const bornAt = prng() * 6000;   // ferns can be older relative to the pre-history
+			const y      = hy + yFrac * groundBand;
+			const bornAt = prng() * 6000;
 			const scale  = growthFactor(Math.max(0, gardenAgeUnits - bornAt));
-			const h      = (52 + prng() * 52) * scale;
+			const depth  = 0.40 + yFrac * 1.40;
+			const h      = (52 + prng() * 52) * scale * depth;
 			const seed   = Math.floor(prng() * 0x7FFFFFFF);
 			plants.push(makeFern(x, y, h, seed));
 		}
@@ -462,12 +471,13 @@
 		const dl  = Math.max(0, Math.min(1, (altDeg + 8) / 16));   // 0=night, 1=full-day
 		const slt = Math.max(0, Math.min(1, 1 - Math.abs(altDeg - 3) / 7)); // sunset peak ~alt 3°
 
-		const dayTop:    RGB = [200, 182, 148];
-		const sunsetTop: RGB = [196, 122,  56];
-		const nightTop:  RGB = [ 22,  22,  36];
-		const dayBot:    RGB = [172, 150, 110];
-		const sunsetBot: RGB = [158,  92,  42];
-		const nightBot:  RGB = [ 12,  12,  24];
+		// topColor is slightly lighter than before — increases recession contrast toward horizon.
+		const dayTop:    RGB = [218, 202, 168];
+		const sunsetTop: RGB = [210, 138,  68];
+		const nightTop:  RGB = [ 30,  30,  50];
+		const dayBot:    RGB = [155, 134,  96];
+		const sunsetBot: RGB = [140,  78,  30];
+		const nightBot:  RGB = [  8,   8,  18];
 
 		let topColor: RGB, botColor: RGB;
 		if (dl > 0.5) {
@@ -485,6 +495,15 @@
 		g.addColorStop(1,   css(botColor));
 		ctx.fillStyle = g;
 		ctx.fillRect(0, horizonY, W, H - horizonY);
+
+		// Foreground shadow: darkens the bottom ~22% of the ground band, simulating
+		// the shadow cast beneath the viewer's feet. Depth cue independent of time of day.
+		const shadowH = (H - horizonY) * 0.22;
+		const sg = ctx.createLinearGradient(0, H - shadowH, 0, H);
+		sg.addColorStop(0, 'rgba(0,0,0,0)');
+		sg.addColorStop(1, 'rgba(0,0,0,0.20)');
+		ctx.fillStyle = sg;
+		ctx.fillRect(0, H - shadowH, W, shadowH);
 	}
 
 	// ── draw: stars & Milky Way ────────────────────────────────────────────────
@@ -576,23 +595,23 @@
 			: Math.max(0.06, Math.min(0.36, (altDeg + 8) / 28));
 		const { horizon } = getSkyColors(altDeg);
 
-		// Far mountains (most atmospheric haze)
-		const farColor = isNight    ? 'rgba(12,15,30,0.84)'
-		               : isTwilight ? 'rgba(95,82,100,0.82)'
-		               :              'rgba(155,142,124,0.78)';
-		fillMountainRange(ctx, 2.3, horizonY * 0.20, farColor, horizon, hazeBase * 0.85);
+		// Far mountains (most atmospheric haze — notably lighter base, heavy haze overlay)
+		const farColor = isNight    ? 'rgba(14,18,35,0.78)'
+		               : isTwilight ? 'rgba(112,98,120,0.75)'
+		               :              'rgba(170,158,142,0.72)';
+		fillMountainRange(ctx, 2.3, horizonY * 0.20, farColor, horizon, Math.min(0.92, hazeBase * 1.15));
 
 		// Near mountains
 		const nearColor = isNight    ? 'rgba(8,10,22,0.90)'
 		                : isTwilight ? 'rgba(58,46,62,0.88)'
 		                :              'rgba(95,82,62,0.88)';
-		fillMountainRange(ctx, 5.7, horizonY * 0.33, nearColor, horizon, hazeBase * 0.48);
+		fillMountainRange(ctx, 5.7, horizonY * 0.33, nearColor, horizon, Math.min(0.72, hazeBase * 0.58));
 
 		// Rolling hills (fBm — softer, greener)
 		const hillColor = isNight    ? 'rgba(6,8,16,0.92)'
 		                : isTwilight ? 'rgba(40,44,32,0.90)'
 		                :              'rgba(70,82,46,0.88)';
-		fillHillRange(ctx, 8.1, horizonY * 0.14, hillColor, horizon, hazeBase * 0.22);
+		fillHillRange(ctx, 8.1, horizonY * 0.14, hillColor, horizon, hazeBase * 0.24);
 	}
 
 	function fillMountainRange(
@@ -640,6 +659,87 @@
 			ctx.fillStyle = css(hazeRGB, hazeAlpha);
 			ctx.fillRect(0, 0, W, H);
 		}
+		ctx.restore();
+	}
+
+	// ── draw: midground tree silhouettes ─────────────────────────────────────
+	// Simple blob silhouettes between the terrain ridges and the foreground tree.
+	// Drawn at reduced scale and alpha to suggest atmospheric distance.
+	function drawMidgroundTrees(ctx: CanvasRenderingContext2D, altDeg: number): void {
+		const isNight    = altDeg < -6;
+		const isTwilight = !isNight && altDeg < 6;
+
+		// [x fraction, scale factor] — seated on horizonY
+		const trees: [number, number][] = [
+			[0.60, 0.27],
+			[0.73, 0.19],
+			[0.51, 0.31],
+			[0.83, 0.16],
+		];
+
+		ctx.save();
+		ctx.lineCap = 'round';
+
+		for (const [xf, s] of trees) {
+			const bx     = xf * W;
+			const by     = horizonY;
+			const trunkH = 128 * s;
+			const crownRx = 60 * s;
+			const crownRy = 50 * s;
+
+			// Smaller = more distant = more atmospheric fade
+			const alpha = isNight ? Math.min(0.90, 0.18 + s * 1.0) : Math.min(0.88, 0.32 + s * 1.1);
+			ctx.globalAlpha = alpha;
+
+			const clr = isNight    ? 'rgba(8,10,20,1)'
+			          : isTwilight ? 'rgba(48,40,54,1)'
+			          :              'rgba(52,64,36,1)';
+
+			ctx.fillStyle   = clr;
+			ctx.strokeStyle = clr;
+			ctx.lineWidth   = Math.max(0.8, 2.4 * s);
+
+			// Trunk
+			ctx.beginPath();
+			ctx.moveTo(bx, by);
+			ctx.lineTo(bx, by - trunkH);
+			ctx.stroke();
+
+			// Crown — two overlapping ellipses for a slightly irregular silhouette
+			ctx.beginPath();
+			ctx.ellipse(bx, by - trunkH - crownRy * 0.4, crownRx, crownRy, 0, 0, Math.PI * 2);
+			ctx.fill();
+			ctx.beginPath();
+			ctx.ellipse(bx - crownRx * 0.28, by - trunkH - crownRy * 0.62, crownRx * 0.68, crownRy * 0.62, 0, 0, Math.PI * 2);
+			ctx.fill();
+		}
+
+		ctx.globalAlpha = 1;
+		ctx.restore();
+	}
+
+	// ── draw: tree shadow pool ────────────────────────────────────────────────
+	// Soft radial ellipse at the foreground tree base — anchors it to the ground.
+	function drawTreeShadow(ctx: CanvasRenderingContext2D, altDeg: number): void {
+		const sunFactor = Math.max(0, Math.min(1, (altDeg + 4) / 20));
+		if (sunFactor < 0.04) return;
+
+		const bx = W * 0.28;
+		const by = horizonY;
+		const rx = Math.max(40, 70 * (W / 1200));
+		const ry = rx * 0.20;
+
+		const g = ctx.createRadialGradient(bx, by, 0, bx, by, rx);
+		g.addColorStop(0,   `rgba(0,0,0,${(0.30 * sunFactor).toFixed(3)})`);
+		g.addColorStop(0.45, `rgba(0,0,0,${(0.12 * sunFactor).toFixed(3)})`);
+		g.addColorStop(1,   'rgba(0,0,0,0)');
+
+		ctx.save();
+		ctx.scale(1, ry / rx);
+		ctx.fillStyle = g;
+		ctx.beginPath();
+		ctx.ellipse(bx, by * (rx / ry), rx, rx, 0, 0, Math.PI * 2);
+		ctx.fill();
 		ctx.restore();
 	}
 
@@ -926,7 +1026,7 @@
 		frameCount++;
 		const now     = new Date();
 		const altDeg  = sunAltitudeDeg(now);
-		const sxn     = sunXNorm(now, themeState.lat);
+		const sxn     = sunXNorm(now, 39.53);
 		const isNight = altDeg < -8;
 		updateTheme(altDeg);
 
@@ -967,7 +1067,7 @@
 		drawCirrus(ctx, altDeg);
 		drawClouds(ctx, altDeg);
 		if (treeSegments.length > 0) drawTree(ctx, treeSegments, W, H);
-		drawPlants(ctx, plants);
+		drawPlants(ctx, plants, horizonY, H);
 
 		animFrame = requestAnimationFrame(draw);
 	}

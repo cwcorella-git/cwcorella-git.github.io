@@ -116,19 +116,11 @@ export const PALETTES: Record<PaletteName, Palette> = {
 };
 
 const STORAGE_KEY = 'cwc-theme';
-const LAT_KEY     = 'cwc-lat';
-const DEFAULT_LAT = 39.53; // Reno, NV
 
 // version increments on every palette switch so Garden.svelte can detect
 // the change and force a full re-render of glass + text vars immediately.
 let _active  = $state<PaletteName>('neutral');
 let _version = $state(0);
-let _lat     = $state(DEFAULT_LAT);
-
-function setLat(lat: number): void {
-	_lat = Math.max(-90, Math.min(90, Math.round(lat * 10) / 10));
-	try { localStorage.setItem(LAT_KEY, String(_lat)); } catch { /* ignore */ }
-}
 
 function applyPalette(name: PaletteName): void {
 	const p = PALETTES[name];
@@ -166,15 +158,11 @@ export const themeState = {
 	get active()   { return _active; },
 	get version()  { return _version; },
 	get palette()  { return PALETTES[_active]; },
-	get lat()      { return _lat; },
 	applyPalette,
-	setLat,
 	restoreFromStorage(): void {
 		if (typeof localStorage === 'undefined') return;
 		const saved = localStorage.getItem(STORAGE_KEY) as PaletteName | null;
 		// Always apply palette on init so all CSS vars (incl. --dark-panel-rgb) are set
 		applyPalette(saved && PALETTES[saved] ? saved : _active);
-		const savedLat = parseFloat(localStorage.getItem(LAT_KEY) ?? '');
-		if (!isNaN(savedLat)) _lat = Math.max(-90, Math.min(90, savedLat));
 	},
 };

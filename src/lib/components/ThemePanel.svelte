@@ -24,21 +24,6 @@
 			</button>
 		{/each}
 	</div>
-	<div class="lat-section">
-		<p class="panel-label">location</p>
-		<div class="lat-row">
-			<input
-				class="lat-input"
-				type="number"
-				min="-90"
-				max="90"
-				step="0.5"
-				value={themeState.lat}
-				oninput={(e) => themeState.setLat(+(e.currentTarget as HTMLInputElement).value)}
-			/>
-			<span class="lat-unit">° lat</span>
-		</div>
-	</div>
 </div>
 
 <style>
@@ -104,39 +89,5 @@
 		height: 10px;
 		border: 1px solid;
 		flex-shrink: 0;
-	}
-
-	.lat-section {
-		margin-top: 0.7rem;
-		padding-top: 0.6rem;
-		border-top: 1px solid rgba(var(--dark-panel-rgb), 0.12);
-	}
-
-	.lat-row {
-		display: flex;
-		align-items: center;
-		gap: 0.3rem;
-	}
-
-	.lat-input {
-		background: rgba(var(--dark-panel-rgb), 0.06);
-		border: 1px solid rgba(var(--dark-panel-rgb), 0.18);
-		color: var(--clr-dark-text);
-		font-family: 'Courier New', Courier, monospace;
-		font-size: 0.65rem;
-		padding: 0.25rem 0.4rem;
-		width: 5.5rem;
-		text-align: right;
-	}
-	.lat-input:focus {
-		outline: none;
-		border-color: rgba(var(--dark-panel-rgb), 0.4);
-	}
-
-	.lat-unit {
-		font-family: 'Courier New', Courier, monospace;
-		font-size: 0.6rem;
-		color: var(--clr-dark-text);
-		opacity: 0.5;
 	}
 </style>
