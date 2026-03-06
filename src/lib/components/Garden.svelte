@@ -223,6 +223,7 @@
 	let treeSegments: TreeSegment[] = [];
 	let gardenAgeUnits              = 11315;   // default; overwritten from localStorage on mount
 	let W = 0, H = 0, horizonY = 0;
+	let dpr = 1;   // devicePixelRatio — canvas works in physical pixels so zoom has no effect
 
 	function buildScene(cw: number, ch: number, hy: number): void {
 		const rng = makePRNG(0xCAFEBABE);
@@ -1057,8 +1058,8 @@
 	let cursorTimeout = 0;
 
 	function onMouseMove(e: MouseEvent): void {
-		rawMouseX = e.clientX;
-		rawMouseY = e.clientY;
+		rawMouseX = e.clientX * dpr;
+		rawMouseY = e.clientY * dpr;
 		cursorActive = true;
 		clearTimeout(cursorTimeout);
 		cursorTimeout = window.setTimeout(() => { cursorActive = false; }, 2000);
@@ -1066,8 +1067,8 @@
 
 	function onTouchMove(e: TouchEvent): void {
 		const t = e.touches[0];
-		rawMouseX = t.clientX;
-		rawMouseY = t.clientY;
+		rawMouseX = t.clientX * dpr;
+		rawMouseY = t.clientY * dpr;
 		cursorActive = true;
 		clearTimeout(cursorTimeout);
 		cursorTimeout = window.setTimeout(() => { cursorActive = false; }, 2000);
@@ -1145,12 +1146,17 @@
 
 	function resize(): void {
 		if (!canvas) return;
+		dpr = window.devicePixelRatio || 1;
+		// Work in physical pixels: innerWidth * dpr stays constant across zoom levels,
+		// so browser zoom no longer triggers a scene rebuild or repositions elements.
+		const newW = Math.round(window.innerWidth * dpr);
+		const newH = Math.round(window.innerHeight * dpr);
+		if (newW === W && newH === H) return;   // zoom-only event — nothing to do
 		const prevW = W, prevH = H;
-		W        = canvas.width  = window.innerWidth;
-		H        = canvas.height = window.innerHeight;
+		W = canvas.width  = newW;
+		H = canvas.height = newH;
 		horizonY = H * HORIZON_FRAC;
 		buildScene(W, H, horizonY);
-		// Regenerate tree whenever viewport changes — cached coords are absolute px
 		if (Math.abs(W - prevW) > 4 || Math.abs(H - prevH) > 4) {
 			treeSegments = generateTree(W, H, horizonY);
 			saveTreeToCache(treeSegments, W, H);
@@ -1158,8 +1164,9 @@
 	}
 
 	onMount(() => {
-		W        = canvas!.width  = window.innerWidth;
-		H        = canvas!.height = window.innerHeight;
+		dpr = window.devicePixelRatio || 1;
+		W = canvas!.width  = Math.round(window.innerWidth * dpr);
+		H = canvas!.height = Math.round(window.innerHeight * dpr);
 		horizonY = H * HORIZON_FRAC;
 
 		// Load persistent garden state, credit visit, accrue days offline
