@@ -3,6 +3,7 @@
 	import { makeGrassTuft, makeFern, tickWind, drawPlants, applyMouseForce, type PlantInstance } from '$lib/garden/plants';
 	import { generateTree, loadTreeFromCache, saveTreeToCache, drawTree, type TreeSegment } from '$lib/garden/tree';
 	import { loadGardenState, saveGardenState, creditVisit, accrueElapsedDays, growthFactor } from '$lib/garden/state';
+	import { themeState } from '$lib/admin/theme.svelte';
 
 	// ── constants ─────────────────────────────────────────────────────────────
 	const HOME_LAT    = 39.53;   // Reno, NV
@@ -551,27 +552,37 @@
 
 	// ── day/night theme ────────────────────────────────────────────────────────
 	// Interpolates CSS vars on :root so all glass panels and text adapt to the sky.
-	// Day (alt ≥ 6°): white glass + dark warm text.
-	// Night (alt ≤ −12°): dark glass + warm off-white text.
-	let lastThemeAlt = 9999;
+	// RGB seed values come from themeState.palette so switching palettes
+	// (amber / beige / gray / neutral) changes the colours without touching this fn.
+
+	let lastThemeAlt     = 9999;
+	let lastPaletteVer   = -1;
 
 	function updateTheme(altDeg: number): void {
-		if (Math.abs(altDeg - lastThemeAlt) < 0.4) return;
-		lastThemeAlt = altDeg;
+		const paletteChanged = themeState.version !== lastPaletteVer;
+		if (!paletteChanged && Math.abs(altDeg - lastThemeAlt) < 0.4) return;
+		lastThemeAlt   = altDeg;
+		lastPaletteVer = themeState.version;
+
 		const dl = Math.max(0, Math.min(1, (altDeg + 12) / 18)); // 0 = night, 1 = day
 
 		function ri(d: number, n: number): number { return Math.round(d + (n - d) * (1 - dl)); }
 
 		const r = document.documentElement;
-		// Glass surfaces
-		const gr = ri(255, 8), gg = ri(255, 6), gb = ri(255, 2);
-		r.style.setProperty('--glass-bg',      `rgba(${gr},${gg},${gb},${(0.22*dl + 0.42*(1-dl)).toFixed(2)})`);
-		r.style.setProperty('--glass-border',  `rgba(${gr},${gg},${gb},${(0.40*dl + 0.15*(1-dl)).toFixed(2)})`);
-		r.style.setProperty('--glass-nav-bg',  `rgba(${gr},${gg},${gb},${(0.30*dl + 0.52*(1-dl)).toFixed(2)})`);
-		// Text — single high-contrast color, interpolated dark (day) → light (night).
-		// Hierarchy is expressed via size / weight / spacing / opacity, not shade.
-		// Day: rgb(8,8,8) — Night: rgb(248,246,242)
-		r.style.setProperty('--clr-text', `rgb(${ri(8,248)},${ri(8,246)},${ri(8,242)})`);
+		const { glassDay, glassNight, textDay, textNight } = themeState.palette;
+
+		// Glass surfaces — RGB interpolates between palette day and night seeds
+		const gr = ri(glassDay[0], glassNight[0]);
+		const gg = ri(glassDay[1], glassNight[1]);
+		const gb = ri(glassDay[2], glassNight[2]);
+		r.style.setProperty('--glass-bg',     `rgba(${gr},${gg},${gb},${(0.22*dl + 0.42*(1-dl)).toFixed(2)})`);
+		r.style.setProperty('--glass-border', `rgba(${gr},${gg},${gb},${(0.40*dl + 0.15*(1-dl)).toFixed(2)})`);
+		r.style.setProperty('--glass-nav-bg', `rgba(${gr},${gg},${gb},${(0.30*dl + 0.52*(1-dl)).toFixed(2)})`);
+
+		// Text — single high-contrast color, dark at day / light at night
+		r.style.setProperty('--clr-text',
+			`rgb(${ri(textDay[0],textNight[0])},${ri(textDay[1],textNight[1])},${ri(textDay[2],textNight[2])})`
+		);
 	}
 
 	// ── cursor tracking ────────────────────────────────────────────────────────

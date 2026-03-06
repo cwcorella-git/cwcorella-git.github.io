@@ -3,6 +3,7 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import { page } from '$app/stores';
 	import { adminState, bookFormState, writeQueue, ADMIN_SEQUENCE } from '$lib/admin/state.svelte';
+	import { themeState } from '$lib/admin/theme.svelte';
 	import { toast } from '$lib/admin/toast.svelte';
 	import AdminDrawer from '$lib/components/AdminDrawer.svelte';
 	import AdminToolbar from '$lib/components/AdminToolbar.svelte';
@@ -27,6 +28,7 @@
 	}
 
 	onMount(() => {
+		themeState.restoreFromStorage();
 		adminState.restoreFromSession();
 		const restored = writeQueue.restoreFromDraft();
 		if (restored > 0) toast.success(`draft restored — pending sync`);
