@@ -6,7 +6,6 @@
 	import { themeState } from '$lib/admin/theme.svelte';
 
 	// ── constants ─────────────────────────────────────────────────────────────
-	const HOME_LAT    = 39.53;   // Reno, NV
 	const HORIZON_FRAC = 0.68;   // horizon at 68% down canvas
 	const STAR_COUNT   = 700;
 	const CLOUD_COUNT  = 7;
@@ -64,17 +63,25 @@
 		const decl = 23.45 * Math.sin(rad * (360 / 365) * (doy - 81));
 		const hour = date.getHours() + date.getMinutes() / 60 + date.getSeconds() / 3600;
 		const ha   = 15 * (hour - 12);
-		const lat  = HOME_LAT * rad;
+		const lat  = themeState.lat * rad;
 		const sinAlt =
 			Math.sin(lat) * Math.sin(decl * rad) +
 			Math.cos(lat) * Math.cos(decl * rad) * Math.cos(ha * rad);
 		return Math.asin(Math.max(-1, Math.min(1, sinAlt))) / rad;
 	}
 
-	// 6am → right (1.0), noon → center (0.5), 6pm → left (0.0)
-	function sunXNorm(date: Date): number {
+	// sunrise → right (1.0), noon → center (~0.5), sunset → left (0.0)
+	// Uses real sunrise/sunset hour angles from declination and latitude.
+	function sunXNorm(date: Date, lat: number): number {
+		const rad  = Math.PI / 180;
+		const doy  = dayOfYear(date);
+		const decl = 23.45 * Math.sin(rad * (360 / 365) * (doy - 81));
+		const cosH0 = Math.max(-1, Math.min(1, -Math.tan(lat * rad) * Math.tan(decl * rad)));
+		const H0_hours = Math.acos(cosH0) * 12 / Math.PI;
+		const sunrise = 12 - H0_hours;
+		const sunset  = 12 + H0_hours;
 		const hour = date.getHours() + date.getMinutes() / 60;
-		return Math.max(0, Math.min(1, 1 - (hour - 6) / 12));
+		return Math.max(0, Math.min(1, 1 - (hour - sunrise) / (sunset - sunrise)));
 	}
 
 	// ── moon phase (Julian date) ───────────────────────────────────────────────
@@ -134,13 +141,14 @@
 		return kfs[kfs.length - 1];
 	}
 
-	// ── cloud color keyframes (top-lit / shadow) ──────────────────────────────
+	// ── cloud color keyframes ─────────────────────────────────────────────────
+	// Shadow is always cool-opposite of lit top (skylight, never neutral grey).
 	const CLOUD_KF: Array<{ alt: number; top: RGB; shadow: RGB }> = [
-		{ alt: -14, top: [72,  82, 110] as RGB, shadow: [34,  40,  66] as RGB },
-		{ alt:  -6, top: [148, 122, 162] as RGB, shadow: [72,  58, 108] as RGB },
-		{ alt:   0, top: [255, 210, 140] as RGB, shadow: [195, 100,  65] as RGB },
-		{ alt:   8, top: [255, 238, 192] as RGB, shadow: [210, 155,  78] as RGB },
-		{ alt:  22, top: [252, 250, 246] as RGB, shadow: [175, 172, 168] as RGB },
+		{ alt: -14, top: [72,  82, 110] as RGB, shadow: [ 34,  40,  66] as RGB },  // deep night
+		{ alt:  -6, top: [148, 122, 162] as RGB, shadow: [ 62,  50,  98] as RGB },  // pre-dawn purple
+		{ alt:   0, top: [255, 140,  70] as RGB, shadow: [165,  72, 128] as RGB },  // sunset: orange top, magenta shadow
+		{ alt:   8, top: [255, 228, 168] as RGB, shadow: [ 90,  74, 112] as RGB },  // golden hour: amber top, purple-grey shadow
+		{ alt:  22, top: [252, 250, 246] as RGB, shadow: [148, 160, 184] as RGB },  // midday: white top, cool blue-grey shadow
 	];
 
 	function getCloudColors(altDeg: number): { top: RGB; shadow: RGB } {
@@ -158,6 +166,46 @@
 		return kfs[kfs.length - 1];
 	}
 
+	// ── cloud lobe generator ──────────────────────────────────────────────────
+	// Builds the ball-cluster layout: 1 primary anchor + 3–5 secondary lobes
+	// arranged asymmetrically on the upper arc + 1 small trailing puff.
+	// Coordinates are in pixel-space relative to the cloud's center (0,0).
+	// Negative oy = upward; the cluster always grows upward from center.
+	function genLobes(rng: () => number, size: number): Lobe[] {
+		const lobes: Lobe[] = [];
+
+		// Primary lobe — slightly off-center for asymmetry
+		const pr = size * (0.38 + rng() * 0.22);
+		const px = (rng() - 0.5) * size * 0.25;
+		lobes.push({ ox: px, oy: 0, r: pr });
+
+		// Secondary lobes — clustered on the upper arc
+		const numSec = 3 + Math.floor(rng() * 3);
+		for (let i = 0; i < numSec; i++) {
+			const angle = -(rng() * Math.PI);                  // upper semicircle
+			const dist  = pr * (0.55 + rng() * 0.55);
+			const r     = pr * (0.22 + rng() * 0.45);
+			lobes.push({ ox: px + Math.cos(angle) * dist, oy: Math.sin(angle) * dist, r });
+		}
+
+		// One small trailing puff on a random side
+		const side = rng() < 0.5 ? -1 : 1;
+		lobes.push({
+			ox: px + side * pr * (0.7 + rng() * 0.5),
+			oy: pr * (0.2 + rng() * 0.3),
+			r:  pr * (0.12 + rng() * 0.15),
+		});
+
+		return lobes;
+	}
+
+	// Cache key: quantize RGB to 8-step bins so slow sky transitions don't
+	// trigger a rebuild every single frame.
+	function quantizeColorKey(top: RGB, shadow: RGB): string {
+		const q = (c: number) => Math.round(c / 8) * 8;
+		return `${top.map(q)}_${shadow.map(q)}`;
+	}
+
 	// ── scene data (rebuilt on resize) ────────────────────────────────────────
 	interface Star {
 		x: number; y: number;
@@ -168,13 +216,18 @@
 		isMilkyWay: boolean;
 	}
 
+	interface Lobe { ox: number; oy: number; r: number; }
+
 	interface CloudDef {
-		xFrac:    number;   // initial x fraction (0–1)
-		yFrac:    number;   // y fraction in sky area (0–1)
-		size:     number;
-		alpha:    number;
-		prngseed: number;
-		speed:    number;   // px / minute
+		xFrac:         number;   // initial x fraction (0–1)
+		yFrac:         number;   // y fraction in sky area (0–1)
+		size:          number;
+		alpha:         number;
+		prngseed:      number;
+		speed:         number;   // px / minute
+		lobes:         Lobe[];
+		cache:         HTMLCanvasElement | null;
+		cacheColorKey: string;
 	}
 
 	interface CirrusDef {
@@ -805,7 +858,7 @@
 		frameCount++;
 		const now     = new Date();
 		const altDeg  = sunAltitudeDeg(now);
-		const sxn     = sunXNorm(now);
+		const sxn     = sunXNorm(now, themeState.lat);
 		const isNight = altDeg < -8;
 		updateTheme(altDeg);
 
@@ -834,18 +887,18 @@
 		ctx.clearRect(0, 0, W, H);
 
 		drawSky(ctx, altDeg);
-		drawCircumsolarGlow(ctx, altDeg, sxn);
-		drawCrepuscularRays(ctx, altDeg, sxn);
-		drawGround(ctx, altDeg);
 		drawStars(ctx, altDeg, time);
 		drawMoon(ctx, altDeg, sxn);
-		drawTerrain(ctx, altDeg);
-		if (treeSegments.length > 0) drawTree(ctx, treeSegments, W, H);
+		drawCircumsolarGlow(ctx, altDeg, sxn);
 		drawSun(ctx, altDeg, sxn);
+		drawCrepuscularRays(ctx, altDeg, sxn);
 		drawBeltOfVenus(ctx, altDeg);
 		drawPurpleLight(ctx, altDeg, sxn);
+		drawGround(ctx, altDeg);
+		drawTerrain(ctx, altDeg);
 		drawCirrus(ctx, altDeg);
 		drawClouds(ctx, altDeg);
+		if (treeSegments.length > 0) drawTree(ctx, treeSegments, W, H);
 		drawPlants(ctx, plants);
 
 		animFrame = requestAnimationFrame(draw);
