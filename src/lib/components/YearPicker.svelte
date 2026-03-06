@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	let {
 		value,
 		onchange
@@ -10,8 +11,9 @@
 	const currentYear = new Date().getFullYear();
 
 	let open = $state(false);
-	let decadeStart = $state(Math.floor((value ?? currentYear) / 12) * 12);
-	let inputVal = $state(value != null ? String(value) : '');
+	// $effect below handles reactive sync; untrack here intentionally captures only initial value
+	let decadeStart = $state(untrack(() => Math.floor((value ?? currentYear) / 12) * 12));
+	let inputVal = $state(untrack(() => value != null ? String(value) : ''));
 
 	// Sync inputVal when value prop changes externally
 	$effect(() => {

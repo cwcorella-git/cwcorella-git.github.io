@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { toast } from '$lib/admin/toast.svelte';
 
 	let {
@@ -11,7 +12,7 @@
 		onCancel: () => void;
 	} = $props();
 
-	let draft = $state(content);
+	let draft = $state(untrack(() => content));
 	let saving = $state(false);
 	let textareaEl = $state<HTMLTextAreaElement>();
 

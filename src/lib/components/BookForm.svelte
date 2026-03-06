@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import type { Book, BookDoc, BookLink } from '$lib/types';
 	import { adminState, booksState } from '$lib/admin/state.svelte';
 	import { updateBooksJson, putFileWithFreshSha } from '$lib/admin/github';
@@ -17,22 +18,24 @@
 		onSaved: (books: Book[]) => void;
 	} = $props();
 
-	const isNew = book === null;
+	// Snapshot initial prop value — form fields intentionally only capture this once
+	const _book = untrack(() => book);
+	const isNew = _book === null;
 
 	// Derive all existing categories for datalist
 	const allCategories = [...new Set((allBooksStatic as Book[]).map((b) => b.category))].sort();
 
 	// Form fields
-	let title = $state(book?.title ?? '');
-	let author = $state(book?.author ?? '');
-	let year = $state(book?.year?.toString() ?? '');
-	let category = $state(book?.category ?? '');
-	let links = $state<BookLink[]>(book?.links ? [...book.links.map(l => ({ ...l }))] : []);
-	let notes = $state(book?.notes ?? '');
+	let title = $state(_book?.title ?? '');
+	let author = $state(_book?.author ?? '');
+	let year = $state(_book?.year?.toString() ?? '');
+	let category = $state(_book?.category ?? '');
+	let links = $state<BookLink[]>(_book?.links ? [..._book.links.map(l => ({ ...l }))] : []);
+	let notes = $state(_book?.notes ?? '');
 
 	function addLink() { links = [...links, { name: '', url: '' }]; }
 	function removeLink(i: number) { links = links.filter((_, idx) => idx !== i); }
-	let docVisibility = $state<'public' | 'admin'>(book?.doc?.visibility ?? 'public');
+	let docVisibility = $state<'public' | 'admin'>(_book?.doc?.visibility ?? 'public');
 	let docContent = $state('');
 
 	let saving = $state(false);
