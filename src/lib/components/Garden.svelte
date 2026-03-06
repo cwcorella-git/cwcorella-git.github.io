@@ -577,13 +577,13 @@
 		const nearColor = isNight    ? 'rgba(8,10,22,0.90)'
 		                : isTwilight ? 'rgba(58,46,62,0.88)'
 		                :              'rgba(95,82,62,0.88)';
-		fillMountainRange(ctx, 5.7, horizonY * 0.33, nearColor, horizon, Math.min(0.72, hazeBase * 0.58));
+		fillMountainRange(ctx, 5.7, horizonY * 0.26, nearColor, horizon, Math.min(0.72, hazeBase * 0.58));
 
 		// Rolling hills (fBm — softer, greener)
 		const hillColor = isNight    ? 'rgba(6,8,16,0.92)'
 		                : isTwilight ? 'rgba(40,44,32,0.90)'
 		                :              'rgba(70,82,46,0.88)';
-		fillHillRange(ctx, 8.1, horizonY * 0.32, hillColor, horizon, hazeBase * 0.24);
+		fillHillRange(ctx, 8.1, horizonY * 0.14, hillColor, horizon, hazeBase * 0.24);
 	}
 
 	function fillMountainRange(
