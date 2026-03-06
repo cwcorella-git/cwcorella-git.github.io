@@ -596,7 +596,10 @@
 		ctx.beginPath();
 		ctx.moveTo(0, H);
 		for (let px = 0; px <= W; px += 3) {
-			const h = ridged1D((px / W) * 3.5 + seed) * heightScale;
+			// Lateral edge fade: terrain sinks into haze at both canvas edges
+			const lf = fade(Math.min(1, px / (W * 0.10)));
+			const rf = fade(Math.min(1, (W - px) / (W * 0.10)));
+			const h = ridged1D((px / W) * 3.5 + seed) * heightScale * lf * rf;
 			ctx.lineTo(px, horizonY - h);
 		}
 		ctx.lineTo(W, H);
@@ -620,7 +623,9 @@
 		ctx.beginPath();
 		ctx.moveTo(0, H);
 		for (let px = 0; px <= W; px += 4) {
-			const h = fbm1D((px / W) * 4.5 + seed) * heightScale;
+			const lf = fade(Math.min(1, px / (W * 0.10)));
+			const rf = fade(Math.min(1, (W - px) / (W * 0.10)));
+			const h = fbm1D((px / W) * 4.5 + seed) * heightScale * lf * rf;
 			ctx.lineTo(px, horizonY - h);
 		}
 		ctx.lineTo(W, H);
