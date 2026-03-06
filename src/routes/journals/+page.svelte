@@ -315,10 +315,10 @@
 		position: relative; z-index: 1;
 		max-width: 760px; margin: 0 auto;
 		padding: 3rem 2rem 6rem;
-		background: rgba(255, 248, 231, 0.88);
-		backdrop-filter: blur(16px);
-		-webkit-backdrop-filter: blur(16px);
-		border: 1px solid rgba(180, 150, 100, 0.18);
+		background: var(--glass-bg);
+		backdrop-filter: var(--glass-blur);
+		-webkit-backdrop-filter: var(--glass-blur);
+		border: 1px solid var(--glass-border);
 	}
 	.page-header {
 		display: flex; align-items: baseline; justify-content: space-between;

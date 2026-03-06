@@ -72,16 +72,16 @@
 		--font-prose: Georgia, 'Times New Roman', Times, serif;
 		--font-ui:    'Courier New', Courier, monospace;
 
-		/* Glass — light (cream) */
-		--glass-bg:        rgba(255, 248, 231, 0.88);
-		--glass-bg-heavy:  rgba(255, 250, 238, 0.96);
-		--glass-border:    rgba(180, 150, 100, 0.18);
-		--glass-blur:      blur(16px);
-		--glass-blur-heavy:blur(24px);
+		/* Glass — light */
+		--glass-bg:        rgba(255, 255, 255, 0.22);
+		--glass-bg-heavy:  rgba(255, 252, 242, 0.78);
+		--glass-border:    rgba(255, 255, 255, 0.40);
+		--glass-blur:      blur(22px);
+		--glass-blur-heavy:blur(28px);
 
 		/* Glass — dark (admin panels) */
-		--glass-bg-dark:      rgba(18, 14, 4, 0.92);
-		--glass-border-dark:  rgba(200, 150, 60, 0.28);
+		--glass-bg-dark:      rgba(12, 8, 2, 0.72);
+		--glass-border-dark:  rgba(200, 150, 60, 0.22);
 
 		/* Text */
 		--clr-text-primary:   #3d2e1a;
@@ -128,10 +128,10 @@
 		display: flex;
 		gap: 2rem;
 		align-items: center;
-		background: var(--glass-bg);
-		backdrop-filter: var(--glass-blur);
-		-webkit-backdrop-filter: var(--glass-blur);
-		border-bottom: 1px solid rgba(100, 75, 40, 0.15);
+		background: rgba(255, 255, 255, 0.30);
+		backdrop-filter: blur(20px);
+		-webkit-backdrop-filter: blur(20px);
+		border-bottom: 1px solid rgba(255, 255, 255, 0.35);
 	}
 	nav a {
 		font-size: 0.82rem;

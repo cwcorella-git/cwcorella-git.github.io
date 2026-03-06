@@ -67,10 +67,10 @@
 	}
 
 	.content-panel {
-		background: rgba(255, 248, 231, 0.88);
-		backdrop-filter: blur(16px);
-		-webkit-backdrop-filter: blur(16px);
-		border: 1px solid rgba(180, 150, 100, 0.18);
+		background: var(--glass-bg);
+		backdrop-filter: var(--glass-blur);
+		-webkit-backdrop-filter: var(--glass-blur);
+		border: 1px solid var(--glass-border);
 		padding: 2.5rem 2.5rem 2.5rem;
 		display: flex;
 		flex-direction: column;
