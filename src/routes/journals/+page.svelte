@@ -253,7 +253,6 @@
 
 <!-- ── main page ──────────────────────────────────────────────────────── -->
 <div class="page">
-	<div class="glow" aria-hidden="true"></div>
 	<div class="inner">
 		<div class="page-header">
 			<h1 class="heading">journals</h1>
@@ -311,18 +310,6 @@
 	.page {
 		min-height: 100vh;
 		padding-top: 4rem;
-		background-image:
-			linear-gradient(rgba(200, 150, 60, 0.016) 1px, transparent 1px),
-			linear-gradient(90deg, rgba(200, 150, 60, 0.016) 1px, transparent 1px);
-		background-size: 48px 48px;
-	}
-	.glow {
-		position: fixed; top: 30%; left: 60%;
-		width: 600px; height: 600px;
-		transform: translate(-50%, -50%);
-		border-radius: 50%;
-		background: radial-gradient(circle, rgba(200, 120, 40, 0.05) 0%, transparent 65%);
-		pointer-events: none; z-index: 0;
 	}
 	.inner {
 		position: relative; z-index: 1;
@@ -336,38 +323,38 @@
 	.heading {
 		font-family: Georgia, 'Times New Roman', Times, serif;
 		font-size: 1rem; font-weight: normal;
-		letter-spacing: 0.12em; color: #c8a060; margin: 0;
+		letter-spacing: 0.12em; color: #7a5020; margin: 0;
 	}
 	.new-btn {
 		background: none;
-		border: 1px solid rgba(200, 150, 60, 0.25);
-		color: #8a7858;
+		border: 1px solid rgba(100, 75, 40, 0.25);
+		color: #8a6a40;
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase;
 		padding: 0.3rem 0.75rem; cursor: pointer; transition: all 0.15s;
 	}
-	.new-btn:hover { color: #c8a060; border-color: rgba(200, 150, 60, 0.5); }
+	.new-btn:hover { color: #7a5020; border-color: rgba(100, 75, 40, 0.5); }
 
-	.status { font-family: 'Courier New', Courier, monospace; font-size: 0.65rem; letter-spacing: 0.08em; color: #5a4e38; }
+	.status { font-family: 'Courier New', Courier, monospace; font-size: 0.65rem; letter-spacing: 0.08em; color: #9a7a50; }
 	.status.error { color: #c07050; }
-	.dim { font-family: 'Courier New', Courier, monospace; font-size: 0.6rem; letter-spacing: 0.06em; color: #4e4232; }
+	.dim { font-family: 'Courier New', Courier, monospace; font-size: 0.6rem; letter-spacing: 0.06em; color: #b09070; }
 
 	/* ── list ─────────────────────────────────────────────── */
 	.list { list-style: none; margin: 0; padding: 0; }
 
 	.entry-row {
 		display: flex; align-items: center; gap: 1rem;
-		border-bottom: 1px solid rgba(200, 150, 60, 0.09);
+		border-bottom: 1px solid rgba(100, 75, 40, 0.09);
 		padding: 0.6rem 0; min-height: 2.6rem;
 	}
 	.confirm-row { gap: 1.5rem; }
 
 	.entry-title-btn {
 		flex: 1; background: none; border: none; cursor: pointer;
-		text-align: left; color: #c0b088; font-size: 0.95rem; line-height: 1.4;
+		text-align: left; color: #3d2e1a; font-size: 0.95rem; line-height: 1.4;
 		padding: 0; transition: color 0.15s;
 	}
-	.entry-title-btn:hover { color: #d4b878; }
+	.entry-title-btn:hover { color: #7a5020; }
 
 	.entry-date { flex-shrink: 0; white-space: nowrap; }
 
@@ -379,15 +366,15 @@
 		background: none; border: none; cursor: pointer;
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.52rem; letter-spacing: 0.08em; text-transform: uppercase;
-		color: #3a3028; padding: 0 0.3rem; transition: color 0.15s;
+		color: #b09070; padding: 0 0.3rem; transition: color 0.15s;
 	}
-	.action-btn:hover:not(:disabled) { color: #8a7858; }
+	.action-btn:hover:not(:disabled) { color: #7a5020; }
 	.action-btn.danger:hover:not(:disabled) { color: #c07050; }
 	.action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 	.count {
 		margin-top: 2rem; font-family: 'Courier New', Courier, monospace;
-		font-size: 0.62rem; letter-spacing: 0.1em; color: #5a4e38;
+		font-size: 0.62rem; letter-spacing: 0.1em; color: #9a7a50;
 	}
 
 	/* ── overlays shared ──────────────────────────────────── */

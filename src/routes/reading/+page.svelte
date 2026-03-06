@@ -123,7 +123,6 @@
 {/if}
 
 <div class="page" role="main" oncontextmenu={(e) => e.preventDefault()}>
-	<div class="glow" aria-hidden="true"></div>
 
 	<div class="inner">
 		<div class="search-area">
@@ -211,21 +210,6 @@
 	.page {
 		min-height: 100vh;
 		padding-top: 4rem;
-		background-image:
-			linear-gradient(rgba(200, 150, 60, 0.016) 1px, transparent 1px),
-			linear-gradient(90deg, rgba(200, 150, 60, 0.016) 1px, transparent 1px);
-		background-size: 48px 48px;
-	}
-
-	.glow {
-		position: fixed;
-		top: 30%; left: 60%;
-		width: 600px; height: 600px;
-		transform: translate(-50%, -50%);
-		border-radius: 50%;
-		background: radial-gradient(circle, rgba(200, 120, 40, 0.05) 0%, transparent 65%);
-		pointer-events: none;
-		z-index: 0;
 	}
 
 	.inner {
@@ -247,8 +231,8 @@
 
 	.add-btn {
 		background: none;
-		border: 1px solid rgba(200, 150, 60, 0.22);
-		color: #6a5a40;
+		border: 1px solid rgba(100, 75, 40, 0.22);
+		color: #8a6a40;
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
 		letter-spacing: 0.08em;
@@ -258,14 +242,14 @@
 		white-space: nowrap;
 		flex-shrink: 0;
 	}
-	.add-btn:hover { color: #c8a060; border-color: rgba(200, 150, 60, 0.5); }
+	.add-btn:hover { color: #7a5020; border-color: rgba(100, 75, 40, 0.5); }
 
 	.search-bar {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
 		flex: 1;
-		border-bottom: 1px solid rgba(200, 150, 60, 0.22);
+		border-bottom: 1px solid rgba(100, 75, 40, 0.22);
 		padding-bottom: 0.4rem;
 	}
 
@@ -273,23 +257,23 @@
 		background: none; border: none; outline: none; flex: 1;
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.78rem; letter-spacing: 0.06em;
-		color: #c0b088; padding: 0.3rem 0;
-		caret-color: #c8a060;
+		color: #3d2e1a; padding: 0.3rem 0;
+		caret-color: #7a5020;
 	}
-	.search-input::placeholder { color: #4e4232; }
+	.search-input::placeholder { color: #b09070; }
 
 	.tag-chip {
 		display: inline-flex; align-items: center; gap: 0.4rem;
-		background: rgba(200, 150, 60, 0.08);
-		border: 1px solid rgba(200, 150, 60, 0.35);
+		background: rgba(100, 75, 40, 0.08);
+		border: 1px solid rgba(100, 75, 40, 0.35);
 		border-radius: 2px; padding: 0.2rem 0.45rem 0.2rem 0.65rem;
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.62rem; letter-spacing: 0.1em;
-		text-transform: uppercase; color: #c8a060; white-space: nowrap;
+		text-transform: uppercase; color: #7a5020; white-space: nowrap;
 	}
 	.chip-clear {
 		background: none; border: none; cursor: pointer;
-		color: #c8a060; opacity: 0.5; font-size: 0.85rem;
+		color: #7a5020; opacity: 0.5; font-size: 0.85rem;
 		padding: 0; line-height: 1; transition: opacity 0.15s;
 	}
 	.chip-clear:hover { opacity: 1; }
@@ -301,18 +285,18 @@
 	/* ── pills ───────────────────────────────────────────────── */
 	.pill {
 		background: none;
-		border: 1px solid rgba(200, 150, 60, 0.18);
+		border: 1px solid rgba(100, 75, 40, 0.18);
 		border-radius: 2px;
 		padding: 0.25rem 0.65rem;
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.62rem;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
-		color: #7a6a48;
+		color: #8a6a40;
 		cursor: pointer;
 		transition: all 0.15s;
 	}
-	.pill:hover { color: #c8a060; border-color: rgba(200, 150, 60, 0.45); }
+	.pill:hover { color: #7a5020; border-color: rgba(100, 75, 40, 0.45); }
 
 	/* ── list ────────────────────────────────────────────────── */
 	.list {
@@ -321,29 +305,29 @@
 	}
 	li { border-bottom: none; }
 	li.done .row-wrap {
-		background: rgba(200, 150, 60, 0.055);
-		border-left: 2px solid rgba(200, 150, 60, 0.28);
+		background: rgba(100, 75, 40, 0.06);
+		border-left: 2px solid rgba(100, 75, 40, 0.5);
 		padding-left: 0.75rem;
 	}
 	li.done .title {
-		color: #d4b878;
+		color: #5a3a10;
 	}
 	li.done .title::after {
 		content: ' ✓';
 		font-size: 0.7em;
-		color: #c8a060;
+		color: #7a5020;
 		opacity: 0.7;
 	}
 	li.done .meta {
-		color: #7a6a50;
+		color: #8a6a40;
 	}
 	li.done .cat-label {
-		color: #6a5a3a;
+		color: #9a7a50;
 	}
 
 	.row-wrap {
 		display: flex; align-items: center;
-		border-bottom: 1px solid rgba(200, 150, 60, 0.09);
+		border-bottom: 1px solid rgba(100, 75, 40, 0.09);
 	}
 
 	.row {
@@ -355,18 +339,18 @@
 		cursor: pointer;
 		transition: background 0.15s;
 	}
-	.row:hover { background: rgba(200, 150, 60, 0.03); }
+	.row:hover { background: rgba(100, 75, 40, 0.03); }
 
 	.title {
 		font-size: 0.95rem;
-		color: #c0b088;
+		color: #3d2e1a;
 		line-height: 1.4;
 	}
 	.meta {
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.62rem;
 		letter-spacing: 0.06em;
-		color: #6a5a40;
+		color: #8a6a40;
 	}
 
 	.read-toggle {
@@ -377,14 +361,14 @@
 		font-size: 0.55rem;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
-		color: #4a3e2c;
+		color: #b09070;
 		padding: 0 0.6rem;
 		transition: color 0.15s;
 		flex-shrink: 0;
 		white-space: nowrap;
 	}
-	.read-toggle:hover:not(:disabled) { color: #8a7858; }
-	.read-toggle.is-read { color: #c8a060; }
+	.read-toggle:hover:not(:disabled) { color: #7a5020; }
+	.read-toggle.is-read { color: #7a5020; }
 	.read-toggle:disabled { opacity: 0.4; cursor: not-allowed; }
 
 	.edit-pencil {
@@ -395,31 +379,31 @@
 		font-size: 0.55rem;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
-		color: #4a3e2c;
+		color: #b09070;
 		padding: 0 0.6rem;
 		transition: color 0.15s;
 		flex-shrink: 0;
 		white-space: nowrap;
 	}
-	.edit-pencil:hover { color: #8a7858; }
+	.edit-pencil:hover { color: #7a5020; }
 
 	.cat-label {
 		background: none; border: none; cursor: pointer;
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.55rem; letter-spacing: 0.08em;
-		text-transform: uppercase; color: #4e4232;
+		text-transform: uppercase; color: #b09070;
 		padding: 0 0 0 1rem; white-space: nowrap;
 		flex-shrink: 0; text-align: right; transition: color 0.15s;
 	}
-	.cat-label:hover { color: #9a8a68; }
-	.cat-label.active-cat { color: #c8a060; }
+	.cat-label:hover { color: #7a5020; }
+	.cat-label.active-cat { color: #7a5020; }
 
 	.count {
 		margin-top: 2rem;
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.62rem;
 		letter-spacing: 0.1em;
-		color: #5a4e38;
+		color: #9a7a50;
 	}
 
 	/* ── context menu ────────────────────────────────────────── */

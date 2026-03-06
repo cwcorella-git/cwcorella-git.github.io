@@ -8,6 +8,7 @@
 	import AdminToolbar from '$lib/components/AdminToolbar.svelte';
 	import BookForm from '$lib/components/BookForm.svelte';
 	import Toasts from '$lib/components/Toasts.svelte';
+	import Garden from '$lib/components/Garden.svelte';
 
 	let { children } = $props();
 
@@ -42,6 +43,7 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
+<Garden />
 <AdminDrawer bind:this={drawerRef} />
 <Toasts />
 
@@ -68,12 +70,17 @@
 	:global(*, *::before, *::after) { box-sizing: border-box; }
 	:global(body, html) {
 		margin: 0; padding: 0;
-		background: #0c0902;
-		color: #c0b088;
+		background: #e8d5b0; /* ground fallback before canvas paints */
+		color: #3d2e1a;
 		font-family: Georgia, 'Times New Roman', Times, serif;
 		-webkit-font-smoothing: antialiased;
 	}
 	:global(a) { color: inherit; }
+	/* All page content sits above the garden canvas */
+	:global(.page), :global(main), :global(.inner) {
+		position: relative;
+		z-index: 1;
+	}
 
 	nav {
 		position: fixed;
@@ -83,17 +90,18 @@
 		display: flex;
 		gap: 2rem;
 		align-items: center;
-		background: rgba(12, 9, 2, 0.92);
-		backdrop-filter: blur(12px);
-		border-bottom: 1px solid rgba(200, 150, 60, 0.12);
+		background: rgba(255, 248, 231, 0.88);
+		backdrop-filter: blur(14px);
+		-webkit-backdrop-filter: blur(14px);
+		border-bottom: 1px solid rgba(100, 75, 40, 0.15);
 	}
 	nav a {
 		font-size: 0.82rem;
-		color: #6a5a40;
+		color: #8a6a40;
 		text-decoration: none;
 		transition: color 0.2s;
 		letter-spacing: 0.02em;
 	}
-	nav a:hover { color: #c8a060; }
-	nav a.active { color: #c8a060; }
+	nav a:hover { color: #7a5020; }
+	nav a.active { color: #7a5020; }
 </style>
