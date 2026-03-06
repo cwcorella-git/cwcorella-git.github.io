@@ -408,8 +408,7 @@
 		display: flex;
 		flex-direction: column;
 	}
-	.menu a,
-	.menu-toggle {
+	.menu a {
 		display: block;
 		padding: 0.55rem 1rem;
 		font-family: 'Courier New', Courier, monospace;
