@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { makeGrassTuft, makeFern, tickWind, drawPlants, type PlantInstance } from '$lib/garden/plants';
+	import { generateTree, loadTreeFromCache, saveTreeToCache, drawTree, type TreeSegment } from '$lib/garden/tree';
 
 	// ── constants ─────────────────────────────────────────────────────────────
 	const HOME_LAT    = 39.53;   // Reno, NV
@@ -156,9 +157,10 @@
 	];
 	const SPECTRAL_TOTAL = SPECTRAL.reduce((s, e) => s + e.weight, 0);
 
-	let stars: Star[]          = [];
-	let clouds: CloudDef[]     = [];
-	let plants: PlantInstance[] = [];
+	let stars: Star[]            = [];
+	let clouds: CloudDef[]       = [];
+	let plants: PlantInstance[]  = [];
+	let treeSegments: TreeSegment[] = [];
 	let W = 0, H = 0, horizonY = 0;
 
 	function buildScene(cw: number, ch: number, hy: number): void {
@@ -525,6 +527,7 @@
 		drawStars(ctx, altDeg, time);
 		drawMoon(ctx, altDeg, sxn);
 		drawTerrain(ctx, altDeg);
+		if (treeSegments.length > 0) drawTree(ctx, treeSegments, W, H);
 		drawSun(ctx, altDeg, sxn);
 		drawBeltOfVenus(ctx, altDeg);
 		drawClouds(ctx, altDeg);
@@ -549,6 +552,18 @@
 
 		animFrame = requestAnimationFrame(draw);
 		window.addEventListener('resize', resize);
+
+		// Load tree from cache, or generate on first visit (deferred so first
+		// frame paints before the ~200ms generation runs).
+		const cached = loadTreeFromCache();
+		if (cached) {
+			treeSegments = cached;
+		} else {
+			setTimeout(() => {
+				treeSegments = generateTree(W, H, horizonY);
+				saveTreeToCache(treeSegments);
+			}, 80);
+		}
 
 		return () => {
 			cancelAnimationFrame(animFrame);
