@@ -127,24 +127,29 @@
 
 	<div class="inner">
 		<div class="search-area">
-			<div class="search-bar">
-				{#if activeTag}
-					<span class="tag-chip">
-						{activeTag}
-						<button class="chip-clear" onclick={clearTag} aria-label="clear filter">×</button>
-					</span>
+			<div class="search-row">
+				<div class="search-bar">
+					{#if activeTag}
+						<span class="tag-chip">
+							{activeTag}
+							<button class="chip-clear" onclick={clearTag} aria-label="clear filter">×</button>
+						</span>
+					{/if}
+					<input
+						type="text"
+						class="search-input"
+						class:with-chip={!!activeTag}
+						placeholder={activeTag ? '' : 'search titles, authors, or categories…'}
+						bind:value={searchQuery}
+						oninput={() => { suggestionsDismissed = false; if (searchQuery.trim()) activeTag = ''; }}
+						aria-label="Search books"
+						autocomplete="off"
+						spellcheck="false"
+					/>
+				</div>
+				{#if adminState.active}
+					<button class="add-btn" onclick={() => bookFormState.openAdd()}>+ add</button>
 				{/if}
-				<input
-					type="text"
-					class="search-input"
-					class:with-chip={!!activeTag}
-					placeholder={activeTag ? '' : 'search titles, authors, or categories…'}
-					bind:value={searchQuery}
-					oninput={() => { suggestionsDismissed = false; if (searchQuery.trim()) activeTag = ''; }}
-					aria-label="Search books"
-					autocomplete="off"
-					spellcheck="false"
-				/>
 			</div>
 			{#if showSuggestions}
 				<div class="suggestions">
@@ -179,7 +184,7 @@
 								aria-label={book.read ? 'Mark as unread' : 'Mark as read'}
 							>{book.read ? 'unmark' : 'mark read'}</button>
 						{/if}
-						{#if adminState.editMode}
+						{#if adminState.active}
 							<button
 								class="edit-pencil"
 								onclick={() => bookFormState.openEdit(book)}
@@ -234,10 +239,32 @@
 	/* ── search area ─────────────────────────────────────────── */
 	.search-area { margin-bottom: 2rem; }
 
+	.search-row {
+		display: flex;
+		align-items: flex-end;
+		gap: 1rem;
+	}
+
+	.add-btn {
+		background: none;
+		border: 1px solid rgba(200, 150, 60, 0.22);
+		color: #6a5a40;
+		font-family: 'Courier New', Courier, monospace;
+		font-size: 0.6rem;
+		letter-spacing: 0.08em;
+		padding: 0.3rem 0.7rem;
+		cursor: pointer;
+		transition: all 0.15s;
+		white-space: nowrap;
+		flex-shrink: 0;
+	}
+	.add-btn:hover { color: #c8a060; border-color: rgba(200, 150, 60, 0.5); }
+
 	.search-bar {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
+		flex: 1;
 		border-bottom: 1px solid rgba(200, 150, 60, 0.22);
 		padding-bottom: 0.4rem;
 	}

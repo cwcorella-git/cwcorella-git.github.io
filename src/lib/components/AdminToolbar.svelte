@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { adminState, bookFormState, writeQueue } from '$lib/admin/state.svelte';
+	import { adminState, writeQueue } from '$lib/admin/state.svelte';
 
 	async function handleLogout() {
 		await adminState.logout();
@@ -20,11 +20,6 @@
 		{:else if writeQueue.status === 'error'}
 			<button class="sync-btn error" onclick={handleSync} title={writeQueue.error}>⚠ retry</button>
 		{/if}
-		<button onclick={() => bookFormState.openAdd()}>+ add</button>
-		<button
-			class:active={adminState.editMode}
-			onclick={() => adminState.toggleEditMode()}
-		>✎ edit</button>
 		<button onclick={handleLogout}>× logout</button>
 	</div>
 {/if}
@@ -58,11 +53,6 @@
 		transition: all 0.15s;
 	}
 	button:hover:not(:disabled) { color: #c8a060; border-color: rgba(200, 150, 60, 0.45); }
-	button.active {
-		color: #c8a060;
-		background: rgba(200, 150, 60, 0.08);
-		border-color: rgba(200, 150, 60, 0.4);
-	}
 	button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 	.sync-btn.dirty {
