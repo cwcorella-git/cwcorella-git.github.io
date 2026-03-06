@@ -41,7 +41,7 @@ npm test          # vitest
 
 **Docs**: `static/docs/public/*.md` (plaintext), `static/docs/private/*.enc` (AES-256-GCM JSON).
 
-**Journals**: `static/docs/private/journals/` — index + entries all encrypted; slugs are SHA-256 hashes of source filename (12 hex chars).
+**Journals**: `static/docs/private/journals/` — index + entries all encrypted. Slugs are word-based (top-3 nouns via `compromise` NLP, e.g. `bread-morning-quiet`). `journalCache` (in-memory) lets reader/editor open newly created entries before the write queue commits. `draftStore` persists the pending journals-index payload to localStorage across hard refreshes. Rapid creates are safe — `writeQueue.push()` merges `extraUpdates` keyed by file path.
 
 **Encryption**: AES-256-GCM, PBKDF2 SHA-256 200k iterations, 16-byte random salt, Web Crypto API only (no Node crypto).
 
@@ -52,7 +52,8 @@ src/lib/types.ts                    — Book, BookDoc, BookLink interfaces
 src/lib/books.json                  — 902 books, BookLink[] schema
 src/lib/content/home.json           — { "content": "..." } single markdown field
 src/lib/admin/github.ts             — getFile, putFile, commitFiles (force:true PATCH)
-src/lib/admin/state.svelte.ts       — adminState, bookFormState, booksState, writeQueue
+src/lib/admin/state.svelte.ts       — adminState, bookFormState, booksState, writeQueue, journalCache
+src/lib/admin/slug.ts               — word-based slug generation via compromise NLP (browser, dynamic import)
 src/lib/admin/crypto.ts             — AES-256-GCM encrypt/decrypt (Web Crypto only)
 src/lib/admin/markdown.ts           — marked renderer + extractToc
 src/lib/admin/toast.svelte.ts       — toast queue (error/success)
