@@ -30,7 +30,9 @@
 		justify-content: space-between;
 		gap: 0.8rem;
 		padding: 0.65rem 0.9rem;
-		background: #120e04;
+		background: rgba(18, 14, 4, 0.88);
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
 		border: 1px solid rgba(200, 150, 60, 0.25);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.65rem;

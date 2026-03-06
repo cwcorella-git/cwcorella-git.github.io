@@ -386,7 +386,7 @@
 	/* ── overlays shared ──────────────────────────────────── */
 	.overlay-backdrop {
 		position: fixed; inset: 0; z-index: 299;
-		background: rgba(0, 0, 0, 0.35);
+		background: var(--backdrop-overlay);
 	}
 	.overlay-header {
 		display: flex; align-items: center; justify-content: space-between;
@@ -409,7 +409,10 @@
 	/* ── reader ───────────────────────────────────────────── */
 	.reader {
 		position: fixed; inset: 0; z-index: 300;
-		background: #fffaee; display: flex; flex-direction: column; overflow: hidden;
+		background: var(--glass-bg-heavy);
+		backdrop-filter: var(--glass-blur-heavy);
+		-webkit-backdrop-filter: var(--glass-blur-heavy);
+		display: flex; flex-direction: column; overflow: hidden;
 	}
 	.reader-meta { display: flex; align-items: baseline; gap: 1rem; }
 	.reader-title { font-family: Georgia, 'Times New Roman', Times, serif; font-size: 0.95rem; color: #3d2e1a; }
@@ -441,7 +444,10 @@
 	/* ── editor ───────────────────────────────────────────── */
 	.editor {
 		position: fixed; inset: 0; z-index: 300;
-		background: #fffaee; display: flex; flex-direction: column; overflow: hidden;
+		background: var(--glass-bg-heavy);
+		backdrop-filter: var(--glass-blur-heavy);
+		-webkit-backdrop-filter: var(--glass-blur-heavy);
+		display: flex; flex-direction: column; overflow: hidden;
 	}
 	.editor-body { flex: 1; overflow-y: auto; padding: 1.8rem 2rem; display: flex; flex-direction: column; gap: 1rem; }
 	.editor-fields { display: flex; flex-direction: column; gap: 0.9rem; max-width: 860px; }

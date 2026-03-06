@@ -166,7 +166,7 @@
 		border: none;
 		outline: none;
 		color: #c0b088;
-		font-family: Georgia, 'Times New Roman', Times, serif;
+		font-family: var(--font-ui);
 		font-size: 0.88rem;
 		padding: 0.45rem 0.6rem;
 		/* Remove browser number spinners */

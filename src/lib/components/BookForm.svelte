@@ -257,7 +257,7 @@
 		position: fixed;
 		inset: 0;
 		z-index: 490;
-		background: rgba(0, 0, 0, 0.6);
+		background: var(--backdrop-overlay);
 	}
 
 	.modal {
@@ -266,8 +266,10 @@
 		left: 50%;
 		transform: translate(-50%, -50%);
 		z-index: 491;
-		background: #120e04;
-		border: 1px solid rgba(200, 150, 60, 0.3);
+		background: var(--glass-bg-dark);
+		backdrop-filter: var(--glass-blur-heavy);
+		-webkit-backdrop-filter: var(--glass-blur-heavy);
+		border: 1px solid var(--glass-border-dark);
 		width: min(600px, 95vw);
 		max-height: 90vh;
 		display: flex;
@@ -337,7 +339,7 @@
 		background: rgba(200, 150, 60, 0.04);
 		border: 1px solid rgba(200, 150, 60, 0.18);
 		color: #c0b088;
-		font-family: Georgia, 'Times New Roman', Times, serif;
+		font-family: var(--font-ui);
 		font-size: 0.88rem;
 		padding: 0.45rem 0.6rem;
 		outline: none;

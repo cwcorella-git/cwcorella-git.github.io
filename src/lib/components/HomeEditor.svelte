@@ -88,7 +88,7 @@
 		background: none;
 		border: 1px solid rgba(200, 150, 60, 0.15);
 		color: #6a5a40;
-		font-family: Georgia, 'Times New Roman', Times, serif;
+		font-family: var(--font-ui);
 		font-size: 0.75rem;
 		width: 1.8rem;
 		height: 1.6rem;
@@ -121,8 +121,8 @@
 		width: 100%;
 		background: rgba(200, 150, 60, 0.04);
 		border: 1px solid rgba(200, 150, 60, 0.2);
-		color: #c0b088;
-		font-family: Georgia, 'Times New Roman', Times, serif;
+		color: var(--clr-text-prose);
+		font-family: var(--font-prose);
 		font-size: 1rem;
 		line-height: 1.9;
 		padding: 0.6rem;

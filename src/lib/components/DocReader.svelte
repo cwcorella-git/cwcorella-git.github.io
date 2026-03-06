@@ -126,7 +126,9 @@
 		position: fixed;
 		inset: 0;
 		z-index: 300;
-		background: #fffaee;
+		background: var(--glass-bg-heavy);
+		backdrop-filter: var(--glass-blur-heavy);
+		-webkit-backdrop-filter: var(--glass-blur-heavy);
 		display: flex;
 		flex-direction: column;
 	}
@@ -250,6 +252,7 @@
 	:global(.doc-content h1),
 	:global(.doc-content h2),
 	:global(.doc-content h3) {
+		font-family: var(--font-prose);
 		color: #3d2e1a;
 		font-weight: normal;
 		margin-top: 2rem;

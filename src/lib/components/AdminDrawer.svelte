@@ -106,7 +106,7 @@
 		position: fixed;
 		inset: 0;
 		z-index: 400;
-		background: rgba(0, 0, 0, 0.5);
+		background: var(--backdrop-overlay);
 	}
 
 	.drawer {
@@ -115,8 +115,10 @@
 		left: 50%;
 		transform: translate(-50%, -50%);
 		z-index: 401;
-		background: #120e04;
-		border: 1px solid rgba(200, 150, 60, 0.3);
+		background: var(--glass-bg-dark);
+		backdrop-filter: var(--glass-blur-heavy);
+		-webkit-backdrop-filter: var(--glass-blur-heavy);
+		border: 1px solid var(--glass-border-dark);
 		padding: 1.8rem;
 		width: min(360px, 90vw);
 	}
