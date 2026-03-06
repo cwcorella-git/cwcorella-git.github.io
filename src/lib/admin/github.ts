@@ -90,17 +90,28 @@ export async function putFileWithFreshSha(
 	}
 }
 
-export async function updateBooksJson(pat: string, books: Book[]): Promise<void> {
-	const content = JSON.stringify(books);
-	const b64 = toBase64(content);
+// ── Git Data API — atomic multi-file commit ──────────────────────────────
+//
+// commitFiles(pat, updates, message, deletions?)
+//   updates:   [{ path, content }]  files to create/update
+//   deletions: ['path/to/file']     files to remove (sha: null in tree)
+//
+// Uses the low-level Git blobs/trees/commits/refs API so there is no
+// blob-SHA conflict and no 1MB content limit. Retries once on 422
+// "not a fast forward" (GitHub Actions race on the ref update).
 
+export async function commitFiles(
+	pat: string,
+	updates: { path: string; content: string }[],
+	message: string,
+	deletions: string[] = []
+): Promise<void> {
 	const headers = {
 		Authorization: `Bearer ${pat}`,
 		Accept: 'application/vnd.github+json',
 		'Content-Type': 'application/json'
 	};
 
-	// Use low-level Git Data API — no blob SHA conflict, no 1MB content limit.
 	// 1. Current HEAD commit SHA
 	const refRes = await fetch(`${API}/repos/${REPO}/git/ref/heads/main`, { headers });
 	if (!refRes.ok) throw new Error(`Failed to get ref: ${refRes.status}`);
@@ -111,52 +122,60 @@ export async function updateBooksJson(pat: string, books: Book[]): Promise<void>
 	if (!commitRes.ok) throw new Error(`Failed to get commit: ${commitRes.status}`);
 	const treeSha: string = (await commitRes.json()).tree.sha;
 
-	// 3. Create blob
-	const blobRes = await fetch(`${API}/repos/${REPO}/git/blobs`, {
-		method: 'POST', headers,
-		body: JSON.stringify({ content: b64, encoding: 'base64' })
-	});
-	if (!blobRes.ok) throw new Error(`Failed to create blob: ${blobRes.status}`);
-	const blobSha: string = (await blobRes.json()).sha;
+	// 3. Create a blob for each updated file (parallel)
+	const blobShas = await Promise.all(updates.map(async ({ content }) => {
+		const res = await fetch(`${API}/repos/${REPO}/git/blobs`, {
+			method: 'POST', headers,
+			body: JSON.stringify({ content: toBase64(content), encoding: 'base64' })
+		});
+		if (!res.ok) throw new Error(`Failed to create blob: ${res.status}`);
+		return (await res.json()).sha as string;
+	}));
 
-	// 4. Create tree
+	// 4. Create tree: updates + deletions (sha: null removes a file)
+	const treeEntries = [
+		...updates.map(({ path }, i) => ({ path, mode: '100644', type: 'blob', sha: blobShas[i] })),
+		...deletions.map(path => ({ path, mode: '100644', type: 'blob', sha: null }))
+	];
 	const treeRes = await fetch(`${API}/repos/${REPO}/git/trees`, {
 		method: 'POST', headers,
-		body: JSON.stringify({
-			base_tree: treeSha,
-			tree: [{ path: 'src/lib/books.json', mode: '100644', type: 'blob', sha: blobSha }]
-		})
+		body: JSON.stringify({ base_tree: treeSha, tree: treeEntries })
 	});
 	if (!treeRes.ok) throw new Error(`Failed to create tree: ${treeRes.status}`);
 	const newTreeSha: string = (await treeRes.json()).sha;
 
-	// 5 + 6. Create commit and advance ref, retrying if another commit lands between our
-	//        GET and PATCH (GitHub Actions race → 422 "not a fast forward").
-	async function createCommitAndAdvanceRef(parentSha: string): Promise<void> {
-		const commitRes2 = await fetch(`${API}/repos/${REPO}/git/commits`, {
+	// 5 + 6. Commit and advance ref, retrying once on 422 fast-forward failure
+	async function commitAndPush(parentSha: string): Promise<void> {
+		const newCommitRes = await fetch(`${API}/repos/${REPO}/git/commits`, {
 			method: 'POST', headers,
-			body: JSON.stringify({ message: 'update books.json', tree: newTreeSha, parents: [parentSha] })
+			body: JSON.stringify({ message, tree: newTreeSha, parents: [parentSha] })
 		});
-		if (!commitRes2.ok) throw new Error(`Failed to create commit: ${commitRes2.status}`);
-		const commitSha: string = (await commitRes2.json()).sha;
+		if (!newCommitRes.ok) throw new Error(`Failed to create commit: ${newCommitRes.status}`);
+		const newCommitSha: string = (await newCommitRes.json()).sha;
 
 		const patchRes = await fetch(`${API}/repos/${REPO}/git/refs/heads/main`, {
 			method: 'PATCH', headers,
-			body: JSON.stringify({ sha: commitSha })
+			body: JSON.stringify({ sha: newCommitSha })
 		});
 		if (patchRes.ok) return;
 
 		const patchErr = await patchRes.json().catch(() => ({}));
 		if (patchRes.status === 422 && patchErr.message?.includes('not a fast forward')) {
-			// Another commit landed — re-fetch HEAD and retry once
 			const retryRef = await fetch(`${API}/repos/${REPO}/git/ref/heads/main`, { headers });
 			if (!retryRef.ok) throw new Error(`Failed to re-fetch ref: ${retryRef.status}`);
-			const newHead: string = (await retryRef.json()).object.sha;
-			await createCommitAndAdvanceRef(newHead);
+			await commitAndPush((await retryRef.json()).object.sha);
 		} else {
 			throw new Error(patchErr.message || `Failed to update ref: ${patchRes.status}`);
 		}
 	}
 
-	await createCommitAndAdvanceRef(headSha);
+	await commitAndPush(headSha);
+}
+
+export async function updateBooksJson(pat: string, books: Book[]): Promise<void> {
+	await commitFiles(
+		pat,
+		[{ path: 'src/lib/books.json', content: JSON.stringify(books) }],
+		'update books.json'
+	);
 }
