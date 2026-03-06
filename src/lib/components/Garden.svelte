@@ -167,34 +167,39 @@
 	}
 
 	// ── cloud lobe generator ──────────────────────────────────────────────────
-	// Builds the ball-cluster layout: 1 primary anchor + 3–5 secondary lobes
-	// arranged asymmetrically on the upper arc + 1 small trailing puff.
-	// Coordinates are in pixel-space relative to the cloud's center (0,0).
-	// Negative oy = upward; the cluster always grows upward from center.
+	// Builds a tightly-overlapping lobe cluster. Individual lobes should NOT be
+	// visible — they accumulate as density through soft gradient overlap.
+	// Coordinates are relative to cloud center (0,0); negative oy = upward.
 	function genLobes(rng: () => number, size: number): Lobe[] {
 		const lobes: Lobe[] = [];
 
-		// Primary lobe — slightly off-center for asymmetry
-		const pr = size * (0.38 + rng() * 0.22);
-		const px = (rng() - 0.5) * size * 0.25;
+		// Primary body lobe — moderately sized anchor
+		const pr = size * (0.28 + rng() * 0.14);
+		const px = (rng() - 0.5) * size * 0.15;
 		lobes.push({ ox: px, oy: 0, r: pr });
 
-		// Secondary lobes — clustered on the upper arc
-		const numSec = 3 + Math.floor(rng() * 3);
+		// Secondary lobes: tightly clustered on upper arc (short dist so they merge)
+		const numSec = 6 + Math.floor(rng() * 4);
 		for (let i = 0; i < numSec; i++) {
-			const angle = -(rng() * Math.PI);                  // upper semicircle
-			const dist  = pr * (0.55 + rng() * 0.55);
-			const r     = pr * (0.22 + rng() * 0.45);
-			lobes.push({ ox: px + Math.cos(angle) * dist, oy: Math.sin(angle) * dist, r });
+			const angle = -(rng() * Math.PI);
+			const dist  = pr * (0.28 + rng() * 0.42);   // close enough to overlap heavily
+			const r     = pr * (0.30 + rng() * 0.45);
+			lobes.push({
+				ox: px + Math.cos(angle) * dist * (0.8 + rng() * 0.4),
+				oy: Math.sin(angle) * dist,
+				r,
+			});
 		}
 
-		// One small trailing puff on a random side
-		const side = rng() < 0.5 ? -1 : 1;
-		lobes.push({
-			ox: px + side * pr * (0.7 + rng() * 0.5),
-			oy: pr * (0.2 + rng() * 0.3),
-			r:  pr * (0.12 + rng() * 0.15),
-		});
+		// 2–3 background mid-body lobes for bulk/density (slightly below center)
+		const numBg = 2 + Math.floor(rng() * 2);
+		for (let i = 0; i < numBg; i++) {
+			lobes.push({
+				ox: px + (rng() - 0.5) * pr * 1.1,
+				oy: pr * (0.08 + rng() * 0.22),
+				r:  pr * (0.20 + rng() * 0.25),
+			});
+		}
 
 		return lobes;
 	}
@@ -761,92 +766,55 @@
 	}
 
 	// ── cloud: offscreen renderer ─────────────────────────────────────────────
-	// Renders one cloud to an HTMLCanvasElement. Called only when the color key
-	// changes (slow sky transitions), never per-frame. drawClouds just drawImage.
+	// 3-pass approach: lobes accumulate density as overlapping soft discs (no
+	// per-lobe shading — that creates the "sphere" look). One global source-atop
+	// gradient applies directional lighting to the whole cloud mass.
 	function renderCloudToCanvas(cloud: CloudDef, topRGB: RGB, shadowRGB: RGB): HTMLCanvasElement {
 		const s   = cloud.size;
 		const CW  = Math.ceil(s * 5.2);
 		const CH  = Math.ceil(s * 3.0);
 		const ccx = CW / 2;
-		const ccy = s * 1.5;   // cloud center y — lobes grow upward from here
+		const ccy = s * 1.5;
 
-		const c   = document.createElement('canvas');
+		const c  = document.createElement('canvas');
 		c.width = CW; c.height = CH;
-		const c2  = c.getContext('2d')!;
+		const c2 = c.getContext('2d')!;
 
-		// Pass 1 — shadow body: all lobes at full size
+		// Pass 1 — soft discs in topRGB; overlapping regions accumulate opacity
+		// naturally, creating denser cores without visible sphere edges.
 		for (const l of cloud.lobes) {
 			const lx = ccx + l.ox, ly = ccy + l.oy;
-			const g  = c2.createRadialGradient(lx, ly + l.r * 0.12, 0, lx, ly - l.r * 0.05, l.r);
-			g.addColorStop(0.00, css(shadowRGB, 0.92));
-			g.addColorStop(0.55, css(shadowRGB, 0.75));
-			g.addColorStop(0.82, css(shadowRGB, 0.28));
-			g.addColorStop(1.00, css(shadowRGB, 0));
+			const g  = c2.createRadialGradient(lx, ly, 0, lx, ly, l.r);
+			g.addColorStop(0.00, css(topRGB, 0.92));
+			g.addColorStop(0.52, css(topRGB, 0.68));
+			g.addColorStop(0.78, css(topRGB, 0.20));
+			g.addColorStop(1.00, css(topRGB, 0));
 			c2.beginPath();
 			c2.arc(lx, ly, l.r, 0, Math.PI * 2);
 			c2.fillStyle = g;
 			c2.fill();
 		}
 
-		// Pass 2 — lit body: lobes shifted up 10%, scaled down 8%
-		for (const l of cloud.lobes) {
-			const lx = ccx + l.ox;
-			const ly = ccy + l.oy - l.r * 0.10;
-			const r  = l.r * 0.92;
-			const g  = c2.createRadialGradient(lx, ly - r * 0.38, 0, lx, ly + r * 0.05, r);
-			g.addColorStop(0.00, css(topRGB, 1.00));
-			g.addColorStop(0.55, css(topRGB, 0.88));
-			g.addColorStop(0.82, css(topRGB, 0.38));
-			g.addColorStop(1.00, css(topRGB, 0));
-			c2.beginPath();
-			c2.arc(lx, ly, r, 0, Math.PI * 2);
-			c2.fillStyle = g;
-			c2.fill();
-		}
+		// Pass 2 — global directional shading via source-atop:
+		// shadows the bottom portion of the cloud mass without touching transparency.
+		c2.save();
+		c2.globalCompositeOperation = 'source-atop';
+		const shade = c2.createLinearGradient(0, ccy - s * 0.25, 0, ccy + s * 0.55);
+		shade.addColorStop(0.00, css(shadowRGB, 0.00));
+		shade.addColorStop(0.58, css(shadowRGB, 0.00));
+		shade.addColorStop(0.80, css(shadowRGB, 0.28));
+		shade.addColorStop(1.00, css(shadowRGB, 0.52));
+		c2.fillStyle = shade;
+		c2.fillRect(0, 0, CW, CH);
+		c2.restore();
 
-		// Pass 3 — AO shadows at overlapping lobe junctions
-		for (let i = 0; i < cloud.lobes.length; i++) {
-			for (let j = i + 1; j < cloud.lobes.length; j++) {
-				const a = cloud.lobes[i], b = cloud.lobes[j];
-				const dx = b.ox - a.ox, dy = b.oy - a.oy;
-				if (Math.sqrt(dx * dx + dy * dy) < (a.r + b.r) * 0.80) {
-					const t  = a.r / (a.r + b.r);
-					const ix = ccx + a.ox + dx * t;
-					const iy = ccy + a.oy + dy * t;
-					const ir = Math.min(a.r, b.r) * 0.52;
-					const g  = c2.createRadialGradient(ix, iy, 0, ix, iy, ir);
-					g.addColorStop(0,   'rgba(38,48,72,0.42)');
-					g.addColorStop(0.6, 'rgba(38,48,72,0.18)');
-					g.addColorStop(1,   'rgba(38,48,72,0)');
-					c2.beginPath();
-					c2.arc(ix, iy, ir, 0, Math.PI * 2);
-					c2.fillStyle = g;
-					c2.fill();
-				}
-			}
-		}
-
-		// Pass 4 — bright highlight on top 2 highest lobes
-		const topLobes = [...cloud.lobes].sort((a, b) => a.oy - b.oy).slice(0, 2);
-		for (const l of topLobes) {
-			const lx = ccx + l.ox, ly = ccy + l.oy;
-			const hr = l.r * 0.30;
-			const g  = c2.createRadialGradient(lx, ly - l.r * 0.42, 0, lx, ly - l.r * 0.28, hr);
-			g.addColorStop(0, 'rgba(255,255,255,0.54)');
-			g.addColorStop(1, 'rgba(255,255,255,0)');
-			c2.beginPath();
-			c2.arc(lx, ly - l.r * 0.35, hr, 0, Math.PI * 2);
-			c2.fillStyle = g;
-			c2.fill();
-		}
-
-		// Pass 5 — dissolve flat base via destination-out gradient
+		// Pass 3 — dissolve flat base via destination-out
 		c2.save();
 		c2.globalCompositeOperation = 'destination-out';
-		const featherTop = ccy + s * 0.32;
+		const featherTop = ccy + s * 0.30;
 		const fade = c2.createLinearGradient(0, featherTop, 0, CH);
 		fade.addColorStop(0.00, 'rgba(0,0,0,0)');
-		fade.addColorStop(0.42, 'rgba(0,0,0,0.62)');
+		fade.addColorStop(0.40, 'rgba(0,0,0,0.65)');
 		fade.addColorStop(1.00, 'rgba(0,0,0,1)');
 		c2.fillStyle = fade;
 		c2.fillRect(0, featherTop, CW, CH - featherTop);
