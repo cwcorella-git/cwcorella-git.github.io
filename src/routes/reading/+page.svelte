@@ -218,6 +218,10 @@
 		max-width: 760px;
 		margin: 0 auto;
 		padding: 3rem 2rem 6rem;
+		background: rgba(255, 248, 231, 0.88);
+		backdrop-filter: blur(16px);
+		-webkit-backdrop-filter: blur(16px);
+		border: 1px solid rgba(180, 150, 100, 0.18);
 	}
 
 	/* ── search area ─────────────────────────────────────────── */

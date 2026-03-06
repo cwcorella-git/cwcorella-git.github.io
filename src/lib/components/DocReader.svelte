@@ -126,7 +126,7 @@
 		position: fixed;
 		inset: 0;
 		z-index: 300;
-		background: #0c0902;
+		background: #fffaee;
 		display: flex;
 		flex-direction: column;
 	}
@@ -136,7 +136,7 @@
 		justify-content: space-between;
 		align-items: center;
 		padding: 1rem 2rem;
-		border-bottom: 1px solid rgba(200, 150, 60, 0.12);
+		border-bottom: 1px solid rgba(100, 75, 40, 0.12);
 		flex-shrink: 0;
 	}
 
@@ -148,27 +148,27 @@
 
 	.book-title {
 		font-size: 0.95rem;
-		color: #c0b088;
+		color: #3d2e1a;
 	}
 
 	.book-meta {
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
 		letter-spacing: 0.06em;
-		color: #6a5a40;
+		color: #8a6a40;
 	}
 
 	.close-btn {
 		background: none;
 		border: none;
-		color: #6a5a40;
+		color: #b09070;
 		font-size: 1.4rem;
 		cursor: pointer;
 		padding: 0;
 		line-height: 1;
 		transition: color 0.15s;
 	}
-	.close-btn:hover { color: #c8a060; }
+	.close-btn:hover { color: #7a5020; }
 
 	.overlay-body {
 		flex: 1;
@@ -187,7 +187,7 @@
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.75rem;
 		letter-spacing: 0.08em;
-		color: #5a4e38;
+		color: #8a6a40;
 	}
 	.state-msg.error { color: #c07050; }
 
@@ -195,8 +195,8 @@
 		display: inline-block;
 		width: 20px;
 		height: 20px;
-		border: 2px solid rgba(200, 150, 60, 0.15);
-		border-top-color: #c8a060;
+		border: 2px solid rgba(100, 75, 40, 0.15);
+		border-top-color: #8a6a40;
 		border-radius: 50%;
 		animation: spin 0.8s linear infinite;
 	}
@@ -207,7 +207,7 @@
 		flex-shrink: 0;
 		overflow-y: auto;
 		padding: 1.5rem 1rem;
-		border-right: 1px solid rgba(200, 150, 60, 0.08);
+		border-right: 1px solid rgba(100, 75, 40, 0.1);
 	}
 
 	.toc-label {
@@ -215,7 +215,7 @@
 		font-size: 0.55rem;
 		letter-spacing: 0.12em;
 		text-transform: uppercase;
-		color: #4e4232;
+		color: #9a7a50;
 		margin: 0 0 0.8rem;
 	}
 
@@ -229,11 +229,11 @@
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.62rem;
 		line-height: 1.5;
-		color: #6a5a40;
+		color: #8a6a40;
 		padding: 0.2rem 0;
 		transition: color 0.15s;
 	}
-	.toc-item:hover { color: #c8a060; }
+	.toc-item:hover { color: #7a5020; }
 	.toc-h1 { font-weight: bold; }
 	.toc-h2 { padding-left: 0.8rem; }
 	.toc-h3 { padding-left: 1.6rem; font-size: 0.58rem; }
@@ -250,35 +250,36 @@
 	:global(.doc-content h1),
 	:global(.doc-content h2),
 	:global(.doc-content h3) {
-		color: #c0b088;
+		color: #3d2e1a;
 		font-weight: normal;
 		margin-top: 2rem;
 	}
-	:global(.doc-content h1) { font-size: 1.4rem; border-bottom: 1px solid rgba(200,150,60,0.12); padding-bottom: 0.5rem; }
+	:global(.doc-content h1) { font-size: 1.4rem; border-bottom: 1px solid rgba(100,75,40,0.15); padding-bottom: 0.5rem; }
 	:global(.doc-content h2) { font-size: 1.1rem; }
-	:global(.doc-content h3) { font-size: 0.95rem; color: #a09070; }
-	:global(.doc-content p) { line-height: 1.9; color: #b8a880; margin-bottom: 1rem; }
-	:global(.doc-content a) { color: #c8a060; }
+	:global(.doc-content h3) { font-size: 0.95rem; color: #5a4020; }
+	:global(.doc-content p) { line-height: 1.9; color: #4a3820; margin-bottom: 1rem; }
+	:global(.doc-content a) { color: #7a5020; }
 	:global(.doc-content blockquote) {
-		border-left: 2px solid rgba(200,150,60,0.3);
+		border-left: 2px solid rgba(100,75,40,0.25);
 		margin: 1rem 0;
 		padding: 0.3rem 1rem;
-		color: #7a6a4a;
+		color: #8a6a40;
 		font-style: italic;
 	}
 	:global(.doc-content code) {
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.82em;
-		background: rgba(200,150,60,0.07);
+		background: rgba(100,75,40,0.07);
 		padding: 0.1em 0.35em;
+		color: #7a5020;
 	}
 	:global(.doc-content pre) {
-		background: rgba(200,150,60,0.05);
-		border: 1px solid rgba(200,150,60,0.12);
+		background: rgba(100,75,40,0.04);
+		border: 1px solid rgba(100,75,40,0.12);
 		padding: 1rem;
 		overflow-x: auto;
 	}
-	:global(.doc-content ul, .doc-content ol) { line-height: 1.8; color: #b8a880; padding-left: 1.5rem; }
+	:global(.doc-content ul, .doc-content ol) { line-height: 1.8; color: #4a3820; padding-left: 1.5rem; }
 
 	@media (max-width: 640px) {
 		.toc { display: none; }

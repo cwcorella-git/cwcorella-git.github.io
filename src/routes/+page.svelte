@@ -48,6 +48,7 @@
 		min-height: 100vh;
 		display: flex;
 		flex-direction: column;
+		padding-top: 4rem;
 	}
 
 	main {
@@ -56,11 +57,15 @@
 		flex: 1;
 		max-width: 560px;
 		margin: 0 auto;
-		padding: 2rem;
+		padding: 2.5rem 2.5rem 3rem;
 		width: 100%;
 		display: flex;
 		flex-direction: column;
 		justify-content: center;
+		background: rgba(255, 248, 231, 0.88);
+		backdrop-filter: blur(16px);
+		-webkit-backdrop-filter: blur(16px);
+		border: 1px solid rgba(180, 150, 100, 0.18);
 	}
 
 	/* Prose styles for markdown-rendered content */

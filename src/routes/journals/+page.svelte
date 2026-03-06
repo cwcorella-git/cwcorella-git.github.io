@@ -315,6 +315,10 @@
 		position: relative; z-index: 1;
 		max-width: 760px; margin: 0 auto;
 		padding: 3rem 2rem 6rem;
+		background: rgba(255, 248, 231, 0.88);
+		backdrop-filter: blur(16px);
+		-webkit-backdrop-filter: blur(16px);
+		border: 1px solid rgba(180, 150, 100, 0.18);
 	}
 	.page-header {
 		display: flex; align-items: baseline; justify-content: space-between;
@@ -380,33 +384,33 @@
 	/* ── overlays shared ──────────────────────────────────── */
 	.overlay-backdrop {
 		position: fixed; inset: 0; z-index: 299;
-		background: rgba(0, 0, 0, 0.55);
+		background: rgba(0, 0, 0, 0.35);
 	}
 	.overlay-header {
 		display: flex; align-items: center; justify-content: space-between;
 		padding: 1.2rem 2rem;
-		border-bottom: 1px solid rgba(200, 150, 60, 0.12);
+		border-bottom: 1px solid rgba(100, 75, 40, 0.12);
 		flex-shrink: 0;
 	}
 	.editor-header-meta { display: flex; flex-direction: column; gap: 0.2rem; }
 	.editor-slug-line { font-size: 0.58rem; letter-spacing: 0.06em; }
 	.overlay-label {
 		font-family: 'Courier New', Courier, monospace;
-		font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; color: #c8a060;
+		font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; color: #7a5020;
 	}
 	.close-btn {
-		background: none; border: none; color: #6a5a40;
+		background: none; border: none; color: #b09070;
 		font-size: 1.4rem; cursor: pointer; padding: 0; line-height: 1; transition: color 0.15s;
 	}
-	.close-btn:hover { color: #c8a060; }
+	.close-btn:hover { color: #7a5020; }
 
 	/* ── reader ───────────────────────────────────────────── */
 	.reader {
 		position: fixed; inset: 0; z-index: 300;
-		background: #0c0902; display: flex; flex-direction: column; overflow: hidden;
+		background: #fffaee; display: flex; flex-direction: column; overflow: hidden;
 	}
 	.reader-meta { display: flex; align-items: baseline; gap: 1rem; }
-	.reader-title { font-family: Georgia, 'Times New Roman', Times, serif; font-size: 0.95rem; color: #c0b088; }
+	.reader-title { font-family: Georgia, 'Times New Roman', Times, serif; font-size: 0.95rem; color: #3d2e1a; }
 	.reader-body {
 		flex: 1; overflow-y: auto; padding: 2.5rem 3rem;
 		max-width: 72ch; margin: 0 auto; width: 100%;
@@ -414,57 +418,57 @@
 	.reader-doc-title {
 		font-family: Georgia, 'Times New Roman', Times, serif;
 		font-size: 1.3rem; font-weight: normal;
-		color: #d4b878; margin: 0 0 2rem; line-height: 1.3;
-		border-bottom: 1px solid rgba(200, 150, 60, 0.15);
+		color: #3d2e1a; margin: 0 0 2rem; line-height: 1.3;
+		border-bottom: 1px solid rgba(100, 75, 40, 0.15);
 		padding-bottom: 1.2rem;
 	}
 	.reader-body :global(h1), .reader-body :global(h2), .reader-body :global(h3) {
 		font-family: Georgia, 'Times New Roman', Times, serif; font-weight: normal;
-		color: #c8a060; margin: 2rem 0 0.75rem; line-height: 1.3;
+		color: #5a3a10; margin: 2rem 0 0.75rem; line-height: 1.3;
 	}
 	.reader-body :global(h1) { font-size: 1.2rem; }
 	.reader-body :global(h2) { font-size: 1rem; }
 	.reader-body :global(h3) { font-size: 0.9rem; }
-	.reader-body :global(p) { color: #c0b088; font-size: 0.95rem; line-height: 1.85; margin: 0 0 1.1rem; }
-	.reader-body :global(blockquote) { border-left: 2px solid rgba(200,150,60,0.3); margin: 1.2rem 0; padding: 0.1rem 1.2rem; color: #8a7858; }
-	.reader-body :global(code) { font-family: 'Courier New', Courier, monospace; font-size: 0.82em; background: rgba(200,150,60,0.07); padding: 0.1em 0.35em; color: #b89858; }
-	.reader-body :global(pre) { background: rgba(200,150,60,0.05); border: 1px solid rgba(200,150,60,0.12); padding: 1rem 1.2rem; overflow-x: auto; margin: 1.2rem 0; }
-	.reader-body :global(ul), .reader-body :global(ol) { color: #c0b088; font-size: 0.95rem; line-height: 1.85; padding-left: 1.5rem; margin: 0 0 1rem; }
-	.reader-body :global(hr) { border: none; border-top: 1px solid rgba(200,150,60,0.12); margin: 2rem 0; }
+	.reader-body :global(p) { color: #4a3820; font-size: 0.95rem; line-height: 1.85; margin: 0 0 1.1rem; }
+	.reader-body :global(blockquote) { border-left: 2px solid rgba(100,75,40,0.25); margin: 1.2rem 0; padding: 0.1rem 1.2rem; color: #8a6a40; font-style: italic; }
+	.reader-body :global(code) { font-family: 'Courier New', Courier, monospace; font-size: 0.82em; background: rgba(100,75,40,0.07); padding: 0.1em 0.35em; color: #7a5020; }
+	.reader-body :global(pre) { background: rgba(100,75,40,0.04); border: 1px solid rgba(100,75,40,0.12); padding: 1rem 1.2rem; overflow-x: auto; margin: 1.2rem 0; }
+	.reader-body :global(ul), .reader-body :global(ol) { color: #4a3820; font-size: 0.95rem; line-height: 1.85; padding-left: 1.5rem; margin: 0 0 1rem; }
+	.reader-body :global(hr) { border: none; border-top: 1px solid rgba(100,75,40,0.12); margin: 2rem 0; }
 
 	/* ── editor ───────────────────────────────────────────── */
 	.editor {
 		position: fixed; inset: 0; z-index: 300;
-		background: #0c0902; display: flex; flex-direction: column; overflow: hidden;
+		background: #fffaee; display: flex; flex-direction: column; overflow: hidden;
 	}
 	.editor-body { flex: 1; overflow-y: auto; padding: 1.8rem 2rem; display: flex; flex-direction: column; gap: 1rem; }
 	.editor-fields { display: flex; flex-direction: column; gap: 0.9rem; max-width: 860px; }
 	.field-row { display: grid; grid-template-columns: 1fr auto; gap: 0.9rem; }
 	.field-narrow { width: 160px; }
 	.field { display: flex; flex-direction: column; gap: 0.3rem; }
-	.field-label { font-family: 'Courier New', Courier, monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: #6a5a40; }
+	.field-label { font-family: 'Courier New', Courier, monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: #9a7a50; }
 	.editor-fields input[type="text"],
 	.editor-fields textarea {
-		background: rgba(200, 150, 60, 0.04);
-		border: 1px solid rgba(200, 150, 60, 0.18);
-		color: #c0b088;
+		background: rgba(100, 75, 40, 0.04);
+		border: 1px solid rgba(100, 75, 40, 0.18);
+		color: #3d2e1a;
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.85rem; padding: 0.45rem 0.6rem; outline: none;
 		transition: border-color 0.15s; width: 100%;
 	}
-	.editor-fields input:focus, .editor-fields textarea:focus { border-color: rgba(200, 150, 60, 0.45); }
+	.editor-fields input:focus, .editor-fields textarea:focus { border-color: rgba(100, 75, 40, 0.4); }
 	.editor-fields textarea { resize: vertical; line-height: 1.6; min-height: 400px; }
 	.editor-footer {
 		display: flex; gap: 0.5rem; justify-content: flex-end; padding-top: 0.8rem;
-		border-top: 1px solid rgba(200, 150, 60, 0.08); max-width: 860px;
+		border-top: 1px solid rgba(100, 75, 40, 0.1); max-width: 860px;
 	}
 	.editor-footer button {
-		background: none; border: 1px solid rgba(200, 150, 60, 0.2);
-		color: #6a5a40; font-family: 'Courier New', Courier, monospace;
+		background: none; border: 1px solid rgba(100, 75, 40, 0.2);
+		color: #8a6a40; font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem; letter-spacing: 0.08em;
 		padding: 0.35rem 0.8rem; cursor: pointer; transition: all 0.15s;
 	}
-	.editor-footer button:hover:not(:disabled) { color: #c8a060; border-color: rgba(200, 150, 60, 0.45); }
+	.editor-footer button:hover:not(:disabled) { color: #7a5020; border-color: rgba(100, 75, 40, 0.4); }
 	.editor-footer button:disabled { opacity: 0.5; cursor: not-allowed; }
-	.save-btn { background: rgba(200,150,60,0.08) !important; border-color: rgba(200,150,60,0.35) !important; color: #c8a060 !important; }
+	.save-btn { background: rgba(100,75,40,0.07) !important; border-color: rgba(100,75,40,0.3) !important; color: #7a5020 !important; }
 </style>
