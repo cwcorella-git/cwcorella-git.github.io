@@ -87,16 +87,16 @@
 		--glass-nav-bg:       rgba(255, 255, 255, 0.30);
 
 		/* Text (day defaults; updated dynamically by Garden.svelte) */
-		--clr-text-primary:   #3d2e1a;
-		--clr-text-prose:     #4a3820;
-		--clr-text-secondary: #8a6a40;
-		--clr-text-muted:     #9a7a50;
-		--clr-text-faint:     #b09070;
+		--clr-text-primary:   #121110;
+		--clr-text-prose:     #1c1814;
+		--clr-text-secondary: #58524a;
+		--clr-text-muted:     #80786e;
+		--clr-text-faint:     #a8a098;
 
 		/* Accent */
 		--clr-accent:         #c8a060;
-		--clr-accent-dim:     #8a6a40;
-		--clr-accent-active:  #7a5020;
+		--clr-accent-dim:     #6e5830;
+		--clr-accent-active:  #5a4420;
 
 		/* Danger */
 		--clr-danger:         #c07050;
@@ -151,6 +151,6 @@
 		transition: color 0.2s;
 		letter-spacing: 0.02em;
 	}
-	nav a:hover { color: var(--clr-accent-active); }
-	nav a.active { color: var(--clr-accent-active); }
+	nav a:hover { color: var(--clr-text-primary); }
+	nav a.active { color: var(--clr-text-primary); }
 </style>

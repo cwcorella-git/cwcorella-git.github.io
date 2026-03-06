@@ -568,13 +568,13 @@
 		r.style.setProperty('--glass-bg',      `rgba(${gr},${gg},${gb},${(0.22*dl + 0.42*(1-dl)).toFixed(2)})`);
 		r.style.setProperty('--glass-border',  `rgba(${gr},${gg},${gb},${(0.40*dl + 0.15*(1-dl)).toFixed(2)})`);
 		r.style.setProperty('--glass-nav-bg',  `rgba(${gr},${gg},${gb},${(0.30*dl + 0.52*(1-dl)).toFixed(2)})`);
-		// Text
-		r.style.setProperty('--clr-text-primary',   `rgb(${ri(61,224)},${ri(46,210)},${ri(26,190)})`);
-		r.style.setProperty('--clr-text-prose',      `rgb(${ri(74,212)},${ri(56,198)},${ri(32,178)})`);
-		r.style.setProperty('--clr-text-secondary',  `rgb(${ri(138,185)},${ri(106,162)},${ri(64,118)})`);
-		r.style.setProperty('--clr-text-muted',      `rgb(${ri(154,168)},${ri(122,148)},${ri(80,108)})`);
-		r.style.setProperty('--clr-text-faint',      `rgb(${ri(176,148)},${ri(144,130)},${ri(112,98)})`);
-		r.style.setProperty('--clr-accent-dim',      `rgb(${ri(138,200)},${ri(106,164)},${ri(64,96)})`);
+		// Text — neutral scale: near-black in day, warm off-white at night
+		r.style.setProperty('--clr-text-primary',   `rgb(${ri(18,230)},${ri(16,224)},${ri(14,212)})`);
+		r.style.setProperty('--clr-text-prose',      `rgb(${ri(28,222)},${ri(24,216)},${ri(20,204)})`);
+		r.style.setProperty('--clr-text-secondary',  `rgb(${ri(88,185)},${ri(82,174)},${ri(74,156)})`);
+		r.style.setProperty('--clr-text-muted',      `rgb(${ri(128,148)},${ri(120,138)},${ri(110,122)})`);
+		r.style.setProperty('--clr-text-faint',      `rgb(${ri(168,110)},${ri(160,102)},${ri(148,90)})`);
+		r.style.setProperty('--clr-accent-dim',      `rgb(${ri(110,200)},${ri(88,166)},${ri(48,100)})`);
 	}
 
 	// ── cursor tracking ────────────────────────────────────────────────────────
