@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { makeGrassTuft, makeFern, tickWind, drawPlants, type PlantInstance } from '$lib/garden/plants';
 
 	// ── constants ─────────────────────────────────────────────────────────────
 	const HOME_LAT    = 39.53;   // Reno, NV
@@ -155,8 +156,9 @@
 	];
 	const SPECTRAL_TOTAL = SPECTRAL.reduce((s, e) => s + e.weight, 0);
 
-	let stars: Star[]     = [];
-	let clouds: CloudDef[] = [];
+	let stars: Star[]          = [];
+	let clouds: CloudDef[]     = [];
+	let plants: PlantInstance[] = [];
 	let W = 0, H = 0, horizonY = 0;
 
 	function buildScene(cw: number, ch: number, hy: number): void {
@@ -204,6 +206,26 @@
 				prngseed: Math.floor(crng() * 0x7FFFFFFF),
 				speed:    8 + crng() * 18,
 			});
+		}
+
+		// ── plants ──────────────────────────────────────────────────────────────────────────
+		const prng = makePRNG(0xBADC0FFE);
+		plants = [];
+
+		for (let i = 0; i < 50; i++) {
+			const x    = prng() * cw;
+			const y    = hy + prng() * 12;
+			const h    = 22 + prng() * 42;
+			const seed = Math.floor(prng() * 0x7FFFFFFF);
+			plants.push(makeGrassTuft(x, y, h, seed));
+		}
+
+		for (let i = 0; i < 8; i++) {
+			const x    = prng() * cw;
+			const y    = hy + prng() * 8;
+			const h    = 52 + prng() * 52;
+			const seed = Math.floor(prng() * 0x7FFFFFFF);
+			plants.push(makeFern(x, y, h, seed));
 		}
 	}
 
@@ -465,29 +487,36 @@
 	}
 
 	// ── main loop ─────────────────────────────────────────────────────────────
-	let animFrame = 0;
+	let animFrame  = 0;
 	let frameCount = 0;
+	let lastStamp  = 0;
 
-	function draw(): void {
+	function draw(timestamp: DOMHighResTimeStamp = 0): void {
 		if (!canvas) return;
 		const ctx = canvas.getContext('2d');
 		if (!ctx) return;
 
 		frameCount++;
-		const now    = new Date();
-		const altDeg = sunAltitudeDeg(now);
-		const sxn    = sunXNorm(now);
+		const now     = new Date();
+		const altDeg  = sunAltitudeDeg(now);
+		const sxn     = sunXNorm(now);
 		const isNight = altDeg < -8;
 
 		// Day: draw at ~4fps (every 15 frames). Night: draw at ~30fps (every 2 frames).
-		// This keeps the animation smooth for twinkling stars while staying light in daytime.
+		// This keeps stars twinkling smoothly at night while staying light on CPU by day.
 		const skip = isNight ? 2 : 15;
 		if (frameCount % skip !== 0) {
 			animFrame = requestAnimationFrame(draw);
 			return;
 		}
 
-		const time = performance.now() / 1000;
+		const time = timestamp / 1000;
+		const dt   = lastStamp > 0 ? Math.min((timestamp - lastStamp) / 1000, 0.1) : 0.016;
+		lastStamp  = timestamp;
+
+		// Wind: slow noise-driven oscillation (degrees/s²)
+		const windForce = noise1D(time / 6) * 28;
+		tickWind(plants, windForce, dt);
 
 		ctx.clearRect(0, 0, W, H);
 
@@ -499,6 +528,7 @@
 		drawSun(ctx, altDeg, sxn);
 		drawBeltOfVenus(ctx, altDeg);
 		drawClouds(ctx, altDeg);
+		drawPlants(ctx, plants);
 
 		animFrame = requestAnimationFrame(draw);
 	}
