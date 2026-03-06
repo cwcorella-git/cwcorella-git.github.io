@@ -1,4 +1,4 @@
-import type { Book } from '$lib/types';
+import type { Book, JournalMeta } from '$lib/types';
 import allBooksStatic from '$lib/books.json';
 import { commitFiles } from '$lib/admin/github';
 import { draftStore } from '$lib/admin/draft';
@@ -148,6 +148,18 @@ export const journalCache = {
 	get(slug: string): string | undefined { return _journalCache.get(slug); },
 };
 
+// ── Journal index state ───────────────────────────────────────────────────────
+// Module-level so it survives SPA navigation. Prevents loadIndex() from
+// re-fetching GitHub Pages CDN (which may be stale) after a local save/delete.
+let _journalIndex = $state<JournalMeta[]>([]);
+let _journalIndexLoaded = $state(false);
+export const journalIndexState = {
+	get entries() { return _journalIndex; },
+	get loaded() { return _journalIndexLoaded; },
+	set(entries: JournalMeta[]) { _journalIndex = [...entries]; _journalIndexLoaded = true; },
+	clear() { _journalIndex = []; _journalIndexLoaded = false; },
+};
+
 // ── Shared books state ────────────────────────────────────────────────────────
 // Reading page derives from this; BookForm writes to it on save.
 let _books = $state<Book[]>([...(allBooksStatic as Book[])]);
@@ -194,6 +206,7 @@ export const adminState = {
 		_contentKey = '';
 		sessionStorage.removeItem('cwc-admin-pat');
 		sessionStorage.removeItem('cwc-admin-key');
+		journalIndexState.clear();
 	},
 
 	toggleEditMode() {

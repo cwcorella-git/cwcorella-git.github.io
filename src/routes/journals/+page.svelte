@@ -1,21 +1,16 @@
 <script lang="ts">
-	import { adminState } from '$lib/admin/state.svelte';
+	import { adminState, writeQueue, journalCache, journalIndexState } from '$lib/admin/state.svelte';
 	import { encryptDoc, decryptDoc } from '$lib/admin/crypto';
 	import { renderMarkdown } from '$lib/admin/markdown';
-	import { writeQueue } from '$lib/admin/state.svelte';
 	import { toast } from '$lib/admin/toast.svelte';
 	import { generateJournalSlug } from '$lib/admin/slug';
-	import { journalCache } from '$lib/admin/state.svelte';
-
-	interface JournalMeta { slug: string; title: string; date: string | null; }
+	import type { JournalMeta } from '$lib/types';
 
 	// ── index ─────────────────────────────────────────────────────────────
-	let index = $state<JournalMeta[]>([]);
-	let indexLoaded = $state(false);
 	let indexError = $state('');
 
 	$effect(() => {
-		if (adminState.active && !indexLoaded) loadIndex();
+		if (adminState.active && !journalIndexState.loaded) loadIndex();
 	});
 
 	async function loadIndex() {
@@ -27,8 +22,7 @@
 				: `HTTP ${res.status}`);
 			const enc = await res.json();
 			const json = await decryptDoc(enc, adminState.contentKey);
-			index = JSON.parse(json);
-			indexLoaded = true;
+			journalIndexState.set(JSON.parse(json));
 		} catch (e: unknown) {
 			indexError = e instanceof Error && e.name === 'OperationError'
 				? 'Incorrect content key.'
@@ -45,7 +39,7 @@
 			deletions,
 			message
 		});
-		index = newIndex;
+		journalIndexState.set(newIndex);
 	}
 
 	// ── reader ────────────────────────────────────────────────────────────
@@ -128,15 +122,15 @@
 		editorSaving = true;
 		try {
 			const slug = editorMode === 'create'
-				? await generateJournalSlug(editorContent, index.map(e => e.slug))
+				? await generateJournalSlug(editorContent, journalIndexState.entries.map(e => e.slug))
 				: editorEntry!.slug;
 
 			journalCache.set(slug, editorContent);
 			const encContent = await encryptDoc(editorContent, adminState.contentKey);
 			const meta: JournalMeta = { slug, title, date: editorDate.trim() || null };
 			const newIndex = editorMode === 'create'
-				? [meta, ...index]
-				: index.map(e => e.slug === slug ? meta : e);
+				? [meta, ...journalIndexState.entries]
+				: journalIndexState.entries.map(e => e.slug === slug ? meta : e);
 
 			await saveIndex(
 				newIndex,
@@ -159,7 +153,7 @@
 		deleteSaving = true;
 		try {
 			await saveIndex(
-				index.filter(e => e.slug !== entry.slug),
+				journalIndexState.entries.filter(e => e.slug !== entry.slug),
 				`delete journal: ${entry.title}`,
 				[],
 				[`static/docs/private/journals/${entry.slug}.enc`]
@@ -263,20 +257,20 @@
 	<div class="inner">
 		<div class="page-header">
 			<h1 class="heading">journals</h1>
-			{#if indexLoaded}
+			{#if journalIndexState.loaded}
 				<button class="new-btn" onclick={startCreate}>+ new</button>
 			{/if}
 		</div>
 
 		{#if indexError}
 			<p class="status error">{indexError}</p>
-		{:else if !indexLoaded}
+		{:else if !journalIndexState.loaded}
 			<p class="status">decrypting index…</p>
-		{:else if index.length === 0}
+		{:else if journalIndexState.entries.length === 0}
 			<p class="status">no entries — click + new or run scripts/encrypt-journals.mjs to populate.</p>
 		{:else}
 			<ul class="list">
-				{#each index as entry (entry.slug)}
+				{#each journalIndexState.entries as entry (entry.slug)}
 					<li>
 						{#if confirmingSlug === entry.slug}
 							<div class="entry-row confirm-row">
@@ -305,7 +299,7 @@
 					</li>
 				{/each}
 			</ul>
-			<p class="count">{index.length} entries</p>
+			<p class="count">{journalIndexState.entries.length} entries</p>
 		{/if}
 	</div>
 </div>

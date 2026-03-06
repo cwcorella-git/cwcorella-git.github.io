@@ -115,7 +115,13 @@
 		try {
 			const books: Book[] = booksState.books;
 			const updatedBooks = books.filter((b) => b.id !== book!.id);
-			writeQueue.push({ domain: 'books', books: updatedBooks });
+			const deletions: string[] = [];
+			if (book.doc) {
+				const dir = book.doc.visibility === 'admin' ? 'private' : 'public';
+				const ext = book.doc.visibility === 'admin' ? 'enc' : 'md';
+				deletions.push(`static/docs/${dir}/${book.doc.file}.${ext}`);
+			}
+			writeQueue.push({ domain: 'books', books: updatedBooks, deletions });
 			booksState.set(updatedBooks);
 			onSaved(updatedBooks);
 		} catch (e: unknown) {
