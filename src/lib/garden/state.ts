@@ -77,3 +77,11 @@ export function accrueElapsedDays(state: GardenState): GardenState {
 export function growthFactor(ageSinceBirth: number): number {
 	return 1 / (1 + Math.exp(-0.0008 * (ageSinceBirth - 500)));
 }
+
+// Logistic growth curve calibrated for century-scale tree growth:
+//   age  11 315d (~31yr)  → 0.45  (young, visibly incomplete)
+//   age  36 500d (~100yr) → 0.85  (mature, still filling out)
+//   age  65 700d (~180yr) → 0.99  (ancient)
+export function treeGrowthFactor(ageSinceBirth: number): number {
+	return 1 / (1 + Math.exp(-0.0000769 * (ageSinceBirth - 13917)));
+}

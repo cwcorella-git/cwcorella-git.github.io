@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { makeGrassTuft, makeFern, tickWind, drawPlants, applyMouseForce, type PlantInstance } from '$lib/garden/plants';
 	import { generateTree, loadTreeFromCache, saveTreeToCache, drawTree, type TreeSegment } from '$lib/garden/tree';
-	import { loadGardenState, saveGardenState, creditVisit, accrueElapsedDays, growthFactor } from '$lib/garden/state';
+	import { loadGardenState, saveGardenState, creditVisit, accrueElapsedDays, growthFactor, treeGrowthFactor } from '$lib/garden/state';
 	import { themeState } from '$lib/admin/theme.svelte';
 
 	// ── constants ─────────────────────────────────────────────────────────────
@@ -701,6 +701,94 @@
 		ctx.fillRect(0, 0, W, H);
 	}
 
+	// ── draw: midground tree silhouettes ──────────────────────────────────────
+	// Four trees at horizon depth — solid silhouettes (no branch detail at this scale).
+	// Each has a distinct species and birth offset so they represent different growth arcs:
+	//   round    — 30yr head start → visibly growing over the site's lifetime
+	//   oak      — 150yr head start → always looks ancient, barely changes
+	//   pine     — same age as garden → most dramatically growing (45%→85% over 69yr)
+	//   columnar — 15yr younger → young sapling becoming a tall slender poplar
+	function drawMidgroundTrees(ctx: CanvasRenderingContext2D, altDeg: number): void {
+		const isNight    = altDeg < -6;
+		const isTwilight = !isNight && altDeg < 6;
+		const clr = isNight    ? 'rgb(8,10,20)'
+		          : isTwilight ? 'rgb(42,46,55)'
+		          :              'rgb(55,68,38)';
+
+		type Kind = 'oak' | 'pine' | 'round' | 'columnar';
+		const specs: { xf: number; bornAgo: number; kind: Kind }[] = [
+			{ xf: 0.49, bornAgo: 10950,  kind: 'round'    },  // +30yr
+			{ xf: 0.58, bornAgo: 54750,  kind: 'oak'      },  // +150yr — ancient
+			{ xf: 0.74, bornAgo: 0,      kind: 'pine'     },  // same age
+			{ xf: 0.85, bornAgo: -5475,  kind: 'columnar' },  // −15yr
+		];
+
+		for (const spec of specs) {
+			const gf = treeGrowthFactor(Math.max(0, gardenAgeUnits + spec.bornAgo));
+			const bx = spec.xf * W;
+			const by = horizonY;
+			const tw = Math.max(0.8, 3.5 * gf);
+
+			ctx.save();
+			ctx.fillStyle   = clr;
+			ctx.strokeStyle = clr;
+			ctx.globalAlpha = 0.80;
+			ctx.lineCap     = 'round';
+
+			// Trunk
+			const trunkH = ({ oak: 90, pine: 80, round: 70, columnar: 60 } as const)[spec.kind] * gf;
+			ctx.lineWidth = tw;
+			ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx, by - trunkH); ctx.stroke();
+
+			if (spec.kind === 'oak') {
+				// Ancient oak: three heavy ellipse masses + a drooping low branch
+				const rx = 72 * gf, ry = 55 * gf;
+				const cx = bx - rx * 0.08, cy = by - trunkH - ry * 0.5;
+				ctx.beginPath(); ctx.ellipse(cx,              cy,              rx,        ry,        0,     0, Math.PI * 2); ctx.fill();
+				ctx.beginPath(); ctx.ellipse(cx - rx * 0.55,  cy + ry * 0.14,  rx * 0.56, ry * 0.44, -0.2,  0, Math.PI * 2); ctx.fill();
+				ctx.beginPath(); ctx.ellipse(cx + rx * 0.50,  cy - ry * 0.10,  rx * 0.48, ry * 0.40, 0.15,  0, Math.PI * 2); ctx.fill();
+				// Signature drooping branch — marks it as old growth
+				ctx.lineWidth = tw * 2.0;
+				ctx.beginPath();
+				ctx.moveTo(bx, by - trunkH * 0.50);
+				ctx.quadraticCurveTo(bx - rx * 0.42, by - trunkH * 0.52, bx - rx * 0.78, by - trunkH * 0.60);
+				ctx.stroke();
+
+			} else if (spec.kind === 'pine') {
+				// Conical/fir — triangular path with fBm edge wobble
+				const halfW = 30 * gf, crownH = 88 * gf;
+				const tipY  = by - trunkH - crownH;
+				const STEPS = 14;
+				ctx.beginPath();
+				ctx.moveTo(bx, tipY);
+				for (let i = 1; i <= STEPS; i++) {
+					const t = i / STEPS;
+					ctx.lineTo(bx + t * halfW * (1 + noise1D(t * 4.2 + spec.xf * 7) * 0.12),      tipY + t * crownH);
+				}
+				for (let i = STEPS; i >= 0; i--) {
+					const t = i / STEPS;
+					ctx.lineTo(bx - t * halfW * (1 + noise1D(t * 4.2 + spec.xf * 7 + 11) * 0.12), tipY + t * crownH);
+				}
+				ctx.closePath(); ctx.fill();
+
+			} else if (spec.kind === 'round') {
+				// Two offset ellipses — irregular natural dome
+				const rx = 38 * gf, ry = 34 * gf;
+				const cx = bx, cy = by - trunkH - ry * 0.5;
+				ctx.beginPath(); ctx.ellipse(cx,             cy,             rx,        ry,        0,   0, Math.PI * 2); ctx.fill();
+				ctx.beginPath(); ctx.ellipse(cx + rx * 0.38, cy - ry * 0.20, rx * 0.72, ry * 0.65, 0.2, 0, Math.PI * 2); ctx.fill();
+
+			} else {
+				// Columnar — narrow upright, Lombardy poplar / cypress
+				ctx.beginPath();
+				ctx.ellipse(bx, by - trunkH - 75 * gf * 0.5, 11 * gf, 75 * gf * 0.5, 0, 0, Math.PI * 2);
+				ctx.fill();
+			}
+
+			ctx.restore();
+		}
+	}
+
 	// ── draw: tree shadow pool ────────────────────────────────────────────────
 	// Soft radial ellipse at the foreground tree base — anchors it to the ground.
 	function drawTreeShadow(ctx: CanvasRenderingContext2D, altDeg: number): void {
@@ -1137,6 +1225,7 @@
 		drawGround(ctx, altDeg);
 		drawGroundContours(ctx, altDeg);
 		drawTerrain(ctx, altDeg);
+		drawMidgroundTrees(ctx, altDeg);
 		drawHorizonBlend(ctx, altDeg);
 		drawPlants(ctx, bgPlants, horizonY, H);   // far grass — behind tree
 		drawCirrus(ctx, altDeg);
