@@ -101,32 +101,36 @@
 		return `rgba(${c[0]},${c[1]},${c[2]},${alpha.toFixed(3)})`;
 	}
 
-	// ── sky keyframes ──────────────────────────────────────────────────────────
-	const SKY_KF: Array<{ alt: number; zenith: RGB; horizon: RGB }> = [
-		{ alt: -20, zenith: [2,   4,  16] as RGB, horizon: [5,   8,  42] as RGB },
-		{ alt: -12, zenith: [5,   8,  32] as RGB, horizon: [13,  21,  64] as RGB },
-		{ alt:  -6, zenith: [13,  21,  64] as RGB, horizon: [26,  42, 108] as RGB },
-		{ alt:  -1, zenith: [26,  42, 108] as RGB, horizon: [47,  64, 128] as RGB },
-		{ alt:   0, zenith: [74, 144, 196] as RGB, horizon: [255, 107,  53] as RGB },
-		{ alt:   6, zenith: [100, 160, 210] as RGB, horizon: [255, 200, 140] as RGB },
-		{ alt:  15, zenith: [100, 165, 220] as RGB, horizon: [200, 230, 245] as RGB },
-		{ alt:  45, zenith: [30,  107, 158] as RGB, horizon: [135, 206, 235] as RGB },
+	// ── sky keyframes (zenith → mid-upper → lower → horizon) ──────────────────
+	// 5-stop non-linear gradient gives better horizon brightening + mid-sky tones.
+	const SKY_KF: Array<{ alt: number; zenith: RGB; mid: RGB; lower: RGB; horizon: RGB }> = [
+		{ alt: -20, zenith: [2,   4,  16] as RGB, mid: [3,   5,  22] as RGB, lower: [4,   7,  34] as RGB, horizon: [5,   8,  42] as RGB },
+		{ alt: -12, zenith: [5,   8,  32] as RGB, mid: [7,  12,  42] as RGB, lower: [11,  18,  56] as RGB, horizon: [13,  21,  64] as RGB },
+		{ alt:  -6, zenith: [13,  21,  64] as RGB, mid: [17,  27,  76] as RGB, lower: [22,  37,  98] as RGB, horizon: [26,  42, 108] as RGB },
+		{ alt:  -1, zenith: [26,  42, 108] as RGB, mid: [32,  48, 114] as RGB, lower: [42,  58, 124] as RGB, horizon: [47,  64, 128] as RGB },
+		// Sunset: mid sky goes violet-gray; lower bridges to orange horizon
+		{ alt:   0, zenith: [74, 144, 196] as RGB, mid: [90, 100, 148] as RGB, lower: [190, 115,  80] as RGB, horizon: [255, 107,  53] as RGB },
+		// Golden hour: warm mid sky, amber-cream lower band
+		{ alt:   6, zenith: [100, 160, 210] as RGB, mid: [115, 165, 200] as RGB, lower: [200, 205, 170] as RGB, horizon: [255, 200, 140] as RGB },
+		{ alt:  15, zenith: [100, 165, 220] as RGB, mid: [128, 188, 228] as RGB, lower: [172, 218, 238] as RGB, horizon: [200, 230, 245] as RGB },
+		{ alt:  45, zenith: [30,  107, 158] as RGB, mid: [62, 152, 198] as RGB, lower: [108, 186, 222] as RGB, horizon: [135, 206, 235] as RGB },
 	];
 
-	function getSkyColors(altDeg: number): { zenith: RGB; horizon: RGB } {
+	function getSkyColors(altDeg: number): { zenith: RGB; mid: RGB; lower: RGB; horizon: RGB } {
 		const kfs = SKY_KF;
-		if (altDeg <= kfs[0].alt) return { zenith: kfs[0].zenith, horizon: kfs[0].horizon };
+		if (altDeg <= kfs[0].alt) return kfs[0];
 		for (let i = 0; i < kfs.length - 1; i++) {
 			if (altDeg <= kfs[i + 1].alt) {
 				const t = (altDeg - kfs[i].alt) / (kfs[i + 1].alt - kfs[i].alt);
 				return {
 					zenith:  lerpRGB(kfs[i].zenith,  kfs[i + 1].zenith,  t),
+					mid:     lerpRGB(kfs[i].mid,     kfs[i + 1].mid,     t),
+					lower:   lerpRGB(kfs[i].lower,   kfs[i + 1].lower,   t),
 					horizon: lerpRGB(kfs[i].horizon, kfs[i + 1].horizon, t),
 				};
 			}
 		}
-		const last = kfs[kfs.length - 1];
-		return { zenith: last.zenith, horizon: last.horizon };
+		return kfs[kfs.length - 1];
 	}
 
 	// ── scene data (rebuilt on resize) ────────────────────────────────────────
@@ -238,15 +242,66 @@
 	}
 
 	// ── draw: sky ─────────────────────────────────────────────────────────────
+	// 5 stops at power-2.5 non-linear positions — more gradient range near horizon.
+	// Stop positions [0, 0.25, 0.5, 0.75, 1] remapped: [0, 0.57, 0.76, 0.88, 1.0]
 	function drawSky(ctx: CanvasRenderingContext2D, altDeg: number): void {
-		const { zenith, horizon } = getSkyColors(altDeg);
-		const mid = lerpRGB(zenith, horizon, 0.45);
-		const g   = ctx.createLinearGradient(0, 0, 0, horizonY);
-		g.addColorStop(0,   css(zenith));
-		g.addColorStop(0.5, css(mid));
-		g.addColorStop(1,   css(horizon));
+		const { zenith, mid, lower, horizon } = getSkyColors(altDeg);
+		// Bright segment: the actual horizon line is slightly lighter than horizon color
+		const bright = lerpRGB(horizon, [255, 255, 255] as RGB, 0.12);
+		const g = ctx.createLinearGradient(0, 0, 0, horizonY);
+		g.addColorStop(0,    css(zenith));
+		g.addColorStop(0.57, css(mid));
+		g.addColorStop(0.76, css(lower));
+		g.addColorStop(0.90, css(horizon));
+		g.addColorStop(1,    css(bright));
 		ctx.fillStyle = g;
 		ctx.fillRect(0, 0, W, horizonY);
+	}
+
+	// ── draw: circumsolar Mie-scatter brightening ─────────────────────────────
+	// Wide warm glow around the sun simulating forward-scattering by aerosols.
+	// Intensity peaks at low solar altitudes (golden hour / horizon crossing).
+	function drawCircumsolarGlow(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
+		if (altDeg <= -8) return;
+		const sunX   = sxn * W;
+		const sinAlt = Math.max(0, Math.sin(altDeg * Math.PI / 180));
+		const sunY   = horizonY - sinAlt * horizonY * 0.92;
+		// Fade at high altitudes; full intensity near horizon
+		const intensity = Math.max(0, 1 - Math.max(0, altDeg - 4) / 42) * 0.30;
+		// Color: warm orange-amber when low, cool white when high
+		const warmth = Math.max(0, 1 - altDeg / 22);
+		const cr = 255, cg = Math.round(238 - warmth * 38), cb = Math.round(212 - warmth * 82);
+		const radius = Math.min(W * 0.58, horizonY * 0.85);
+		const glow   = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, radius);
+		glow.addColorStop(0,    `rgba(${cr},${cg},${cb},${intensity.toFixed(3)})`);
+		glow.addColorStop(0.35, `rgba(${cr},${cg},${cb},${(intensity * 0.32).toFixed(3)})`);
+		glow.addColorStop(1,    'rgba(255,235,210,0)');
+		ctx.save();
+		ctx.globalCompositeOperation = 'screen';
+		ctx.fillStyle = glow;
+		ctx.fillRect(0, 0, W, H);
+		ctx.restore();
+	}
+
+	// ── draw: purple light / afterglow ────────────────────────────────────────
+	// Stratospheric aerosol scattering produces a rose-magenta glow on the
+	// sun-side upper sky for ~30 min after sunset (alt -2° to -10°).
+	function drawPurpleLight(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
+		if (altDeg < -10 || altDeg > -1) return;
+		const t         = (altDeg + 10) / 9;           // 0 at -10°, 1 at -1°
+		const intensity = Math.sin(t * Math.PI) * 0.45; // peaks near -5.5°
+		const cx = sxn * W;
+		const cy = horizonY * 0.17;
+		const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.62);
+		grad.addColorStop(0,   `rgba(180,80,140,${(intensity * 0.34).toFixed(3)})`);
+		grad.addColorStop(0.4, `rgba(140,58,118,${(intensity * 0.18).toFixed(3)})`);
+		grad.addColorStop(0.7, `rgba(100,48,118,${(intensity * 0.07).toFixed(3)})`);
+		grad.addColorStop(1,   'rgba(80,40,100,0)');
+		ctx.save();
+		ctx.globalCompositeOperation = 'screen';
+		ctx.fillStyle = grad;
+		ctx.fillRect(0, 0, W, horizonY * 0.65);
+		ctx.restore();
 	}
 
 	// ── draw: ground ──────────────────────────────────────────────────────────
@@ -589,6 +644,7 @@
 		ctx.clearRect(0, 0, W, H);
 
 		drawSky(ctx, altDeg);
+		drawCircumsolarGlow(ctx, altDeg, sxn);
 		drawGround(ctx);
 		drawStars(ctx, altDeg, time);
 		drawMoon(ctx, altDeg, sxn);
@@ -596,6 +652,7 @@
 		if (treeSegments.length > 0) drawTree(ctx, treeSegments, W, H);
 		drawSun(ctx, altDeg, sxn);
 		drawBeltOfVenus(ctx, altDeg);
+		drawPurpleLight(ctx, altDeg, sxn);
 		drawClouds(ctx, altDeg);
 		drawPlants(ctx, plants);
 
