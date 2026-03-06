@@ -87,7 +87,7 @@
 	.toolbar button {
 		background: none;
 		border: 1px solid rgba(200, 150, 60, 0.15);
-		color: #6a5a40;
+		color: var(--clr-text-secondary);
 		font-family: var(--font-ui);
 		font-size: 0.75rem;
 		width: 1.8rem;
@@ -99,7 +99,7 @@
 		justify-content: center;
 		padding: 0;
 	}
-	.toolbar button:hover { color: #c8a060; border-color: rgba(200, 150, 60, 0.4); }
+	.toolbar button:hover { color: var(--clr-text-primary); border-color: rgba(200, 150, 60, 0.4); }
 	.toolbar button.italic { font-style: italic; }
 
 	.sep {
@@ -113,7 +113,7 @@
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.55rem;
 		letter-spacing: 0.06em;
-		color: #4e4232;
+		color: var(--clr-text-muted);
 		margin-left: auto;
 	}
 
@@ -142,7 +142,7 @@
 	button.save {
 		background: none;
 		border: 1px solid rgba(200, 150, 60, 0.2);
-		color: #6a5a40;
+		color: var(--clr-text-secondary);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
 		letter-spacing: 0.08em;
@@ -150,11 +150,11 @@
 		cursor: pointer;
 		transition: all 0.15s;
 	}
-	button.cancel:hover:not(:disabled) { color: #c8a060; border-color: rgba(200, 150, 60, 0.45); }
+	button.cancel:hover:not(:disabled) { color: var(--clr-text-primary); border-color: rgba(200, 150, 60, 0.45); }
 	button.save {
 		background: rgba(200, 150, 60, 0.08);
 		border-color: rgba(200, 150, 60, 0.35);
-		color: #c8a060;
+		color: var(--clr-text-primary);
 	}
 	button.save:hover:not(:disabled) { background: rgba(200, 150, 60, 0.15); }
 	button:disabled { opacity: 0.5; cursor: not-allowed; }

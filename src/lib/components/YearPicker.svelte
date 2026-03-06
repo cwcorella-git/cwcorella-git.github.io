@@ -185,7 +185,7 @@
 		background: none;
 		border: none;
 		border-left: 1px solid rgba(200, 150, 60, 0.18);
-		color: #6a5a40;
+		color: #a09070;
 		padding: 0 0.5rem;
 		cursor: pointer;
 		transition: color 0.15s;
@@ -220,14 +220,14 @@
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
 		letter-spacing: 0.1em;
-		color: #6a5a40;
+		color: #a09070;
 		text-transform: uppercase;
 	}
 
 	.nav-btn {
 		background: none;
 		border: none;
-		color: #6a5a40;
+		color: #a09070;
 		font-size: 1rem;
 		cursor: pointer;
 		padding: 0 0.4rem;

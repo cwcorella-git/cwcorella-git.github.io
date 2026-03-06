@@ -296,7 +296,7 @@
 	.close-btn {
 		background: none;
 		border: none;
-		color: #6a5a40;
+		color: #a09070;
 		font-size: 1.2rem;
 		cursor: pointer;
 		padding: 0;
@@ -330,7 +330,7 @@
 		font-size: 0.58rem;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
-		color: #6a5a40;
+		color: #a09070;
 	}
 
 	input[type="text"],
@@ -374,7 +374,7 @@
 	.remove-link {
 		background: none;
 		border: none;
-		color: #6a5a40;
+		color: #a09070;
 		font-size: 1rem;
 		cursor: pointer;
 		padding: 0 0.2rem;
@@ -387,7 +387,7 @@
 	.add-link {
 		background: none;
 		border: 1px dashed rgba(200, 150, 60, 0.2);
-		color: #6a5a40;
+		color: #a09070;
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
 		letter-spacing: 0.08em;
@@ -405,7 +405,7 @@
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
 		letter-spacing: 0.08em;
-		color: #6a5a40;
+		color: #a09070;
 	}
 
 	.radio {
@@ -414,7 +414,7 @@
 		align-items: center;
 		gap: 0.35rem;
 		font-size: 0.65rem;
-		color: #8a7858;
+		color: #b0a080;
 	}
 	.radio input { width: auto; }
 
@@ -442,7 +442,7 @@
 	button {
 		background: none;
 		border: 1px solid rgba(200, 150, 60, 0.2);
-		color: #6a5a40;
+		color: #a09070;
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
 		letter-spacing: 0.08em;

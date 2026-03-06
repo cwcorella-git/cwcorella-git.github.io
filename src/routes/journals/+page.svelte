@@ -402,13 +402,13 @@
 	.editor-slug-line { font-size: 0.58rem; letter-spacing: 0.06em; }
 	.overlay-label {
 		font-family: 'Courier New', Courier, monospace;
-		font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; color: #7a5020;
+		font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--clr-text-secondary);
 	}
 	.close-btn {
-		background: none; border: none; color: #b09070;
+		background: none; border: none; color: var(--clr-text-muted);
 		font-size: 1.4rem; cursor: pointer; padding: 0; line-height: 1; transition: color 0.15s;
 	}
-	.close-btn:hover { color: #7a5020; }
+	.close-btn:hover { color: var(--clr-text-primary); }
 
 	/* ── reader ───────────────────────────────────────────── */
 	.reader {
@@ -419,7 +419,7 @@
 		display: flex; flex-direction: column; overflow: hidden;
 	}
 	.reader-meta { display: flex; align-items: baseline; gap: 1rem; }
-	.reader-title { font-family: Georgia, 'Times New Roman', Times, serif; font-size: 0.95rem; color: #3d2e1a; }
+	.reader-title { font-family: Georgia, 'Times New Roman', Times, serif; font-size: 0.95rem; color: var(--clr-text-primary); }
 	.reader-body {
 		flex: 1; overflow-y: auto; padding: 2.5rem 3rem;
 		max-width: 72ch; margin: 0 auto; width: 100%;
@@ -427,22 +427,22 @@
 	.reader-doc-title {
 		font-family: Georgia, 'Times New Roman', Times, serif;
 		font-size: 1.3rem; font-weight: normal;
-		color: #3d2e1a; margin: 0 0 2rem; line-height: 1.3;
+		color: var(--clr-text-primary); margin: 0 0 2rem; line-height: 1.3;
 		border-bottom: 1px solid rgba(100, 75, 40, 0.15);
 		padding-bottom: 1.2rem;
 	}
 	.reader-body :global(h1), .reader-body :global(h2), .reader-body :global(h3) {
 		font-family: Georgia, 'Times New Roman', Times, serif; font-weight: normal;
-		color: #5a3a10; margin: 2rem 0 0.75rem; line-height: 1.3;
+		color: var(--clr-text-primary); margin: 2rem 0 0.75rem; line-height: 1.3;
 	}
 	.reader-body :global(h1) { font-size: 1.2rem; }
 	.reader-body :global(h2) { font-size: 1rem; }
-	.reader-body :global(h3) { font-size: 0.9rem; }
-	.reader-body :global(p) { color: #4a3820; font-size: 0.95rem; line-height: 1.85; margin: 0 0 1.1rem; }
-	.reader-body :global(blockquote) { border-left: 2px solid rgba(100,75,40,0.25); margin: 1.2rem 0; padding: 0.1rem 1.2rem; color: #8a6a40; font-style: italic; }
-	.reader-body :global(code) { font-family: 'Courier New', Courier, monospace; font-size: 0.82em; background: rgba(100,75,40,0.07); padding: 0.1em 0.35em; color: #7a5020; }
+	.reader-body :global(h3) { font-size: 0.9rem; color: var(--clr-text-secondary); }
+	.reader-body :global(p) { color: var(--clr-text-prose); font-size: 0.95rem; line-height: 1.85; margin: 0 0 1.1rem; }
+	.reader-body :global(blockquote) { border-left: 2px solid rgba(100,75,40,0.25); margin: 1.2rem 0; padding: 0.1rem 1.2rem; color: var(--clr-text-muted); font-style: italic; }
+	.reader-body :global(code) { font-family: 'Courier New', Courier, monospace; font-size: 0.82em; background: rgba(100,75,40,0.07); padding: 0.1em 0.35em; color: var(--clr-text-secondary); }
 	.reader-body :global(pre) { background: rgba(100,75,40,0.04); border: 1px solid rgba(100,75,40,0.12); padding: 1rem 1.2rem; overflow-x: auto; margin: 1.2rem 0; }
-	.reader-body :global(ul), .reader-body :global(ol) { color: #4a3820; font-size: 0.95rem; line-height: 1.85; padding-left: 1.5rem; margin: 0 0 1rem; }
+	.reader-body :global(ul), .reader-body :global(ol) { color: var(--clr-text-prose); font-size: 0.95rem; line-height: 1.85; padding-left: 1.5rem; margin: 0 0 1rem; }
 	.reader-body :global(hr) { border: none; border-top: 1px solid rgba(100,75,40,0.12); margin: 2rem 0; }
 
 	/* ── editor ───────────────────────────────────────────── */
@@ -458,12 +458,12 @@
 	.field-row { display: grid; grid-template-columns: 1fr auto; gap: 0.9rem; }
 	.field-narrow { width: 160px; }
 	.field { display: flex; flex-direction: column; gap: 0.3rem; }
-	.field-label { font-family: 'Courier New', Courier, monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: #9a7a50; }
+	.field-label { font-family: 'Courier New', Courier, monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--clr-text-muted); }
 	.editor-fields input[type="text"],
 	.editor-fields textarea {
 		background: rgba(100, 75, 40, 0.04);
 		border: 1px solid rgba(100, 75, 40, 0.18);
-		color: #3d2e1a;
+		color: var(--clr-text-primary);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.85rem; padding: 0.45rem 0.6rem; outline: none;
 		transition: border-color 0.15s; width: 100%;
@@ -476,11 +476,11 @@
 	}
 	.editor-footer button {
 		background: none; border: 1px solid rgba(100, 75, 40, 0.2);
-		color: #8a6a40; font-family: 'Courier New', Courier, monospace;
+		color: var(--clr-text-secondary); font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem; letter-spacing: 0.08em;
 		padding: 0.35rem 0.8rem; cursor: pointer; transition: all 0.15s;
 	}
-	.editor-footer button:hover:not(:disabled) { color: #7a5020; border-color: rgba(100, 75, 40, 0.4); }
+	.editor-footer button:hover:not(:disabled) { color: var(--clr-text-primary); border-color: rgba(100, 75, 40, 0.4); }
 	.editor-footer button:disabled { opacity: 0.5; cursor: not-allowed; }
-	.save-btn { background: rgba(100,75,40,0.07) !important; border-color: rgba(100,75,40,0.3) !important; color: #7a5020 !important; }
+	.save-btn { background: rgba(100,75,40,0.07) !important; border-color: rgba(100,75,40,0.3) !important; color: var(--clr-text-primary) !important; }
 </style>
