@@ -345,7 +345,7 @@
 	.new-btn:hover { color: var(--clr-text-primary); border-color: var(--glass-border); }
 
 	.status { font-family: 'Courier New', Courier, monospace; font-size: 0.65rem; letter-spacing: 0.08em; color: var(--clr-text-muted); }
-	.status.error { color: #c07050; }
+	.status.error { color: var(--clr-danger); }
 	.dim { font-family: 'Courier New', Courier, monospace; font-size: 0.6rem; letter-spacing: 0.06em; color: var(--clr-text-faint); }
 
 	/* ── list ─────────────────────────────────────────────── */
@@ -384,7 +384,7 @@
 		color: var(--clr-text-faint); padding: 0 0.3rem; transition: color 0.15s;
 	}
 	.action-btn:hover:not(:disabled) { color: var(--clr-text-primary); }
-	.action-btn.danger:hover:not(:disabled) { color: #c07050; }
+	.action-btn.danger:hover:not(:disabled) { color: var(--clr-danger); }
 	.action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 	.count {

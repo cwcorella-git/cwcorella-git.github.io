@@ -63,10 +63,10 @@
 		color: var(--clr-text-muted);
 	}
 	.sync-btn.error {
-		color: #c07050;
+		color: var(--clr-danger);
 		border-color: rgba(190, 80, 60, 0.45);
 	}
-	.sync-btn.error:hover { color: #d08060; border-color: rgba(190, 80, 60, 0.7); }
+	.sync-btn.error:hover { color: var(--clr-danger); border-color: rgba(190, 80, 60, 0.7); }
 
 	@media (max-width: 480px) {
 		.label { display: none; }

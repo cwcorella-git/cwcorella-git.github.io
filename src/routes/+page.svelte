@@ -108,7 +108,7 @@
 	.edit-btn {
 		background: none;
 		border: 1px solid rgba(100, 75, 40, 0.15);
-		color: #b09070;
+		color: var(--clr-text-muted);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
 		letter-spacing: 0.08em;
@@ -118,7 +118,7 @@
 		align-self: flex-start;
 		margin-top: 0.5rem;
 	}
-	.edit-btn:hover { color: #7a5020; border-color: rgba(100, 75, 40, 0.4); }
+	.edit-btn:hover { color: var(--clr-text-primary); border-color: rgba(100, 75, 40, 0.4); }
 
 	footer {
 		position: relative;
@@ -127,11 +127,11 @@
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.65rem;
 		letter-spacing: 0.1em;
-		color: #9a7a50;
+		color: var(--clr-text-muted);
 	}
 	footer a {
 		text-decoration: none;
 		transition: color 0.2s;
 	}
-	footer a:hover { color: #7a5020; }
+	footer a:hover { color: var(--clr-text-primary); }
 </style>

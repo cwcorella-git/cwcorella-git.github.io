@@ -290,20 +290,20 @@
 		font-size: 0.7rem;
 		letter-spacing: 0.12em;
 		text-transform: uppercase;
-		color: #c8a060;
+		color: var(--clr-accent);
 	}
 
 	.close-btn {
 		background: none;
 		border: none;
-		color: #a09070;
+		color: var(--clr-dark-text-secondary);
 		font-size: 1.2rem;
 		cursor: pointer;
 		padding: 0;
 		line-height: 1;
 		transition: color 0.15s;
 	}
-	.close-btn:hover { color: #c8a060; }
+	.close-btn:hover { color: var(--clr-accent); }
 
 	.modal-body {
 		overflow-y: auto;
@@ -330,7 +330,7 @@
 		font-size: 0.58rem;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
-		color: #a09070;
+		color: var(--clr-dark-text-secondary);
 	}
 
 	input[type="text"],
@@ -338,7 +338,7 @@
 	textarea {
 		background: rgba(200, 150, 60, 0.04);
 		border: 1px solid rgba(200, 150, 60, 0.18);
-		color: #c0b088;
+		color: var(--clr-dark-text-primary);
 		font-family: var(--font-ui);
 		font-size: 0.88rem;
 		padding: 0.45rem 0.6rem;
@@ -374,7 +374,7 @@
 	.remove-link {
 		background: none;
 		border: none;
-		color: #a09070;
+		color: var(--clr-dark-text-secondary);
 		font-size: 1rem;
 		cursor: pointer;
 		padding: 0 0.2rem;
@@ -382,12 +382,12 @@
 		transition: color 0.15s;
 		flex-shrink: 0;
 	}
-	.remove-link:hover { color: #c07060; }
+	.remove-link:hover { color: var(--clr-danger); }
 
 	.add-link {
 		background: none;
 		border: 1px dashed rgba(200, 150, 60, 0.2);
-		color: #a09070;
+		color: var(--clr-dark-text-secondary);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
 		letter-spacing: 0.08em;
@@ -396,7 +396,7 @@
 		transition: all 0.15s;
 		align-self: flex-start;
 	}
-	.add-link:hover { color: #c8a060; border-color: rgba(200, 150, 60, 0.45); }
+	.add-link:hover { color: var(--clr-accent); border-color: rgba(200, 150, 60, 0.45); }
 
 	.visibility-row {
 		display: flex;
@@ -405,7 +405,7 @@
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
 		letter-spacing: 0.08em;
-		color: #a09070;
+		color: var(--clr-dark-text-secondary);
 	}
 
 	.radio {
@@ -414,14 +414,14 @@
 		align-items: center;
 		gap: 0.35rem;
 		font-size: 0.65rem;
-		color: #b0a080;
+		color: var(--clr-dark-text-primary);
 	}
 	.radio input { width: auto; }
 
 	.error {
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.65rem;
-		color: #c07050;
+		color: var(--clr-danger);
 		margin: 0;
 	}
 
@@ -442,7 +442,7 @@
 	button {
 		background: none;
 		border: 1px solid rgba(200, 150, 60, 0.2);
-		color: #a09070;
+		color: var(--clr-dark-text-secondary);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
 		letter-spacing: 0.08em;
@@ -450,18 +450,18 @@
 		cursor: pointer;
 		transition: all 0.15s;
 	}
-	button:hover:not(:disabled) { color: #c8a060; border-color: rgba(200, 150, 60, 0.45); }
+	button:hover:not(:disabled) { color: var(--clr-accent); border-color: rgba(200, 150, 60, 0.45); }
 	button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 	.save-btn {
 		background: rgba(200, 150, 60, 0.08);
 		border-color: rgba(200, 150, 60, 0.35);
-		color: #c8a060;
+		color: var(--clr-accent);
 	}
 
 	.delete-btn {
 		border-color: rgba(180, 60, 60, 0.3);
-		color: #8a4040;
+		color: var(--clr-danger-muted);
 	}
-	.delete-btn:hover:not(:disabled) { color: #c06060; border-color: rgba(180, 60, 60, 0.6); background: rgba(180, 60, 60, 0.06); }
+	.delete-btn:hover:not(:disabled) { color: var(--clr-danger); border-color: rgba(180, 60, 60, 0.6); background: rgba(180, 60, 60, 0.06); }
 </style>

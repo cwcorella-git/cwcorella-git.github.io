@@ -165,7 +165,7 @@
 		background: transparent;
 		border: none;
 		outline: none;
-		color: #c0b088;
+		color: var(--clr-dark-text-primary);
 		font-family: var(--font-ui);
 		font-size: 0.88rem;
 		padding: 0.45rem 0.6rem;
@@ -185,7 +185,7 @@
 		background: none;
 		border: none;
 		border-left: 1px solid rgba(200, 150, 60, 0.18);
-		color: #a09070;
+		color: var(--clr-dark-text-secondary);
 		padding: 0 0.5rem;
 		cursor: pointer;
 		transition: color 0.15s;
@@ -194,7 +194,7 @@
 		letter-spacing: inherit;
 	}
 	.cal-btn:hover {
-		color: #c8a060;
+		color: var(--clr-accent);
 	}
 
 	.dropdown {
@@ -220,14 +220,14 @@
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.6rem;
 		letter-spacing: 0.1em;
-		color: #a09070;
+		color: var(--clr-dark-text-secondary);
 		text-transform: uppercase;
 	}
 
 	.nav-btn {
 		background: none;
 		border: none;
-		color: #a09070;
+		color: var(--clr-dark-text-secondary);
 		font-size: 1rem;
 		cursor: pointer;
 		padding: 0 0.4rem;
@@ -237,7 +237,7 @@
 		transition: color 0.15s;
 	}
 	.nav-btn:hover {
-		color: #c8a060;
+		color: var(--clr-accent);
 	}
 
 	.year-grid {
@@ -249,7 +249,7 @@
 	.year-btn {
 		background: none;
 		border: 1px solid transparent;
-		color: #c0b088;
+		color: var(--clr-dark-text-primary);
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.62rem;
 		letter-spacing: 0.04em;
@@ -259,16 +259,16 @@
 		transition: all 0.12s;
 	}
 	.year-btn:hover {
-		color: #c8a060;
+		color: var(--clr-accent);
 		border-color: rgba(200, 150, 60, 0.35);
 		background: rgba(200, 150, 60, 0.06);
 	}
 	.year-btn.current {
-		color: #c8a060;
+		color: var(--clr-accent);
 	}
 	.year-btn.selected {
 		background: rgba(200, 150, 60, 0.15);
 		border-color: rgba(200, 150, 60, 0.5);
-		color: #c8a060;
+		color: var(--clr-accent);
 	}
 </style>

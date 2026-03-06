@@ -437,7 +437,7 @@
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.65rem;
 		letter-spacing: 0.08em;
-		color: #8a7858;
+		color: var(--clr-dark-text-secondary);
 		text-decoration: none;
 		background: none;
 		border: none;
@@ -447,7 +447,7 @@
 		width: 100%;
 	}
 	.menu a:hover {
-		color: #c8a060;
+		color: var(--clr-accent);
 		background: rgba(200, 150, 60, 0.07);
 	}
 </style>

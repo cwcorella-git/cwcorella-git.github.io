@@ -191,7 +191,7 @@
 		letter-spacing: 0.08em;
 		color: var(--clr-text-secondary);
 	}
-	.state-msg.error { color: #c07050; }
+	.state-msg.error { color: var(--clr-danger); }
 
 	.spinner {
 		display: inline-block;

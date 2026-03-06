@@ -98,9 +98,15 @@
 		--clr-accent-dim:     #6e5830;
 		--clr-accent-active:  #5a4420;
 
-		/* Danger */
+		/* Danger / Success */
 		--clr-danger:         #c07050;
 		--clr-danger-muted:   #8a4040;
+		--clr-success:        #70b880;
+
+		/* Dark-panel text (for components on dark glass backgrounds: BookForm, AdminDrawer, YearPicker) */
+		--clr-dark-text-primary:   #c0b088;
+		--clr-dark-text-secondary: #a09070;
+		--clr-dark-text-muted:     #7a6a50;
 
 		/* Backdrop overlay */
 		--backdrop-overlay:   rgba(0, 0, 0, 0.45);

@@ -37,19 +37,19 @@
 		font-family: 'Courier New', Courier, monospace;
 		font-size: 0.65rem;
 		letter-spacing: 0.05em;
-		color: #b8a880;
+		color: var(--clr-dark-text-primary);
 		pointer-events: all;
 		animation: slide-in 0.15s ease-out;
 	}
 
 	.toast.error {
 		border-color: rgba(180, 60, 60, 0.45);
-		color: #c07070;
+		color: var(--clr-danger);
 	}
 
 	.toast.success {
 		border-color: rgba(60, 150, 80, 0.45);
-		color: #70b880;
+		color: var(--clr-success);
 	}
 
 	@keyframes slide-in {
