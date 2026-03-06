@@ -237,5 +237,27 @@ export function drawTree(
 		ctx.strokeStyle = seg.color;
 		ctx.stroke();
 	}
+
+	// Root flare — covers the round lineCap at the trunk base and splays into
+	// the ground so the trunk looks planted rather than floating.
+	// segments[0] is always the first trunk step; its start point is the base.
+	if (segments.length > 0) {
+		const base = segments[0];
+		const bx   = base.x1f * W;
+		const by   = base.y1f * H;
+		const hw   = base.thick / 2;   // half trunk width at the base (~9px)
+
+		ctx.fillStyle = '#4A2C17';
+		ctx.beginPath();
+		// Top edge sits just above the round cap so there's no visible gap
+		ctx.moveTo(bx - hw,       by - hw * 0.5);
+		ctx.lineTo(bx + hw,       by - hw * 0.5);
+		// Splay out ~90% wider as it descends into the ground
+		ctx.lineTo(bx + hw * 1.9, by + hw * 1.4);
+		ctx.lineTo(bx - hw * 1.9, by + hw * 1.4);
+		ctx.closePath();
+		ctx.fill();
+	}
+
 	ctx.restore();
 }
