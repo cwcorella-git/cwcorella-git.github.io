@@ -424,15 +424,8 @@
 		transition: color 0.15s, background 0.15s;
 		width: 100%;
 	}
-	.menu a:hover,
-	.menu-toggle:hover {
+	.menu a:hover {
 		color: #c8a060;
 		background: rgba(200, 150, 60, 0.07);
-	}
-	.menu-toggle { color: #b89870; }
-	.menu-divider {
-		height: 1px;
-		background: rgba(200, 150, 60, 0.08);
-		margin: 0.3rem 0;
 	}
 </style>
