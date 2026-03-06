@@ -296,11 +296,11 @@
 		// ── plants ──────────────────────────────────────────────────────────────────────────
 		const prng = makePRNG(0xBADC0FFE);
 
-		// Plants scatter across 65% of the ground band. yFrac=0 is at the horizon (far/small),
-		// yFrac=1 is deep foreground (large/opaque). Split at yFrac=0.28 into bg/fg layers so
-		// background grass draws behind midground trees, foreground grass draws in front.
-		const groundBand = (ch - hy) * 0.65;
-		const bgCut = 0.28;   // yFrac threshold separating bg from fg
+		// Plants scatter across 80% of the ground band. yFrac=0 is at the horizon (far/small),
+		// yFrac=1 is deep foreground (large/opaque). Split at bgCut: bg layer draws behind
+		// the tree, fg layer draws in front.
+		const groundBand = (ch - hy) * 0.80;
+		const bgCut = 0.42;   // yFrac threshold separating bg from fg
 
 		bgPlants = [];
 		fgPlants = [];
@@ -615,20 +615,11 @@
 		seed: number, heightScale: number, color: string,
 		hazeRGB: RGB = [255, 255, 255], hazeAlpha = 0
 	): void {
-		// Two broad sinusoidal crests define the large-scale hillscape; fBm adds
-		// organic micro-texture on top. The result reads as a hillside you're standing
-		// on that sweeps up to a crest and rolls away into the next terrain layer.
 		ctx.save();
 		ctx.beginPath();
 		ctx.moveTo(0, H);
-		for (let px = 0; px <= W; px += 3) {
-			const t = px / W;
-			// Two offset hill crests — pow sharpens the peaks, keeping valleys flat
-			const crest1 = Math.pow(Math.max(0, Math.sin(t * Math.PI * 1.9 + 0.5)), 1.6) * 0.55;
-			const crest2 = Math.pow(Math.max(0, Math.sin(t * Math.PI * 1.1 + 2.6)), 1.4) * 0.38;
-			// fBm texture layered on top (reduced contribution vs. before)
-			const detail = fbm1D(t * 5.0 + seed) * 0.16;
-			const h = (crest1 + crest2 + detail) * heightScale;
+		for (let px = 0; px <= W; px += 4) {
+			const h = fbm1D((px / W) * 4.5 + seed) * heightScale;
 			ctx.lineTo(px, horizonY - h);
 		}
 		ctx.lineTo(W, H);
@@ -702,62 +693,6 @@
 		g.addColorStop(1,    'rgba(0,0,0,0.42)');
 		ctx.fillStyle = g;
 		ctx.fillRect(0, 0, W, H);
-	}
-
-	// ── draw: midground tree silhouettes ─────────────────────────────────────
-	// Simple blob silhouettes between the terrain ridges and the foreground tree.
-	// Drawn at reduced scale and alpha to suggest atmospheric distance.
-	function drawMidgroundTrees(ctx: CanvasRenderingContext2D, altDeg: number): void {
-		const isNight    = altDeg < -6;
-		const isTwilight = !isNight && altDeg < 6;
-
-		// [x fraction, scale factor] — seated on horizonY
-		const trees: [number, number][] = [
-			[0.60, 0.27],
-			[0.73, 0.19],
-			[0.51, 0.31],
-			[0.83, 0.16],
-		];
-
-		ctx.save();
-		ctx.lineCap = 'round';
-
-		for (const [xf, s] of trees) {
-			const bx     = xf * W;
-			const by     = horizonY;
-			const trunkH = 128 * s;
-			const crownRx = 60 * s;
-			const crownRy = 50 * s;
-
-			// Smaller = more distant = more atmospheric fade
-			const alpha = isNight ? Math.min(0.90, 0.18 + s * 1.0) : Math.min(0.88, 0.32 + s * 1.1);
-			ctx.globalAlpha = alpha;
-
-			const clr = isNight    ? 'rgba(8,10,20,1)'
-			          : isTwilight ? 'rgba(48,40,54,1)'
-			          :              'rgba(52,64,36,1)';
-
-			ctx.fillStyle   = clr;
-			ctx.strokeStyle = clr;
-			ctx.lineWidth   = Math.max(0.8, 2.4 * s);
-
-			// Trunk
-			ctx.beginPath();
-			ctx.moveTo(bx, by);
-			ctx.lineTo(bx, by - trunkH);
-			ctx.stroke();
-
-			// Crown — two overlapping ellipses for a slightly irregular silhouette
-			ctx.beginPath();
-			ctx.ellipse(bx, by - trunkH - crownRy * 0.4, crownRx, crownRy, 0, 0, Math.PI * 2);
-			ctx.fill();
-			ctx.beginPath();
-			ctx.ellipse(bx - crownRx * 0.28, by - trunkH - crownRy * 0.62, crownRx * 0.68, crownRy * 0.62, 0, 0, Math.PI * 2);
-			ctx.fill();
-		}
-
-		ctx.globalAlpha = 1;
-		ctx.restore();
 	}
 
 	// ── draw: tree shadow pool ────────────────────────────────────────────────
@@ -1197,8 +1132,7 @@
 		drawGroundContours(ctx, altDeg);
 		drawTerrain(ctx, altDeg);
 		drawHorizonBlend(ctx, altDeg);
-		drawPlants(ctx, bgPlants, horizonY, H);   // far grass — behind midground trees
-		drawMidgroundTrees(ctx, altDeg);
+		drawPlants(ctx, bgPlants, horizonY, H);   // far grass — behind tree
 		drawCirrus(ctx, altDeg);
 		drawClouds(ctx, altDeg);
 		drawTreeShadow(ctx, altDeg);

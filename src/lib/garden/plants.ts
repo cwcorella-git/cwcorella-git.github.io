@@ -152,9 +152,20 @@ function tickSeg(seg: PlantSegment, wind: number, dt: number, depth: number): vo
 	for (const child of seg.children) tickSeg(child, wind, dt, depth + (seg.len > 0 ? 1 : 0));
 }
 
-export function tickWind(plants: PlantInstance[], windForce: number, dt: number): void {
+export function tickWind(
+	plants: PlantInstance[],
+	windForce: number,
+	dt: number,
+	horizonY: number,
+	groundBand: number,
+): void {
 	for (const plant of plants) {
-		for (const child of plant.root.children) tickSeg(child, windForce, dt, 0);
+		// Foreground plants (heavy, large) barely sway — 8% of wind force.
+		// Horizon plants (small, light) get full wind. Curve is convex so the
+		// reduction is dramatic near the foreground and gentle near midground.
+		const depthFrac = groundBand > 0 ? Math.max(0, Math.min(1, (plant.y - horizonY) / groundBand)) : 0;
+		const mul = 0.08 + Math.pow(1 - depthFrac, 1.2) * 0.92;
+		for (const child of plant.root.children) tickSeg(child, windForce * mul, dt, 0);
 	}
 }
 
@@ -195,11 +206,13 @@ export function drawPlants(
 	H: number,
 ): void {
 	ctx.save();
-	const depthBand = (H - horizonY) * 0.60;
-	for (const plant of plants) {
-		// Plants near the horizon (far) fade to 0.42 alpha; near the viewer (bottom) are fully opaque.
+	const depthBand = (H - horizonY) * 0.80;
+	// Sort back-to-front so near plants correctly overlap far ones within each layer.
+	const sorted = [...plants].sort((a, b) => a.y - b.y);
+	for (const plant of sorted) {
+		// Far plants (near horizon) fade to 0.55 alpha; foreground is fully opaque.
 		const t = depthBand > 0 ? Math.max(0, Math.min(1, (plant.y - horizonY) / depthBand)) : 1;
-		ctx.globalAlpha = 0.42 + t * 0.58;
+		ctx.globalAlpha = 0.55 + t * 0.45;
 		for (const child of plant.root.children) drawSeg(ctx, plant.x, plant.y, -90, child);
 	}
 	ctx.globalAlpha = 1;
@@ -207,7 +220,7 @@ export function drawPlants(
 }
 
 // ── mouse/touch interaction ────────────────────────────────────────────────
-function applyForceSeg(seg: PlantSegment, mx: number, my: number, radius: number): void {
+function applyForceSeg(seg: PlantSegment, mx: number, my: number, radius: number, forceMul: number): void {
 	if (seg.len > 0) {
 		const midX = (seg.wx0 + seg.wx) * 0.5;
 		const midY = (seg.wy0 + seg.wy) * 0.5;
@@ -215,19 +228,26 @@ function applyForceSeg(seg: PlantSegment, mx: number, my: number, radius: number
 		const dy   = my - midY;
 		const dist = Math.sqrt(dx * dx + dy * dy);
 		if (dist < radius && dist > 0) {
-			// 2D cross product: segment dir × cursor-to-mid vector → sign = which side
 			const sdx   = seg.wx - seg.wx0;
 			const sdy   = seg.wy - seg.wy0;
 			const cross = sdx * dy - sdy * dx;
-			const str   = (1 - dist / radius) * 90;
+			const str   = (1 - dist / radius) * 90 * forceMul;
 			seg.angVel += (cross > 0 ? -1 : 1) * str;
 		}
 	}
-	for (const child of seg.children) applyForceSeg(child, mx, my, radius);
+	for (const child of seg.children) applyForceSeg(child, mx, my, radius, forceMul);
 }
 
-export function applyMouseForce(plants: PlantInstance[], mx: number, my: number, radius = 90): void {
+export function applyMouseForce(
+	plants: PlantInstance[],
+	mx: number, my: number,
+	horizonY: number,
+	groundBand: number,
+	radius = 90,
+): void {
 	for (const plant of plants) {
-		for (const child of plant.root.children) applyForceSeg(child, mx, my, radius);
+		const depthFrac = groundBand > 0 ? Math.max(0, Math.min(1, (plant.y - horizonY) / groundBand)) : 0;
+		const forceMul = 0.08 + Math.pow(1 - depthFrac, 1.2) * 0.92;
+		for (const child of plant.root.children) applyForceSeg(child, mx, my, radius, forceMul);
 	}
 }
