@@ -188,11 +188,21 @@ function drawSeg(
 	for (const child of seg.children) drawSeg(ctx, ex, ey, dir, child);
 }
 
-export function drawPlants(ctx: CanvasRenderingContext2D, plants: PlantInstance[]): void {
+export function drawPlants(
+	ctx: CanvasRenderingContext2D,
+	plants: PlantInstance[],
+	horizonY: number,
+	H: number,
+): void {
 	ctx.save();
+	const depthBand = (H - horizonY) * 0.60;
 	for (const plant of plants) {
+		// Plants near the horizon (far) fade to 0.42 alpha; near the viewer (bottom) are fully opaque.
+		const t = depthBand > 0 ? Math.max(0, Math.min(1, (plant.y - horizonY) / depthBand)) : 1;
+		ctx.globalAlpha = 0.42 + t * 0.58;
 		for (const child of plant.root.children) drawSeg(ctx, plant.x, plant.y, -90, child);
 	}
+	ctx.globalAlpha = 1;
 	ctx.restore();
 }
 
