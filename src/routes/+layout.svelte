@@ -34,7 +34,7 @@
 </script>
 
 <svelte:head>
-	<link rel="icon" href={favicon} />
+	<link rel="icon" type="image/svg+xml" href={favicon} />
 </svelte:head>
 
 <svelte:window onkeydown={handleKeydown} />
