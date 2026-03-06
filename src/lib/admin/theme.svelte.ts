@@ -80,17 +80,22 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		label: 'gray',
 		uiRgb:        '128, 128, 128',
 		darkPanelRgb: '190, 195, 210',   // cool blue-white tint
-		bodyBg:       '#d0d0d0',
+		bodyBg:       '#b0b2b8',          // medium cool gray — clearly darker than neutral
 		clrDarkText:  '#bcc0c4',
 		glassBgDark:     'rgba(12, 14, 22, 0.86)',   // cool blue-gray dark
 		glassBorderDark: 'rgba(180, 190, 210, 0.22)',
-		darkGlass: false,
-		glassDay:   [244, 246, 255],  // slight cool blue-white → distinguishable from neutral
-		glassNight: [8,   10,  14 ],
-		textDay:    [8,   8,   8  ],
-		textNight:  [232, 235, 238],
-		swatchBg:     '#d0d0d0',
-		swatchBorder: '#999999',
+		// Fixed medium-gray panels — consistent, distinctly darker than neutral's white glass
+		darkGlass:        true,
+		glassFixed:       'rgba(168, 172, 184, 0.84)',  // cool gray content panels
+		glassBorderFixed: 'rgba(140, 148, 168, 0.25)',  // cool gray border
+		glassNavBgFixed:  'rgba(160, 164, 176, 0.82)',  // cool gray nav
+		glassHeavyFixed:  'rgba(175, 179, 192, 0.92)',  // heavier gray for fullscreen
+		glassDay:   [168, 172, 184],
+		glassNight: [168, 172, 184],
+		textDay:    [16,  16,  20 ],   // near-black, slightly cool — consistent
+		textNight:  [16,  16,  20 ],
+		swatchBg:     '#b0b2b8',
+		swatchBorder: '#707880',
 	},
 	neutral: {
 		label: 'neutral',
@@ -111,11 +116,19 @@ export const PALETTES: Record<PaletteName, Palette> = {
 };
 
 const STORAGE_KEY = 'cwc-theme';
+const LAT_KEY     = 'cwc-lat';
+const DEFAULT_LAT = 39.53; // Reno, NV
 
 // version increments on every palette switch so Garden.svelte can detect
 // the change and force a full re-render of glass + text vars immediately.
 let _active  = $state<PaletteName>('neutral');
 let _version = $state(0);
+let _lat     = $state(DEFAULT_LAT);
+
+function setLat(lat: number): void {
+	_lat = Math.max(-90, Math.min(90, Math.round(lat * 10) / 10));
+	try { localStorage.setItem(LAT_KEY, String(_lat)); } catch { /* ignore */ }
+}
 
 function applyPalette(name: PaletteName): void {
 	const p = PALETTES[name];
@@ -153,11 +166,15 @@ export const themeState = {
 	get active()   { return _active; },
 	get version()  { return _version; },
 	get palette()  { return PALETTES[_active]; },
+	get lat()      { return _lat; },
 	applyPalette,
+	setLat,
 	restoreFromStorage(): void {
 		if (typeof localStorage === 'undefined') return;
 		const saved = localStorage.getItem(STORAGE_KEY) as PaletteName | null;
 		// Always apply palette on init so all CSS vars (incl. --dark-panel-rgb) are set
 		applyPalette(saved && PALETTES[saved] ? saved : _active);
+		const savedLat = parseFloat(localStorage.getItem(LAT_KEY) ?? '');
+		if (!isNaN(savedLat)) _lat = Math.max(-90, Math.min(90, savedLat));
 	},
 };
