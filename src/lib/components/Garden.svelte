@@ -313,7 +313,9 @@
 			const y      = hy + yFrac * groundBand;
 			const bornAt = prng() * 4000;
 			const scale  = growthFactor(Math.max(0, gardenAgeUnits - bornAt));
-			const depth  = 0.35 + yFrac * 1.60;
+			// True 1/d perspective scaling: same endpoints as linear (0.35× far, 1.85× near)
+			// but correct hyperbolic curve — midground plants are ~half the linear approximation.
+			const depth  = 0.431 / (1.233 - yFrac);
 			const h      = (20 + prng() * 40) * scale * depth;
 			const seed   = Math.floor(prng() * 0x7FFFFFFF);
 			const plant  = makeGrassTuft(x, y, h, seed);
@@ -327,7 +329,7 @@
 			const y      = hy + yFrac * groundBand;
 			const bornAt = prng() * 6000;
 			const scale  = growthFactor(Math.max(0, gardenAgeUnits - bornAt));
-			const depth  = 0.40 + yFrac * 1.40;
+			const depth  = 0.431 / (1.233 - yFrac);
 			const h      = (50 + prng() * 50) * scale * depth;
 			const seed   = Math.floor(prng() * 0x7FFFFFFF);
 			const plant  = makeFern(x, y, h, seed);
