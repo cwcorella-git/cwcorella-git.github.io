@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { adminState, canvasEditState, writeQueue } from '$lib/admin/state.svelte';
-	import { isUnlockDay } from '$lib/admin/tlock';
+	import { adminState, writeQueue } from '$lib/admin/state.svelte';
 	import ThemePanel from '$lib/components/ThemePanel.svelte';
 
 	let { onLogoutRequest }: { onLogoutRequest: () => void } = $props();
@@ -25,19 +24,12 @@
 		<span class="label">⊙ admin</span>
 
 		{#if writeQueue.status === 'dirty'}
-			<button class="sync-btn dirty" onclick={handleSync}>● sync</button>
+			<button class="sync-btn dirty" onclick={handleSync}>● <span class="btn-label">sync</span></button>
 		{:else if writeQueue.status === 'saving'}
-			<button class="sync-btn saving" disabled>syncing…</button>
+			<button class="sync-btn saving" disabled>… <span class="btn-label">syncing</span></button>
 		{:else if writeQueue.status === 'error'}
-			<button class="sync-btn error" onclick={handleSync} title={writeQueue.error}>⚠ retry</button>
+			<button class="sync-btn error" onclick={handleSync} title={writeQueue.error}>⚠ <span class="btn-label">retry</span></button>
 		{/if}
-
-		<!-- Canvas overlay editor (stub) -->
-		<button
-			class:active={canvasEditState.editMode}
-			onclick={() => canvasEditState.toggle()}
-			title="toggle canvas editor"
-		>⊹ edit</button>
 
 		<!-- Theme palette picker -->
 		<div class="theme-wrapper" use:handleClickOutside>
@@ -47,13 +39,13 @@
 				onclick={() => (themePanelOpen = !themePanelOpen)}
 				aria-expanded={themePanelOpen}
 				aria-label="Toggle theme palette"
-			>⊹ theme</button>
+			>⊹ <span class="btn-label">theme</span></button>
 			{#if themePanelOpen}
 				<ThemePanel />
 			{/if}
 		</div>
 
-		<button onclick={onLogoutRequest}>× logout</button>
+		<button onclick={onLogoutRequest}>× <span class="btn-label">logout</span></button>
 	</div>
 {/if}
 
@@ -63,6 +55,7 @@
 		display: flex;
 		align-items: center;
 		gap: 0.6rem;
+		flex-shrink: 0;
 	}
 
 	.label {
@@ -72,6 +65,7 @@
 		color: var(--clr-text);
 		opacity: 0.8;
 		margin-right: 0.2rem;
+		white-space: nowrap;
 	}
 
 	button {
@@ -85,6 +79,11 @@
 		cursor: pointer;
 		transition: all var(--t-ui);
 		opacity: 0.7;
+		white-space: nowrap;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3em;
+		line-height: 1;
 	}
 	button:hover:not(:disabled) { opacity: 1; }
 	button:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -113,9 +112,11 @@
 		background: rgba(var(--ui-rgb), 0.10);
 	}
 
-	@media (max-width: 480px) {
+	/* Icon-only at narrow widths */
+	@media (max-width: 580px) {
 		.label { display: none; }
-		button { font-size: 0.55rem; padding: 0.2rem 0.4rem; }
+		.btn-label { display: none; }
+		button { padding: 0.25rem 0.5rem; }
+		.toolbar { gap: 0.35rem; }
 	}
-
 </style>

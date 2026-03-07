@@ -178,14 +178,6 @@ export const homeState = {
 	set(content: string) { _homeContent = content; }
 };
 
-// ── Canvas editor state ───────────────────────────────────────────────────────
-let _canvasEditMode = $state(false);
-
-export const canvasEditState = {
-	get editMode() { return _canvasEditMode; },
-	toggle()       { _canvasEditMode = !_canvasEditMode; },
-	deactivate()   { _canvasEditMode = false; },
-};
 
 // ── Admin state ───────────────────────────────────────────────────────────────
 let _active = $state(false);
@@ -206,8 +198,7 @@ export const adminState = {
 	},
 
 	async logout() {
-		canvasEditState.deactivate();
-		await writeQueue.flush();
+await writeQueue.flush();
 		_active = false;
 		_pat = '';
 		_contentKey = '';
