@@ -400,7 +400,7 @@
 		ctx.save();
 		ctx.globalCompositeOperation = 'screen';
 		ctx.fillStyle = grad;
-		ctx.fillRect(0, 0, W, horizonY * 0.65);
+		ctx.fillRect(0, 0, W, horizonY);  // full sky — gradient fades to 0 before edge
 		ctx.restore();
 	}
 
@@ -862,19 +862,19 @@
 		ctx.fillStyle = isGolden ? '#FF7020' : '#FFFDE7';
 		ctx.fill();
 
-		// Horizon glow band (golden hour)
+		// Horizon glow band (golden hour) — radial gradient centred on sun at horizon
+		// so it fades in all directions with no hard rectangular edge.
 		if (isGolden && altDeg > -5) {
 			const intensity = Math.max(0, 1 - Math.max(0, altDeg) / 12);
-			const bg = ctx.createLinearGradient(sunX - W * 0.6, 0, sunX + W * 0.6, 0);
-			bg.addColorStop(0,    'rgba(255,100,0,0)');
-			bg.addColorStop(0.3,  `rgba(255,100,0,${(intensity * 0.22).toFixed(3)})`);
-			bg.addColorStop(0.5,  `rgba(255,140,0,${(intensity * 0.40).toFixed(3)})`);
-			bg.addColorStop(0.7,  `rgba(255,100,0,${(intensity * 0.22).toFixed(3)})`);
-			bg.addColorStop(1,    'rgba(255,100,0,0)');
+			const r = W * 0.72;
+			const bg = ctx.createRadialGradient(sunX, horizonY, 0, sunX, horizonY, r);
+			bg.addColorStop(0,    `rgba(255,140,0,${(intensity * 0.40).toFixed(3)})`);
+			bg.addColorStop(0.35, `rgba(255,100,0,${(intensity * 0.22).toFixed(3)})`);
+			bg.addColorStop(1,    'rgba(255,80,0,0)');
 			ctx.save();
 			ctx.globalCompositeOperation = 'screen';
 			ctx.fillStyle = bg;
-			ctx.fillRect(0, horizonY * 0.6, W, horizonY * 0.5);
+			ctx.fillRect(0, 0, W, H);
 			ctx.restore();
 		}
 	}
