@@ -69,12 +69,27 @@
 		<a href="/journals" class:active={$page.url.pathname === '/journals'}>journals</a>
 	{/if}
 	<AdminToolbar />
-	<button class="hide-btn" onclick={() => uiHidden = !uiHidden} title="hide interface (H)">⊟</button>
 </nav>
 
-{#if uiHidden}
-	<button class="restore-btn" onclick={() => uiHidden = false} title="restore interface (H)">⊞</button>
-{/if}
+<!-- Fixed outside the nav so it survives the nav opacity collapse -->
+<button
+	class="eye-btn"
+	class:ui-hidden={uiHidden}
+	onclick={() => uiHidden = !uiHidden}
+	title="{uiHidden ? 'show' : 'hide'} interface (H)"
+>
+	{#if uiHidden}
+		<svg width="14" height="9" viewBox="0 0 14 9" fill="none" aria-hidden="true">
+			<path d="M1,4 Q7,-1 13,4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+			<path d="M3,6.5 Q7,10 11,6.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+		</svg>
+	{:else}
+		<svg width="14" height="9" viewBox="0 0 14 9" fill="none" aria-hidden="true">
+			<path d="M1,4.5 Q7,-0.5 13,4.5 Q7,9.5 1,4.5Z" stroke="currentColor" stroke-width="1.2"/>
+			<circle cx="7" cy="4.5" r="1.8" fill="currentColor"/>
+		</svg>
+	{/if}
+</button>
 
 <div class="page-content" class:ui-hidden={uiHidden}>
 	{@render children()}
@@ -193,16 +208,29 @@
 	nav a:hover { opacity: 1; }
 	nav a.active { opacity: 1; }
 
-	/* ── hide button ───────────────────────────────────────── */
-	.hide-btn {
-		background: none; border: none; cursor: pointer;
+	/* ── eye button (always fixed, survives nav opacity collapse) ── */
+	.eye-btn {
+		position: fixed;
+		top: 1.08rem; right: 2rem;
+		z-index: 200;
+		background: none;
+		border: 1px solid var(--glass-border);
 		color: var(--clr-text);
-		font-size: 0.9rem; line-height: 1;
-		padding: 0 0.1rem;
-		opacity: 0.35;
-		transition: opacity var(--t-ui);
+		font-family: 'Courier New', Courier, monospace;
+		font-size: 0.58rem;
+		padding: 0.25rem 0.55rem;
+		cursor: pointer;
+		display: flex; align-items: center;
+		opacity: 0.7;
+		transition: opacity var(--t-ui), border-color var(--t-ui);
 	}
-	.hide-btn:hover { opacity: 0.8; }
+	.eye-btn:hover { opacity: 1; }
+	/* When UI is hidden: drop the border so the button becomes a ghost */
+	.eye-btn.ui-hidden {
+		border-color: transparent;
+		opacity: 0.35;
+	}
+	.eye-btn.ui-hidden:hover { opacity: 0.8; }
 
 	/* ── ui hidden state ───────────────────────────────────── */
 	nav.ui-hidden {
@@ -218,18 +246,4 @@
 		pointer-events: none;
 		transition: opacity 0.4s;
 	}
-
-	/* ── restore button ────────────────────────────────────── */
-	.restore-btn {
-		position: fixed;
-		top: 1rem; right: 1.8rem;
-		z-index: 200;
-		background: none; border: none; cursor: pointer;
-		color: var(--clr-text);
-		font-size: 0.9rem; line-height: 1;
-		padding: 0.2rem;
-		opacity: 0.30;
-		transition: opacity 0.2s;
-	}
-	.restore-btn:hover { opacity: 0.85; }
 </style>
