@@ -63,8 +63,8 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		darkPanelRgb: '120, 168, 240',     // sky-blue chrome tint
 		bodyBg:       '#c0cede',            // soft grey-blue canvas fallback
 		clrDarkText:  '#d8eaff',           // bright blue-white — high contrast on medium blue panel
-		glassBgDark:     'rgba(8, 14, 40, 0.92)',      // deep navy-black — near-black for panel chrome contrast
-		glassBorderDark: 'rgba(100, 160, 255, 0.30)', // sky-blue border
+		glassBgDark:     'rgba(20, 36, 100, 0.92)',     // rich navy — dark but clearly sky-blue palette
+		glassBorderDark: 'rgba(100, 160, 255, 0.32)', // sky-blue border
 		// Light-glass: adapts with time of day — both light panels AND dark-panel chrome
 		darkGlass: false,
 		glassDay:   [210, 228, 250],   // pale sky-blue at noon
@@ -104,8 +104,8 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		darkPanelRgb: '200, 200, 205',   // neutral gray chrome
 		bodyBg:       '#d8d8d8',
 		clrDarkText:  '#d4d4d8',          // clean light gray — matches neutral gray body aesthetic
-		glassBgDark:     'rgba(14, 14, 16, 0.92)',    // near-black — no color cast
-		glassBorderDark: 'rgba(200, 200, 208, 0.30)', // neutral gray border
+		glassBgDark:     'rgba(32, 32, 40, 0.90)',    // medium-dark cool gray — palette-representative
+		glassBorderDark: 'rgba(200, 200, 208, 0.32)', // neutral gray border
 		darkGlass: false,
 		glassDay:   [255, 255, 255],
 		glassNight: [8,   6,   2  ],

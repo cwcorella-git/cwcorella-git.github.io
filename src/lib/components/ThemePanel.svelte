@@ -67,6 +67,7 @@
 		font-size: 0.6rem;
 		letter-spacing: 0.08em;
 		padding: 0.35rem 0.5rem;
+		min-height: 36px;
 		cursor: pointer;
 		transition: all 0.12s;
 		opacity: 0.6;
@@ -75,12 +76,12 @@
 	}
 	.palette-btn:hover {
 		opacity: 1;
-		border-color: rgba(var(--dark-panel-rgb), 0.12);
+		border-color: rgba(var(--dark-panel-rgb), 0.20);
 	}
 	.palette-btn.active {
 		opacity: 1;
-		border-color: rgba(var(--dark-panel-rgb), 0.22);
-		background: rgba(var(--dark-panel-rgb), 0.06);
+		border-color: rgba(var(--dark-panel-rgb), 0.35);
+		background: rgba(var(--dark-panel-rgb), 0.10);
 	}
 
 	.swatch {
