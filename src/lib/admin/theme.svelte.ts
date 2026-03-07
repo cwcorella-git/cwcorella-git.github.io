@@ -60,7 +60,7 @@ export const PALETTES: Record<PaletteName, Palette> = {
 	sky: {
 		label: 'sky',
 		uiRgb:        '140, 168, 210',     // cool sky-blue light-context chrome
-		darkPanelRgb: '120, 168, 240',     // sky-blue chrome tint
+		darkPanelRgb: '200, 220, 255',     // pale blue-white — luminance contrast against navy panel
 		bodyBg:       '#c0cede',            // soft grey-blue canvas fallback
 		clrDarkText:  '#d8eaff',           // bright blue-white — high contrast on medium blue panel
 		glassBgDark:     'rgba(20, 36, 100, 0.92)',     // rich navy — dark but clearly sky-blue palette
@@ -71,9 +71,9 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		glassNight: [8,   12,  28 ],   // deep midnight
 		textDay:    [12,  16,  28 ],   // near-black on pale panels
 		textNight:  [205, 218, 240],   // cool blue-white on dark panels
-		// Adaptive dark-panel RGB: blue inputs at day, indigo at night
-		darkPanelDay:   [120, 168, 240],
-		darkPanelNight: [22,  28,  62 ],
+		// Adaptive dark-panel RGB: pale blue-white at day, dimmer at night — both contrast against navy panel
+		darkPanelDay:   [200, 220, 255],
+		darkPanelNight: [80,  120, 200],
 		swatchBg:     '#b0c4dc',
 		swatchBorder: '#5890d0',
 	},
