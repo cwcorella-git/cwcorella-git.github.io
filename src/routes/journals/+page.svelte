@@ -463,26 +463,30 @@
 	</div>
 </div>
 
-{:else if sealedManifest.length > 0}
+{:else}
 
-<!-- ── public sealed manifest (no login) ─────────────────────────────── -->
+<!-- ── public view (no login) ─────────────────────────────────────────── -->
 <div class="page">
 	<div class="inner">
 		<div class="page-header">
 			<h1 class="heading">journals</h1>
 		</div>
-		<ul class="list">
-			{#each sealedManifest as entry (entry.slug)}
-				<li>
-					<div class="entry-row">
-						<div class="entry-title-btn" style="cursor: default;">
-							<span class="entry-title">{entry.title}</span>
-							<span class="entry-meta sealed-meta">sealed · unlocks Feb 13, 2095</span>
+		{#if sealedManifest.length > 0}
+			<ul class="list">
+				{#each sealedManifest as entry (entry.slug)}
+					<li>
+						<div class="entry-row">
+							<div class="entry-title-btn" style="cursor: default;">
+								<span class="entry-title">{entry.title}</span>
+								<span class="entry-meta sealed-meta">sealed · unlocks Feb 13, 2095</span>
+							</div>
 						</div>
-					</div>
-				</li>
-			{/each}
-		</ul>
+					</li>
+				{/each}
+			</ul>
+		{:else}
+			<p class="status">private — admin access required.</p>
+		{/if}
 	</div>
 </div>
 
@@ -727,4 +731,13 @@
 	}
 	.seal-modal-actions button:hover { border-color: rgba(255,255,255,0.30); }
 	.seal-confirm-btn { background: rgba(255,255,255,0.06) !important; }
+
+	@media (max-width: 480px) {
+		.reader-body { padding: 1.5rem 1.25rem; }
+		.field-row { grid-template-columns: 1fr; }
+		.field-narrow { width: 100%; }
+		.inner { padding: 2rem 1.25rem 4rem; }
+		.overlay-header { padding: 1rem 1.25rem; }
+		.editor-body { padding: 1.25rem; }
+	}
 </style>

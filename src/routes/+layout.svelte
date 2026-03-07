@@ -258,9 +258,12 @@
 		line-height: 1;
 		letter-spacing: 0.08em;
 		padding: 0.25rem 0.55rem;
+		min-height: 44px;
+		min-width: 44px;
 		cursor: pointer;
 		display: inline-flex;
 		align-items: center;
+		justify-content: center;
 		white-space: nowrap;
 		flex-shrink: 0;
 		opacity: 0.7;
@@ -337,4 +340,9 @@
 	.logout-cancel:hover  { border-color: rgba(var(--ui-rgb), 0.40); }
 	.logout-confirm { color: var(--clr-danger); border-color: rgba(var(--ui-rgb), 0.20); }
 	.logout-confirm:hover { border-color: var(--clr-danger); }
+
+	@media (max-width: 480px) {
+		nav { padding: 0.85rem 1rem; }
+		.nav-items { gap: 1.25rem; }
+	}
 </style>

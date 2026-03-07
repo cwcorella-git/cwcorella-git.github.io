@@ -134,4 +134,9 @@
 		transition: color 0.2s;
 	}
 	footer a:hover { color: var(--clr-text); }
+
+	@media (max-width: 480px) {
+		main { padding: 1.25rem; }
+		.content-panel { padding: 1.5rem 1.25rem; }
+	}
 </style>
