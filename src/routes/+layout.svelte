@@ -73,7 +73,7 @@
 </nav>
 
 {#if uiHidden}
-	<button class="restore-strip" onclick={() => uiHidden = false} title="restore interface (H)"></button>
+	<button class="restore-btn" onclick={() => uiHidden = false} title="restore interface (H)">⊞</button>
 {/if}
 
 <div class="page-content" class:ui-hidden={uiHidden}>
@@ -195,7 +195,6 @@
 
 	/* ── hide button ───────────────────────────────────────── */
 	.hide-btn {
-		margin-left: auto;
 		background: none; border: none; cursor: pointer;
 		color: var(--clr-text);
 		font-size: 0.9rem; line-height: 1;
@@ -220,15 +219,17 @@
 		transition: opacity 0.4s;
 	}
 
-	/* ── restore strip ─────────────────────────────────────── */
-	.restore-strip {
+	/* ── restore button ────────────────────────────────────── */
+	.restore-btn {
 		position: fixed;
-		top: 0; left: 0; right: 0;
-		height: 6px;
+		top: 1rem; right: 1.8rem;
 		z-index: 200;
-		background: rgba(var(--ui-rgb), 0.18);
-		border: none; cursor: pointer;
-		transition: background 0.2s;
+		background: none; border: none; cursor: pointer;
+		color: var(--clr-text);
+		font-size: 0.9rem; line-height: 1;
+		padding: 0.2rem;
+		opacity: 0.30;
+		transition: opacity 0.2s;
 	}
-	.restore-strip:hover { background: rgba(var(--ui-rgb), 0.45); }
+	.restore-btn:hover { opacity: 0.85; }
 </style>
