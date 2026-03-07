@@ -280,6 +280,21 @@
 
 	// ── archive mode index ────────────────────────────────────────────────
 	const activeIndex = $derived(adminState.active ? journalIndexState.entries : archiveState.index);
+
+	// ── search ────────────────────────────────────────────────────────────
+	let searchQuery = $state('');
+
+	function matchesSearch(e: { slug: string; title?: string }) {
+		const q = searchQuery.trim().toLowerCase();
+		return e.slug.toLowerCase().includes(q) || (e.title?.toLowerCase().includes(q) ?? false);
+	}
+
+	let filteredEntries = $derived(
+		searchQuery.trim() ? journalIndexState.entries.filter(matchesSearch) : journalIndexState.entries
+	);
+	let filteredArchive = $derived(
+		searchQuery.trim() ? activeIndex.filter(matchesSearch) : activeIndex
+	);
 </script>
 
 <svelte:head><title>journals — cwcorella</title></svelte:head>
@@ -385,7 +400,19 @@
 <div class="page">
 	<div class="inner">
 		<div class="page-header">
-			<h1 class="heading">journals{archiveState.mode ? ' · archive' : ''}</h1>
+			<div class="search-bar">
+				<input
+					type="text"
+					class="search-input"
+					placeholder="search entries…"
+					bind:value={searchQuery}
+					autocomplete="off"
+					spellcheck="false"
+					aria-label="Search journal entries"
+					onkeydown={(e) => { if (e.key === 'Escape') { searchQuery = ''; (e.target as HTMLInputElement).blur(); } }}
+				/>
+				{#if archiveState.mode}<span class="mode-tag">archive</span>{/if}
+			</div>
 			{#if journalIndexState.loaded && adminState.active}
 				<button class="new-btn" onclick={startCreate}>+ new</button>
 			{/if}
@@ -400,7 +427,7 @@
 				<p class="status">no entries — click + new or run scripts/encrypt-journals.mjs to populate.</p>
 			{:else}
 				<ul class="list">
-					{#each journalIndexState.entries as entry (entry.slug)}
+					{#each filteredEntries as entry (entry.slug)}
 						<li>
 							{#if confirmingSlug === entry.slug}
 								<div class="entry-row confirm-row">
@@ -434,14 +461,14 @@
 						</li>
 					{/each}
 				</ul>
-				<p class="count">{journalIndexState.entries.length} entries</p>
+				<p class="count">{filteredEntries.length}{filteredEntries.length !== journalIndexState.entries.length ? ` of ${journalIndexState.entries.length}` : ''} {filteredEntries.length === 1 ? 'entry' : 'entries'}</p>
 			{/if}
 		{:else if archiveState.mode}
-			{#if activeIndex.length === 0}
-				<p class="status">no entries.</p>
+			{#if filteredArchive.length === 0}
+				<p class="status">{searchQuery.trim() ? 'no matches.' : 'no entries.'}</p>
 			{:else}
 				<ul class="list">
-					{#each activeIndex as entry (entry.slug)}
+					{#each filteredArchive as entry (entry.slug)}
 						<li>
 							<div class="entry-row">
 								<button class="entry-title-btn" onclick={() => openReader(entry)}>
@@ -457,7 +484,7 @@
 						</li>
 					{/each}
 				</ul>
-				<p class="count">{activeIndex.length} entries</p>
+				<p class="count">{filteredArchive.length}{filteredArchive.length !== activeIndex.length ? ` of ${activeIndex.length}` : ''} {filteredArchive.length === 1 ? 'entry' : 'entries'}</p>
 			{/if}
 		{/if}
 	</div>
@@ -513,13 +540,34 @@
 		to   { opacity: 1; }
 	}
 	.page-header {
-		display: flex; align-items: baseline; justify-content: space-between;
+		display: flex; align-items: center; justify-content: space-between;
+		gap: 1rem;
 		margin-bottom: 2.5rem;
 	}
 	.heading {
 		font-family: var(--font-prose);
 		font-size: 1rem; font-weight: normal;
 		letter-spacing: 0.12em; color: var(--clr-text); margin: 0;
+	}
+	.search-bar {
+		display: flex; align-items: center; gap: 0.75rem;
+		flex: 1;
+		border-bottom: 1px solid rgba(var(--ui-rgb), 0.22);
+		padding-bottom: 0.4rem;
+	}
+	.search-input {
+		background: none; border: none; outline: none; flex: 1;
+		font-family: var(--font-ui);
+		font-size: 0.78rem; letter-spacing: 0.06em;
+		color: var(--clr-text); padding: 0.3rem 0;
+		caret-color: currentColor;
+	}
+	.search-input::placeholder { color: var(--clr-text); opacity: 0.45; }
+	.mode-tag {
+		font-family: var(--font-ui);
+		font-size: 0.6rem; letter-spacing: 0.1em;
+		color: var(--clr-text); opacity: 0.5;
+		white-space: nowrap;
 	}
 	.new-btn {
 		background: none;
