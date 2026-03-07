@@ -213,10 +213,7 @@ export function drawPlants(
 		// Far plants (near horizon) fade to 0.55 alpha; foreground is fully opaque.
 		const t = depthBand > 0 ? Math.max(0, Math.min(1, (plant.y - horizonY) / depthBand)) : 1;
 		ctx.globalAlpha = 0.55 + t * 0.45;
-		// Atmospheric desaturation: far plants lose colour as aerial haze washes them out.
-		ctx.filter = `saturate(${Math.round(62 + t * 38)}%)`;
 		for (const child of plant.root.children) drawSeg(ctx, plant.x, plant.y, -90, child);
-		ctx.filter = 'none';
 	}
 	ctx.globalAlpha = 1;
 	ctx.restore();
