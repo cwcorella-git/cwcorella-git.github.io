@@ -707,12 +707,8 @@
 	}
 
 	// ── draw: midground tree silhouettes ──────────────────────────────────────
-	// Four trees at horizon depth — solid silhouettes (no branch detail at this scale).
-	// Each has a distinct species and birth offset so they represent different growth arcs:
-	//   round    — 30yr head start → visibly growing over the site's lifetime
-	//   oak      — 150yr head start → always looks ancient, barely changes
-	//   pine     — same age as garden → most dramatically growing (45%→85% over 69yr)
-	//   columnar — 15yr younger → young sapling becoming a tall slender poplar
+	// Two species, four trees. Deciduous: decurrent recursive branching (wide
+	// spreading crown). Conifer: excurrent central leader + whorled side branches.
 	function drawMidgroundTrees(ctx: CanvasRenderingContext2D, altDeg: number): void {
 		const isNight    = altDeg < -6;
 		const isTwilight = !isNight && altDeg < 6;
@@ -720,74 +716,93 @@
 		          : isTwilight ? 'rgb(42,46,55)'
 		          :              'rgb(55,68,38)';
 
-		type Kind = 'oak' | 'pine' | 'round' | 'columnar';
+		// Recursive deciduous crown. angle: standard math radians, π/2 = straight up.
+		function branchDeciduous(
+			x: number, y: number,
+			angle: number, length: number, thick: number,
+			depth: number, rng: () => number
+		): void {
+			if (depth <= 0 || length < 1.2) return;
+			const x2 = x + Math.cos(angle) * length;
+			const y2 = y - Math.sin(angle) * length;
+			ctx.lineWidth = Math.max(0.3, thick);
+			ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x2, y2); ctx.stroke();
+			const ratio  = 0.67 + rng() * 0.08;
+			const spread = 0.50 + rng() * 0.24;  // ±29–43° each side
+			const bias   = (rng() - 0.5) * 0.22; // asymmetric lean
+			branchDeciduous(x2, y2, angle + spread + bias, length * ratio,        thick * 0.62, depth - 1, rng);
+			branchDeciduous(x2, y2, angle - spread + bias, length * ratio * 0.94, thick * 0.60, depth - 1, rng);
+			// Occasional third shoot — adds mid-crown density
+			if (depth >= 4 && rng() < 0.28)
+				branchDeciduous(x2, y2, angle + bias * 0.3, length * ratio * 0.72, thick * 0.50, depth - 2, rng);
+		}
+
+		type Kind = 'deciduous' | 'conifer';
 		const specs: { xf: number; bornAgo: number; kind: Kind }[] = [
-			{ xf: 0.49, bornAgo: 10950,  kind: 'round'    },  // +30yr
-			{ xf: 0.58, bornAgo: 54750,  kind: 'oak'      },  // +150yr — ancient
-			{ xf: 0.74, bornAgo: 0,      kind: 'pine'     },  // same age
-			{ xf: 0.85, bornAgo: -5475,  kind: 'columnar' },  // −15yr
+			{ xf: 0.49, bornAgo: 54750, kind: 'deciduous' },  // +150yr — ancient spreading oak
+			{ xf: 0.61, bornAgo: 10950, kind: 'deciduous' },  // +30yr  — mid-growth
+			{ xf: 0.74, bornAgo: 0,     kind: 'conifer'   },  // same age — most dramatic growth arc
+			{ xf: 0.85, bornAgo: -5475, kind: 'conifer'   },  // −15yr  — young sapling pine
 		];
 
 		for (const spec of specs) {
-			const gf = treeGrowthFactor(Math.max(0, gardenAgeUnits + spec.bornAgo));
-			const bx = spec.xf * W;
-			const by = horizonY;
-			const tw = Math.max(0.8, 3.5 * gf);
+			const gf  = treeGrowthFactor(Math.max(0, gardenAgeUnits + spec.bornAgo));
+			const bx  = spec.xf * W;
+			const by  = horizonY;
+			const tw  = Math.max(0.8, 3.5 * gf);
+			const rng = makePRNG(Math.floor(spec.xf * 0x7FFFFFFF));
 
 			ctx.save();
-			ctx.fillStyle   = clr;
 			ctx.strokeStyle = clr;
-			ctx.globalAlpha = 0.80;
+			ctx.fillStyle   = clr;
+			ctx.globalAlpha = 0.82;
 			ctx.lineCap     = 'round';
 
-			// Trunk
-			const trunkH = ({ oak: 90, pine: 80, round: 70, columnar: 60 } as const)[spec.kind] * gf;
-			ctx.lineWidth = tw;
-			ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx, by - trunkH); ctx.stroke();
-
-			if (spec.kind === 'oak') {
-				// Ancient oak: three heavy ellipse masses + a drooping low branch
-				const rx = 72 * gf, ry = 55 * gf;
-				const cx = bx - rx * 0.08, cy = by - trunkH - ry * 0.5;
-				ctx.beginPath(); ctx.ellipse(cx,              cy,              rx,        ry,        0,     0, Math.PI * 2); ctx.fill();
-				ctx.beginPath(); ctx.ellipse(cx - rx * 0.55,  cy + ry * 0.14,  rx * 0.56, ry * 0.44, -0.2,  0, Math.PI * 2); ctx.fill();
-				ctx.beginPath(); ctx.ellipse(cx + rx * 0.50,  cy - ry * 0.10,  rx * 0.48, ry * 0.40, 0.15,  0, Math.PI * 2); ctx.fill();
-				// Signature drooping branch — marks it as old growth
-				ctx.lineWidth = tw * 2.0;
-				ctx.beginPath();
-				ctx.moveTo(bx, by - trunkH * 0.50);
-				ctx.quadraticCurveTo(bx - rx * 0.42, by - trunkH * 0.52, bx - rx * 0.78, by - trunkH * 0.60);
-				ctx.stroke();
-
-			} else if (spec.kind === 'pine') {
-				// Conical/fir — triangular path with fBm edge wobble
-				const halfW = 30 * gf, crownH = 88 * gf;
-				const tipY  = by - trunkH - crownH;
-				const STEPS = 14;
-				ctx.beginPath();
-				ctx.moveTo(bx, tipY);
-				for (let i = 1; i <= STEPS; i++) {
-					const t = i / STEPS;
-					ctx.lineTo(bx + t * halfW * (1 + noise1D(t * 4.2 + spec.xf * 7) * 0.12),      tipY + t * crownH);
-				}
-				for (let i = STEPS; i >= 0; i--) {
-					const t = i / STEPS;
-					ctx.lineTo(bx - t * halfW * (1 + noise1D(t * 4.2 + spec.xf * 7 + 11) * 0.12), tipY + t * crownH);
-				}
-				ctx.closePath(); ctx.fill();
-
-			} else if (spec.kind === 'round') {
-				// Two offset ellipses — irregular natural dome
-				const rx = 38 * gf, ry = 34 * gf;
-				const cx = bx, cy = by - trunkH - ry * 0.5;
-				ctx.beginPath(); ctx.ellipse(cx,             cy,             rx,        ry,        0,   0, Math.PI * 2); ctx.fill();
-				ctx.beginPath(); ctx.ellipse(cx + rx * 0.38, cy - ry * 0.20, rx * 0.72, ry * 0.65, 0.2, 0, Math.PI * 2); ctx.fill();
+			if (spec.kind === 'deciduous') {
+				const trunkH   = 72 * gf;
+				const startLen = trunkH * 0.55;
+				// Trunk
+				ctx.lineWidth = tw;
+				ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx, by - trunkH); ctx.stroke();
+				// Crown: depth 8 binary branching → ~300 segments
+				branchDeciduous(bx, by - trunkH, Math.PI / 2, startLen, tw * 0.78, 8, rng);
 
 			} else {
-				// Columnar — narrow upright, Lombardy poplar / cypress
-				ctx.beginPath();
-				ctx.ellipse(bx, by - trunkH - 75 * gf * 0.5, 11 * gf, 75 * gf * 0.5, 0, 0, Math.PI * 2);
-				ctx.fill();
+				// Dominant central leader
+				const totalH = 145 * gf;
+				const WHORLS = 8;
+				ctx.lineWidth = tw;
+				ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx, by - totalH); ctx.stroke();
+
+				// Whorled side branches — widest at base, shortest at tip
+				for (let w = 0; w < WHORLS; w++) {
+					const t    = w / WHORLS;
+					const wy   = by - (0.12 + t * 0.80) * totalH;
+					const blen = (44 - 34 * t) * gf * (0.88 + rng() * 0.12);
+					const wTw  = Math.max(0.25, tw * 0.45 * (1 - t * 0.65));
+
+					for (const dir of [-1, 1]) {
+						const wx2 = bx + dir * blen;
+						const wy2 = wy - blen * 0.08; // slight upward tilt
+						ctx.lineWidth = wTw;
+						ctx.beginPath(); ctx.moveTo(bx, wy); ctx.lineTo(wx2, wy2); ctx.stroke();
+
+						// Branchlets fanning outward along the whorl branch
+						const subs = 3 + Math.floor(rng() * 2);
+						for (let s = 0; s < subs; s++) {
+							const tSub = (s + 0.5) / subs;
+							const sx   = bx  + (wx2 - bx) * tSub;
+							const sy   = wy  + (wy2 - wy) * tSub;
+							const sLen = blen * (0.22 + (1 - tSub) * 0.12) * (0.8 + rng() * 0.2);
+							const ang  = (rng() - 0.5) * 0.55; // ±15° from horizontal
+							ctx.lineWidth = Math.max(0.2, wTw * 0.45);
+							ctx.beginPath();
+							ctx.moveTo(sx, sy);
+							ctx.lineTo(sx + dir * Math.cos(ang) * sLen, sy - Math.sin(ang) * sLen);
+							ctx.stroke();
+						}
+					}
+				}
 			}
 
 			ctx.restore();
@@ -993,13 +1008,13 @@
 			peaks[0].x, peaks[0].y
 		);
 
-		// Walk through peaks; each pair shares a shallow valley
+		// Walk through peaks; each pair shares a valley
 		for (let i = 0; i < peaks.length - 1; i++) {
 			const p1 = peaks[i], p2 = peaks[i + 1];
-			// Valley sits between peaks, 14–30% of the way down toward baseY
+			// Valley 28–50% of the way down toward base — deep enough for distinct puff silhouette
 			const valX  = (p1.x + p2.x) / 2 + (rng() - 0.5) * (p2.x - p1.x) * 0.18;
 			const lower = Math.max(p1.y, p2.y);
-			const valY  = lower + (baseY - lower) * (0.14 + rng() * 0.18);
+			const valY  = lower + (baseY - lower) * (0.28 + rng() * 0.22);
 			ctx.quadraticCurveTo(p1.x + (valX - p1.x) * 0.58, p1.y, valX, valY);
 			ctx.quadraticCurveTo(valX + (p2.x - valX) * 0.42, p2.y, p2.x, p2.y);
 		}
@@ -1036,14 +1051,32 @@
 			const p1    = peaks[i], p2 = peaks[i + 1];
 			const valX  = (p1.x + p2.x) / 2;
 			const lower = Math.max(p1.y, p2.y);
-			const valY  = lower + (baseY - lower) * 0.22;
-			const rr    = (p2.x - p1.x) * 0.20;
+			const valY  = lower + (baseY - lower) * 0.35;
+			const rr    = (p2.x - p1.x) * 0.22;
 			const vg    = ctx.createRadialGradient(valX, valY, 0, valX, valY, rr);
-			vg.addColorStop(0, css(shadowRGB, 0.28));
+			vg.addColorStop(0, css(shadowRGB, 0.40));
 			vg.addColorStop(1, css(shadowRGB, 0));
 			ctx.beginPath();
-			ctx.ellipse(valX, valY, rr * 1.2, rr * 0.60, 0, 0, Math.PI * 2);
+			ctx.ellipse(valX, valY, rr * 1.3, rr * 0.65, 0, 0, Math.PI * 2);
 			ctx.fillStyle = vg;
+			ctx.fill();
+		}
+		ctx.restore();
+
+		// ── Highlight spots on peak tops (source-atop) ───────────────────────────
+		// Bright radial glow at each bump apex — gives clouds their lit-turret look.
+		ctx.save();
+		ctx.globalCompositeOperation = 'source-atop';
+		for (const p of peaks) {
+			const peakH = baseY - p.y;   // how tall this peak is above base
+			const hr    = peakH * 0.28;  // highlight radius ~28% of peak height
+			const hg    = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, hr);
+			hg.addColorStop(0,   'rgba(255,255,255,0.40)');
+			hg.addColorStop(0.5, 'rgba(255,255,255,0.16)');
+			hg.addColorStop(1,   'rgba(255,255,255,0)');
+			ctx.beginPath();
+			ctx.arc(p.x, p.y, hr, 0, Math.PI * 2);
+			ctx.fillStyle = hg;
 			ctx.fill();
 		}
 		ctx.restore();
@@ -1051,10 +1084,10 @@
 		// ── Feather base edge (destination-out) ──────────────────────────────────
 		ctx.save();
 		ctx.globalCompositeOperation = 'destination-out';
-		const fTop = baseY - Math.max(totalH * 0.15, 5);
+		const fTop = baseY - Math.max(totalH * 0.30, 8);
 		const fade = ctx.createLinearGradient(0, fTop, 0, baseY + padB * 0.55);
 		fade.addColorStop(0.00, 'rgba(0,0,0,0)');
-		fade.addColorStop(0.48, 'rgba(0,0,0,0.45)');
+		fade.addColorStop(0.42, 'rgba(0,0,0,0.35)');
 		fade.addColorStop(1.00, 'rgba(0,0,0,1)');
 		ctx.fillStyle = fade;
 		ctx.fillRect(0, fTop, CW, baseY + padB * 0.55 - fTop);
