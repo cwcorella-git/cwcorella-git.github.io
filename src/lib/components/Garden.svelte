@@ -341,8 +341,12 @@
 	// 5 stops at power-2.5 non-linear positions — more gradient range near horizon.
 	// Stop positions [0, 0.25, 0.5, 0.75, 1] remapped: [0, 0.57, 0.76, 0.88, 1.0]
 	function drawSky(ctx: CanvasRenderingContext2D, altDeg: number): void {
-		const { zenith, mid, lower, horizon } = getSkyColors(altDeg);
-		// Bright segment: the actual horizon line is slightly lighter than horizon color
+		const { zenith, mid, horizon } = getSkyColors(altDeg);
+		// Derive `lower` as a smooth bridge between mid and horizon rather than
+		// using the independently-keyed value — independent values caused visible
+		// banding when hue shifted abruptly between keyframes (golden-hour warm
+		// amber → morning cool blue produced a greenish strip at ~alt 10°).
+		const lower = lerpRGB(mid, horizon, 0.55);
 		const bright = lerpRGB(horizon, [255, 255, 255] as RGB, 0.12);
 		const g = ctx.createLinearGradient(0, 0, 0, horizonY);
 		g.addColorStop(0,    css(zenith));
