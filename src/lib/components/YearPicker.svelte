@@ -217,7 +217,7 @@
 	}
 
 	.decade-label {
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.6rem;
 		letter-spacing: 0.1em;
 		color: var(--clr-dark-text);
@@ -250,7 +250,7 @@
 		background: none;
 		border: 1px solid transparent;
 		color: var(--clr-dark-text);
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.62rem;
 		letter-spacing: 0.04em;
 		padding: 0.3rem 0.1rem;

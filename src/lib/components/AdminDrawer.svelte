@@ -136,7 +136,7 @@
 	}
 
 	.drawer-title {
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.7rem;
 		letter-spacing: 0.12em;
 		text-transform: uppercase;
@@ -168,7 +168,7 @@
 	}
 
 	label span {
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.6rem;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
@@ -180,7 +180,7 @@
 		border: 1px solid rgba(var(--dark-panel-rgb), 0.15);
 		outline: none;
 		color: var(--clr-dark-text);
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.75rem;
 		padding: 0.5rem 0.65rem;
 		transition: border-color 0.15s;
@@ -188,7 +188,7 @@
 	label input:focus { border-color: rgba(var(--dark-panel-rgb), 0.32); }
 
 	.error {
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.65rem;
 		color: var(--clr-danger);
 		margin: 0;
@@ -198,7 +198,7 @@
 		background: rgba(var(--dark-panel-rgb), 0.08);
 		border: 1px solid rgba(var(--dark-panel-rgb), 0.25);
 		color: var(--clr-dark-text);
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.65rem;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;

@@ -59,7 +59,7 @@
 	}
 
 	.label {
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.6rem;
 		letter-spacing: 0.1em;
 		color: var(--clr-text);
@@ -72,7 +72,7 @@
 		background: none;
 		border: 1px solid var(--glass-border);
 		color: var(--clr-text);
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.58rem;
 		letter-spacing: 0.08em;
 		padding: 0.25rem 0.55rem;

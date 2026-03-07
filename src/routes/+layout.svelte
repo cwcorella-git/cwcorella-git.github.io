@@ -105,10 +105,32 @@
 </div>
 
 <style>
+	@font-face {
+		font-family: 'Kalinga';
+		src: url('/fonts/kalinga.ttf') format('truetype');
+		font-weight: normal;
+		font-style: normal;
+		font-display: swap;
+	}
+	@font-face {
+		font-family: 'Kalinga';
+		src: url('/fonts/kalinga-bold.ttf') format('truetype');
+		font-weight: bold;
+		font-style: normal;
+		font-display: swap;
+	}
+	/* Map all weights of the UI font to the regular face so it can never render bold. */
+	@font-face {
+		font-family: 'CWC-UI';
+		src: local('Courier New');
+		font-weight: 100 900;
+		font-style: normal;
+	}
+
 	:global(:root) {
 		/* Fonts */
-		--font-prose: Georgia, 'Times New Roman', Times, serif;
-		--font-ui:    'Courier New', Courier, monospace;
+		--font-prose: 'Kalinga', Georgia, serif;
+		--font-ui:    'CWC-UI', 'Courier New', Courier, monospace;
 
 		/* Typography */
 		--lh-prose: 1.9;
@@ -231,7 +253,7 @@
 		background: none;
 		border: 1px solid var(--glass-border);
 		color: var(--clr-text);
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.58rem;
 		line-height: 1;
 		letter-spacing: 0.08em;
@@ -289,12 +311,12 @@
 		display: flex; flex-direction: column; gap: 0.9rem;
 	}
 	.logout-title {
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase;
 		color: var(--clr-text); margin: 0;
 	}
 	.logout-warn {
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.62rem; line-height: 1.6; letter-spacing: 0.03em;
 		color: var(--clr-danger); margin: 0;
 	}
@@ -307,7 +329,7 @@
 		background: none;
 		border: 1px solid rgba(var(--ui-rgb), 0.20);
 		color: var(--clr-text);
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.6rem; letter-spacing: 0.08em;
 		padding: 0.35rem 0.8rem; cursor: pointer;
 		transition: all var(--t-ui);

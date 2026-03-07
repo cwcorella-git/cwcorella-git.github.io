@@ -34,7 +34,7 @@
 		backdrop-filter: blur(10px);
 		-webkit-backdrop-filter: blur(10px);
 		border: 1px solid var(--glass-border-dark);
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.65rem;
 		letter-spacing: 0.05em;
 		color: var(--clr-dark-text);

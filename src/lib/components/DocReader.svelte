@@ -154,7 +154,7 @@
 	}
 
 	.book-meta {
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.6rem;
 		letter-spacing: 0.06em;
 		color: var(--clr-text);
@@ -186,7 +186,7 @@
 	}
 
 	.state-msg {
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.75rem;
 		letter-spacing: 0.08em;
 		color: var(--clr-text);
@@ -213,7 +213,7 @@
 	}
 
 	.toc-label {
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.55rem;
 		letter-spacing: 0.12em;
 		text-transform: uppercase;
@@ -228,7 +228,7 @@
 		border: none;
 		text-align: left;
 		cursor: pointer;
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.62rem;
 		line-height: 1.5;
 		color: var(--clr-text);
@@ -236,7 +236,7 @@
 		transition: color 0.15s;
 	}
 	.toc-item:hover { color: var(--clr-text); }
-	.toc-h1 { font-weight: bold; }
+	.toc-h1 { letter-spacing: 0.04em; }
 	.toc-h2 { padding-left: 0.8rem; }
 	.toc-h3 { padding-left: 1.6rem; font-size: 0.58rem; }
 
@@ -270,7 +270,7 @@
 		font-style: italic;
 	}
 	:global(.doc-content code) {
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.82em;
 		background: rgba(var(--ui-rgb),0.07);
 		padding: 0.1em 0.35em;

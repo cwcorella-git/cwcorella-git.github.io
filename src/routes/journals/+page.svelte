@@ -513,7 +513,7 @@
 		margin-bottom: 2.5rem;
 	}
 	.heading {
-		font-family: Georgia, 'Times New Roman', Times, serif;
+		font-family: var(--font-prose);
 		font-size: 1rem; font-weight: normal;
 		letter-spacing: 0.12em; color: var(--clr-text); margin: 0;
 	}
@@ -521,15 +521,15 @@
 		background: none;
 		border: 1px solid var(--glass-border);
 		color: var(--clr-text);
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase;
 		padding: 0.3rem 0.75rem; cursor: pointer; transition: all 0.15s;
 	}
 	.new-btn:hover { color: var(--clr-text); border-color: var(--glass-border); }
 
-	.status { font-family: 'Courier New', Courier, monospace; font-size: 0.65rem; letter-spacing: 0.08em; color: var(--clr-text); }
+	.status { font-family: var(--font-ui); font-size: 0.65rem; letter-spacing: 0.08em; color: var(--clr-text); }
 	.status.error { color: var(--clr-danger); }
-	.dim { font-family: 'Courier New', Courier, monospace; font-size: 0.6rem; letter-spacing: 0.06em; color: var(--clr-text); }
+	.dim { font-family: var(--font-ui); font-size: 0.6rem; letter-spacing: 0.06em; color: var(--clr-text); }
 
 	/* ── list ─────────────────────────────────────────────── */
 	.list { list-style: none; margin: 0; padding: 0; }
@@ -563,7 +563,7 @@
 
 	.action-btn {
 		background: none; border: none; cursor: pointer;
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.52rem; letter-spacing: 0.08em; text-transform: uppercase;
 		color: var(--clr-text); padding: 0 0.3rem; transition: color 0.15s;
 	}
@@ -572,7 +572,7 @@
 	.action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 	.count {
-		margin-top: 2rem; font-family: 'Courier New', Courier, monospace;
+		margin-top: 2rem; font-family: var(--font-ui);
 		font-size: 0.62rem; letter-spacing: 0.1em; color: var(--clr-text);
 	}
 
@@ -590,7 +590,7 @@
 	.editor-header-meta { display: flex; flex-direction: column; gap: 0.2rem; }
 	.editor-slug-line { font-size: 0.58rem; letter-spacing: 0.06em; }
 	.overlay-label {
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--clr-text);
 	}
 	.close-btn {
@@ -608,9 +608,9 @@
 		display: flex; flex-direction: column; overflow: hidden;
 	}
 	.reader-meta { display: flex; align-items: baseline; gap: 1rem; }
-	.reader-title { font-family: Georgia, 'Times New Roman', Times, serif; font-size: 0.95rem; color: var(--clr-text); }
+	.reader-title { font-family: var(--font-prose); font-size: 0.95rem; color: var(--clr-text); }
 	.sealed-tag {
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.55rem; letter-spacing: 0.1em; text-transform: uppercase;
 		color: var(--clr-text); opacity: 0.5; font-style: italic;
 	}
@@ -619,19 +619,19 @@
 		max-width: 72ch; margin: 0 auto; width: 100%;
 	}
 	.sealed-message {
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.75rem; letter-spacing: 0.06em; color: var(--clr-text);
 		opacity: 0.6; margin-top: 3rem; text-align: center;
 	}
 	.reader-doc-title {
-		font-family: Georgia, 'Times New Roman', Times, serif;
+		font-family: var(--font-prose);
 		font-size: 1.3rem; font-weight: normal;
 		color: var(--clr-text); margin: 0 0 2rem; line-height: 1.3;
 		border-bottom: 1px solid rgba(var(--ui-rgb), 0.15);
 		padding-bottom: 1.2rem;
 	}
 	.reader-body :global(h1), .reader-body :global(h2), .reader-body :global(h3) {
-		font-family: Georgia, 'Times New Roman', Times, serif; font-weight: normal;
+		font-family: var(--font-prose); font-weight: normal;
 		color: var(--clr-text); margin: 2rem 0 0.75rem; line-height: 1.3;
 	}
 	.reader-body :global(h1) { font-size: 1.2rem; }
@@ -639,7 +639,7 @@
 	.reader-body :global(h3) { font-size: 0.9rem; color: var(--clr-text); }
 	.reader-body :global(p) { color: var(--clr-text); font-size: 0.95rem; line-height: 1.85; margin: 0 0 1.1rem; }
 	.reader-body :global(blockquote) { border-left: 2px solid rgba(var(--ui-rgb),0.25); margin: 1.2rem 0; padding: 0.1rem 1.2rem; color: var(--clr-text); font-style: italic; }
-	.reader-body :global(code) { font-family: 'Courier New', Courier, monospace; font-size: 0.82em; background: rgba(var(--ui-rgb),0.07); padding: 0.1em 0.35em; color: var(--clr-text); }
+	.reader-body :global(code) { font-family: var(--font-ui); font-size: 0.82em; background: rgba(var(--ui-rgb),0.07); padding: 0.1em 0.35em; color: var(--clr-text); }
 	.reader-body :global(pre) { background: rgba(var(--ui-rgb),0.04); border: 1px solid rgba(var(--ui-rgb),0.12); padding: 1rem 1.2rem; overflow-x: auto; margin: 1.2rem 0; }
 	.reader-body :global(ul), .reader-body :global(ol) { color: var(--clr-text); font-size: 0.95rem; line-height: 1.85; padding-left: 1.5rem; margin: 0 0 1rem; }
 	.reader-body :global(hr) { border: none; border-top: 1px solid rgba(var(--ui-rgb),0.12); margin: 2rem 0; }
@@ -657,13 +657,13 @@
 	.field-row { display: grid; grid-template-columns: 1fr auto; gap: 0.9rem; }
 	.field-narrow { width: 160px; }
 	.field { display: flex; flex-direction: column; gap: 0.3rem; }
-	.field-label { font-family: 'Courier New', Courier, monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--clr-text); }
+	.field-label { font-family: var(--font-ui); font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--clr-text); }
 	.editor-fields input[type="text"],
 	.editor-fields textarea {
 		background: rgba(var(--ui-rgb), 0.04);
 		border: 1px solid rgba(var(--ui-rgb), 0.18);
 		color: var(--clr-text);
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.85rem; padding: 0.45rem 0.6rem; outline: none;
 		transition: border-color 0.15s; width: 100%;
 	}
@@ -675,7 +675,7 @@
 	}
 	.editor-footer button {
 		background: none; border: 1px solid rgba(var(--ui-rgb), 0.20);
-		color: var(--clr-text); font-family: 'Courier New', Courier, monospace;
+		color: var(--clr-text); font-family: var(--font-ui);
 		font-size: 0.6rem; letter-spacing: 0.08em;
 		padding: 0.35rem 0.8rem; cursor: pointer; transition: all 0.15s;
 	}
@@ -700,12 +700,12 @@
 		display: flex; flex-direction: column; gap: 1.2rem;
 	}
 	.seal-modal-title {
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase;
 		color: var(--clr-dark-text); margin: 0;
 	}
 	.seal-modal-body {
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.65rem; line-height: 1.75; letter-spacing: 0.03em;
 		color: var(--clr-dark-text); opacity: 0.8; margin: 0;
 	}
@@ -721,7 +721,7 @@
 	}
 	.seal-modal-actions button {
 		background: none; border: 1px solid rgba(255,255,255,0.15);
-		color: var(--clr-dark-text); font-family: 'Courier New', Courier, monospace;
+		color: var(--clr-dark-text); font-family: var(--font-ui);
 		font-size: 0.6rem; letter-spacing: 0.08em;
 		padding: 0.4rem 0.9rem; cursor: pointer; transition: all 0.15s;
 	}

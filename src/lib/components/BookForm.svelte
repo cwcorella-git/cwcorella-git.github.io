@@ -284,7 +284,7 @@
 	}
 
 	.modal-title {
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.7rem;
 		letter-spacing: 0.12em;
 		text-transform: uppercase;
@@ -324,7 +324,7 @@
 	}
 
 	label span, legend {
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.58rem;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
@@ -345,7 +345,7 @@
 		width: 100%;
 	}
 	input:focus, textarea:focus { border-color: rgba(var(--dark-panel-rgb), 0.32); }
-	textarea { resize: vertical; font-family: 'Courier New', Courier, monospace; font-size: 0.78rem; }
+	textarea { resize: vertical; font-family: var(--font-ui); font-size: 0.78rem; }
 
 	.row {
 		display: grid;
@@ -386,7 +386,7 @@
 		background: none;
 		border: 1px dashed rgba(var(--dark-panel-rgb), 0.15);
 		color: var(--clr-dark-text);
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.6rem;
 		letter-spacing: 0.08em;
 		padding: 0.3rem 0.7rem;
@@ -400,7 +400,7 @@
 		display: flex;
 		align-items: center;
 		gap: 1rem;
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.6rem;
 		letter-spacing: 0.08em;
 		color: var(--clr-dark-text);
@@ -417,7 +417,7 @@
 	.radio input { width: auto; }
 
 	.error {
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.65rem;
 		color: var(--clr-danger);
 		margin: 0;
@@ -441,7 +441,7 @@
 		background: none;
 		border: 1px solid rgba(var(--dark-panel-rgb), 0.15);
 		color: var(--clr-dark-text);
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.6rem;
 		letter-spacing: 0.08em;
 		padding: 0.35rem 0.8rem;

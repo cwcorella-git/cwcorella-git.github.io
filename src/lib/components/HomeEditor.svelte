@@ -110,7 +110,7 @@
 	}
 
 	.hint {
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.55rem;
 		letter-spacing: 0.06em;
 		color: var(--clr-text);
@@ -143,7 +143,7 @@
 		background: none;
 		border: 1px solid rgba(var(--ui-rgb), 0.15);
 		color: var(--clr-text);
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.6rem;
 		letter-spacing: 0.08em;
 		padding: 0.35rem 0.8rem;

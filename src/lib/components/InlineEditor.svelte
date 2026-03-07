@@ -77,7 +77,7 @@
 		background: rgba(var(--dark-panel-rgb), 0.04);
 		border: 1px solid rgba(var(--dark-panel-rgb), 0.18);
 		color: var(--clr-dark-text);
-		font-family: Georgia, 'Times New Roman', Times, serif;
+		font-family: var(--font-prose);
 		font-size: 1rem;
 		line-height: 1.9;
 		padding: 0.5rem;
@@ -96,7 +96,7 @@
 		background: none;
 		border: 1px solid rgba(var(--dark-panel-rgb), 0.15);
 		color: var(--clr-dark-text);
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.6rem;
 		letter-spacing: 0.08em;
 		padding: 0.3rem 0.7rem;

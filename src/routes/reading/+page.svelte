@@ -242,7 +242,7 @@
 		background: none;
 		border: 1px solid var(--glass-border);
 		color: var(--clr-text);
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.6rem;
 		letter-spacing: 0.08em;
 		padding: 0.3rem 0.7rem;
@@ -264,7 +264,7 @@
 
 	.search-input {
 		background: none; border: none; outline: none; flex: 1;
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.78rem; letter-spacing: 0.06em;
 		color: var(--clr-text); padding: 0.3rem 0;
 		caret-color: currentColor;
@@ -276,7 +276,7 @@
 		background: rgba(0, 0, 0, 0.06);
 		border: 1px solid var(--glass-border);
 		border-radius: 2px; padding: 0.2rem 0.45rem 0.2rem 0.65rem;
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.62rem; letter-spacing: 0.1em;
 		text-transform: uppercase; color: var(--clr-text); white-space: nowrap;
 	}
@@ -297,7 +297,7 @@
 		border: 1px solid var(--glass-border);
 		border-radius: 2px;
 		padding: 0.25rem 0.65rem;
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.62rem;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
@@ -356,7 +356,7 @@
 		line-height: 1.4;
 	}
 	.meta {
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.62rem;
 		letter-spacing: 0.06em;
 		color: var(--clr-text);
@@ -366,7 +366,7 @@
 		background: none;
 		border: none;
 		cursor: pointer;
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.55rem;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
@@ -384,7 +384,7 @@
 		background: none;
 		border: none;
 		cursor: pointer;
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.55rem;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
@@ -398,7 +398,7 @@
 
 	.cat-label {
 		background: none; border: none; cursor: pointer;
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.55rem; letter-spacing: 0.08em;
 		text-transform: uppercase; color: var(--clr-text);
 		padding: 0 0 0 1rem; white-space: nowrap;
@@ -409,7 +409,7 @@
 
 	.count {
 		margin-top: 2rem;
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.62rem;
 		letter-spacing: 0.1em;
 		color: var(--clr-text);
@@ -434,7 +434,7 @@
 	.menu a {
 		display: block;
 		padding: 0.55rem 1rem;
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.65rem;
 		letter-spacing: 0.08em;
 		color: var(--clr-dark-text);

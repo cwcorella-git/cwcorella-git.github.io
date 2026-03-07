@@ -109,7 +109,7 @@
 		background: none;
 		border: 1px solid rgba(var(--ui-rgb), 0.15);
 		color: var(--clr-text);
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.6rem;
 		letter-spacing: 0.08em;
 		padding: 0.3rem 0.7rem;
@@ -124,7 +124,7 @@
 		position: relative;
 		z-index: 1;
 		padding: 2rem;
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.65rem;
 		letter-spacing: 0.1em;
 		color: var(--clr-text);

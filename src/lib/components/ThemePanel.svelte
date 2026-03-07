@@ -41,7 +41,7 @@
 	}
 
 	.panel-label {
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.52rem;
 		letter-spacing: 0.14em;
 		text-transform: uppercase;
@@ -63,7 +63,7 @@
 		background: none;
 		border: 1px solid transparent;
 		color: var(--clr-dark-text);
-		font-family: 'Courier New', Courier, monospace;
+		font-family: var(--font-ui);
 		font-size: 0.6rem;
 		letter-spacing: 0.08em;
 		padding: 0.35rem 0.5rem;
