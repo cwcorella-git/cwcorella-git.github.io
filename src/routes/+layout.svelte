@@ -286,9 +286,9 @@
 		position: fixed; top: 50%; left: 50%;
 		transform: translate(-50%, -50%);
 		z-index: 401;
-		background: var(--glass-bg-heavy);
-		backdrop-filter: var(--glass-blur-heavy);
-		-webkit-backdrop-filter: var(--glass-blur-heavy);
+		background: var(--glass-bg);
+		backdrop-filter: var(--glass-blur);
+		-webkit-backdrop-filter: var(--glass-blur);
 		border: 1px solid var(--glass-border);
 		padding: 1.6rem 1.8rem;
 		width: min(300px, 90vw);
