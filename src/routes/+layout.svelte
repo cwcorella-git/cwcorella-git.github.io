@@ -4,6 +4,8 @@
 	import { page } from '$app/stores';
 	import { adminState, bookFormState, writeQueue, ADMIN_SEQUENCE } from '$lib/admin/state.svelte';
 	import { themeState } from '$lib/admin/theme.svelte';
+	import { archiveState } from '$lib/admin/archive.svelte';
+	import { isUnlockDay } from '$lib/admin/tlock';
 	import { toast } from '$lib/admin/toast.svelte';
 	import AdminDrawer from '$lib/components/AdminDrawer.svelte';
 	import AdminToolbar from '$lib/components/AdminToolbar.svelte';
@@ -27,11 +29,12 @@
 		}
 	}
 
-	onMount(() => {
+	onMount(async () => {
 		themeState.restoreFromStorage();
 		adminState.restoreFromSession();
 		const restored = writeQueue.restoreFromDraft();
 		if (restored > 0) toast.success(`draft restored — pending sync`);
+		if (isUnlockDay()) await archiveState.tryUnlock();
 	});
 
 	function handleBookSaved() {
@@ -60,7 +63,7 @@
 <nav>
 	<a href="/" class:active={$page.url.pathname === '/'}>cwcorella</a>
 	<a href="/reading" class:active={$page.url.pathname === '/reading'}>reading</a>
-	{#if adminState.active}
+	{#if adminState.active || archiveState.mode}
 		<a href="/journals" class:active={$page.url.pathname === '/journals'}>journals</a>
 	{/if}
 	<AdminToolbar />
@@ -83,11 +86,11 @@
 		--t-reveal: 0.4s;   /* page panel fade-in (FOUC mask) */
 
 		/* Seed: light-context chrome (borders, subtle fills, glass tint in rgba()) */
-		/* [theme: --ui-rgb] amber=160,120,60 | beige=140,120,90 | gray=128,128,128 | neutral=128,128,128 */
+		/* [theme: --ui-rgb] amber=160,120,60 | sky=140,168,210 | dusk=148,110,178 | neutral=128,128,128 */
 		--ui-rgb: 128, 128, 128;
 
 		/* Seed: dark-panel chrome (inputs, buttons, separators inside dark overlays) */
-		/* [theme: --dark-panel-rgb] amber=200,150,60 | beige=155,130,95 | gray=190,195,210 | neutral=255,255,255 */
+		/* [theme: --dark-panel-rgb] amber=200,152,64 | sky=90,130,200→22,28,62 (adaptive) | dusk=175,130,205 | neutral=255,255,255 */
 		--dark-panel-rgb: 255, 255, 255;
 
 		/* Glass — light (day defaults; updated per-frame by Garden.svelte) */
@@ -99,7 +102,7 @@
 		--glass-blur-nav:   blur(20px);
 
 		/* Glass — dark panels (admin, toasts, dropdowns) */
-		/* [theme: --glass-bg-dark] amber=rgba(12,8,2,0.72) | others=rgba(10,12,16,0.78) */
+		/* [theme: --glass-bg-dark] amber=rgba(20,13,3,0.88) | sky=rgba(12,18,42,0.86) | dusk=rgba(24,14,36,0.88) | neutral=rgba(10,12,16,0.78) */
 		--glass-bg-dark:     rgba(10, 12, 16, 0.78);
 		--glass-border-dark: rgba(200, 210, 220, 0.15);
 
@@ -108,11 +111,11 @@
 
 		/* Text — light context (day default; updated per-frame by Garden.svelte)        */
 		/* One color for all text; hierarchy via size / weight / spacing, not shade.      */
-		/* [theme: day val] amber=#3d2e1a | beige=#2a2218 | gray=#080808 | neutral=#080808 */
+		/* [theme: day val] amber=#3d2e1a | sky=#0c1020 | dusk=#c0b4d2 | neutral=#080808 */
 		--clr-text: #080808;
 
 		/* Text — dark panels (BookForm, AdminDrawer, YearPicker, Toasts, InlineEditor) */
-		/* [theme: --clr-dark-text] amber=#c8b890 | beige=#c4bcb0 | gray=#bcc0c4 | neutral=#c0c4c8 */
+		/* [theme: --clr-dark-text] amber=#c8b890 | sky=#b8c8e4 | dusk=#c0b4d0 | neutral=#c0c4c8 */
 		--clr-dark-text: #c0c4c8;
 
 		/* Semantic colors */
@@ -124,7 +127,7 @@
 		--backdrop-overlay: rgba(0, 0, 0, 0.45);
 
 		/* Body background (canvas fallback before Garden.svelte paints) */
-		/* [theme: --body-bg] amber=#e8d5b0 | beige=#e8e0d0 | gray=#d8d8d8 | neutral=#d8d8d8 */
+		/* [theme: --body-bg] amber=#0c0902 | sky=#c0cede | dusk=#0e0a16 | neutral=#d8d8d8 */
 		--body-bg: #d8d8d8;
 	}
 

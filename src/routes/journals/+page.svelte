@@ -1,11 +1,26 @@
 <script lang="ts">
 	import { adminState, writeQueue, journalCache, journalIndexState } from '$lib/admin/state.svelte';
+	import { archiveState } from '$lib/admin/archive.svelte';
 	import { encryptDoc, decryptDoc } from '$lib/admin/crypto';
+	import { sealContent, sealContentKey } from '$lib/admin/tlock';
 	import { renderMarkdown } from '$lib/admin/markdown';
 	import { toast } from '$lib/admin/toast.svelte';
 	import { generateJournalSlug } from '$lib/admin/slug';
 	import { addAgeUnits } from '$lib/garden/state';
 	import type { JournalMeta } from '$lib/types';
+
+	// ── sealed manifest (public, no key required) ─────────────────────────
+	type SealedManifestEntry = { slug: string; title: string };
+	let sealedManifest = $state<SealedManifestEntry[]>([]);
+
+	$effect(() => {
+		if (!adminState.active && !archiveState.mode) {
+			fetch('/docs/private/sealed-manifest.json')
+				.then(r => r.ok ? r.json() : [])
+				.then((data: SealedManifestEntry[]) => { sealedManifest = data; })
+				.catch(() => {});
+		}
+	});
 
 	// ── index ─────────────────────────────────────────────────────────────
 	let indexError = $state('');
@@ -53,6 +68,21 @@
 		readerHtml = '';
 		readerLoading = true;
 		try {
+			if (entry.sealed) {
+				if (archiveState.mode) {
+					const markdown = await archiveState.decryptSealedEntry(entry.slug);
+					readerHtml = renderMarkdown(markdown);
+				} else {
+					readerHtml = '';  // sealed message shown in template
+				}
+				return;
+			}
+			// Regular .enc entry
+			if (archiveState.mode) {
+				const markdown = await archiveState.decryptEntry(entry.slug);
+				readerHtml = renderMarkdown(markdown);
+				return;
+			}
 			const cached = journalCache.get(entry.slug);
 			if (cached) {
 				readerHtml = renderMarkdown(cached);
@@ -115,7 +145,7 @@
 		}
 	}
 
-	function closeEditor() { editorMode = 'none'; editorEntry = null; }
+	function closeEditor() { editorMode = 'none'; editorEntry = null; sealConfirmOpen = false; }
 
 	async function saveEditor() {
 		const title = editorTitle.trim();
@@ -147,6 +177,61 @@
 		}
 	}
 
+	// ── seal ──────────────────────────────────────────────────────────────
+	let sealConfirmOpen = $state(false);
+	let sealLoading = $state(false);
+
+	async function commitSeal() {
+		sealConfirmOpen = false;
+		sealLoading = true;
+		try {
+			const plain = editorContent;
+
+			// 1. tlock-encrypt the content
+			const tlockCt = await sealContent(plain);
+
+			// 2. Seal the content key if content-key.tlock doesn't exist yet
+			const ckCheck = await fetch('/docs/private/content-key.tlock', { method: 'HEAD' });
+			const ckExtra: { path: string; content: string }[] = [];
+			if (!ckCheck.ok) {
+				const sealedKey = await sealContentKey(adminState.contentKey);
+				ckExtra.push({ path: 'static/docs/private/content-key.tlock', content: sealedKey });
+			}
+
+			// 3. Update index: sealed = true
+			const newMeta: JournalMeta = { ...editorEntry!, sealed: true };
+			const newIndex = journalIndexState.entries.map(e => e.slug === editorEntry!.slug ? newMeta : e);
+
+			// 4. Update sealed-manifest.json (public)
+			const currentManifest: SealedManifestEntry[] = await fetch('/docs/private/sealed-manifest.json')
+				.then(r => r.ok ? r.json() : [])
+				.catch(() => []);
+			const newManifest = [
+				...currentManifest.filter((m: SealedManifestEntry) => m.slug !== editorEntry!.slug),
+				{ slug: editorEntry!.slug, title: editorEntry!.title }
+			];
+
+			// 5. Push to write queue
+			await saveIndex(
+				newIndex,
+				`seal journal entry: ${editorEntry!.slug}`,
+				[
+					{ path: `static/docs/private/journals/${editorEntry!.slug}.tlock`, content: tlockCt },
+					{ path: 'static/docs/private/sealed-manifest.json', content: JSON.stringify(newManifest) },
+					...ckExtra,
+				],
+				[`static/docs/private/journals/${editorEntry!.slug}.enc`]
+			);
+
+			closeEditor();
+			toast.success('Entry sealed until February 13, 2095.');
+		} catch (e: unknown) {
+			toast.error(e instanceof Error ? `Seal failed: ${e.message}` : 'Seal failed.');
+		} finally {
+			sealLoading = false;
+		}
+	}
+
 	// ── delete ────────────────────────────────────────────────────────────
 	let confirmingSlug = $state<string | null>(null);
 	let deleteSaving = $state(false);
@@ -154,11 +239,25 @@
 	async function deleteEntry(entry: JournalMeta) {
 		deleteSaving = true;
 		try {
+			const deletions = entry.sealed
+				? [`static/docs/private/journals/${entry.slug}.tlock`]
+				: [`static/docs/private/journals/${entry.slug}.enc`];
+
+			// Also remove from sealed-manifest if sealed
+			const extraUpdates: { path: string; content: string }[] = [];
+			if (entry.sealed) {
+				const manifest: SealedManifestEntry[] = await fetch('/docs/private/sealed-manifest.json')
+					.then(r => r.ok ? r.json() : [])
+					.catch(() => []);
+				const newManifest = manifest.filter((m: SealedManifestEntry) => m.slug !== entry.slug);
+				extraUpdates.push({ path: 'static/docs/private/sealed-manifest.json', content: JSON.stringify(newManifest) });
+			}
+
 			await saveIndex(
 				journalIndexState.entries.filter(e => e.slug !== entry.slug),
 				`delete journal: ${entry.title}`,
-				[],
-				[`static/docs/private/journals/${entry.slug}.enc`]
+				extraUpdates,
+				deletions
 			);
 			confirmingSlug = null;
 		} catch (e: unknown) {
@@ -174,17 +273,21 @@
 	// ── keyboard ──────────────────────────────────────────────────────────
 	function handleKeydown(e: KeyboardEvent) {
 		if (e.key === 'Escape') {
+			if (sealConfirmOpen) { sealConfirmOpen = false; return; }
 			if (readerEntry) closeReader();
 			else if (editorMode !== 'none') closeEditor();
 			else { confirmingSlug = null; }
 		}
 	}
+
+	// ── archive mode index ────────────────────────────────────────────────
+	const activeIndex = $derived(adminState.active ? journalIndexState.entries : archiveState.index);
 </script>
 
 <svelte:head><title>journals — cwcorella</title></svelte:head>
 <svelte:window onkeydown={handleKeydown} />
 
-{#if adminState.active}
+{#if adminState.active || archiveState.mode}
 
 <!-- ── reader overlay ─────────────────────────────────────────────────── -->
 {#if readerEntry}
@@ -193,13 +296,16 @@
 		<div class="overlay-header">
 			<div class="reader-meta">
 				<span class="reader-title">{readerEntry.title}</span>
-				{#if readerEntry.date}<span class="dim">{readerEntry.date}</span>{/if}
+				{#if readerEntry.date && !readerEntry.sealed}<span class="dim">{readerEntry.date}</span>{/if}
+				{#if readerEntry.sealed}<span class="sealed-tag">sealed</span>{/if}
 			</div>
 			<button class="close-btn" onclick={closeReader} aria-label="Close">×</button>
 		</div>
 		<div class="reader-body">
 			{#if readerLoading}
 				<p class="status">decrypting…</p>
+			{:else if readerEntry.sealed && !archiveState.mode}
+				<p class="sealed-message">This entry is sealed until February 13, 2095.</p>
 			{:else}
 				<h1 class="reader-doc-title">{readerEntry.title}</h1>
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -->
@@ -210,7 +316,7 @@
 {/if}
 
 <!-- ── editor overlay ─────────────────────────────────────────────────── -->
-{#if editorMode !== 'none'}
+{#if editorMode !== 'none' && adminState.active}
 	<div class="overlay-backdrop" role="presentation" onclick={closeEditor}></div>
 	<div class="editor" role="dialog" aria-modal="true">
 		<div class="overlay-header">
@@ -243,8 +349,13 @@
 					</label>
 				</div>
 				<div class="editor-footer">
-					<button onclick={closeEditor} disabled={editorSaving}>cancel</button>
-					<button class="save-btn" onclick={saveEditor} disabled={editorSaving}>
+					{#if editorMode === 'edit' && !editorEntry?.sealed}
+						<button class="seal-btn" onclick={() => sealConfirmOpen = true} disabled={editorSaving || sealLoading}>
+							{sealLoading ? 'sealing…' : 'seal until 2095'}
+						</button>
+					{/if}
+					<button onclick={closeEditor} disabled={editorSaving || sealLoading}>cancel</button>
+					<button class="save-btn" onclick={saveEditor} disabled={editorSaving || sealLoading}>
 						{editorSaving ? 'saving…' : 'save'}
 					</button>
 				</div>
@@ -253,53 +364,125 @@
 	</div>
 {/if}
 
+<!-- ── seal confirmation modal ───────────────────────────────────────── -->
+{#if sealConfirmOpen}
+	<div class="overlay-backdrop seal-backdrop" role="presentation" onclick={() => sealConfirmOpen = false}></div>
+	<div class="seal-modal" role="dialog" aria-modal="true" aria-label="Seal confirmation">
+		<p class="seal-modal-title">Seal this entry until February 13, 2095?</p>
+		<p class="seal-modal-body">
+			This entry will be encrypted to the drand beacon round that unlocks on your 100th birthday.
+			You will not be able to read or edit it until then.<br /><br />
+			<strong>If you have not yet sealed an entry:</strong> your current content key will be locked
+			into <code>content-key.tlock</code>. Do not change your content key after sealing.<br /><br />
+			This cannot be undone.
+		</p>
+		<div class="seal-modal-actions">
+			<button onclick={() => sealConfirmOpen = false}>cancel</button>
+			<button class="seal-confirm-btn" onclick={commitSeal}>seal entry →</button>
+		</div>
+	</div>
+{/if}
+
 <!-- ── main page ──────────────────────────────────────────────────────── -->
 <div class="page">
 	<div class="inner">
 		<div class="page-header">
-			<h1 class="heading">journals</h1>
-			{#if journalIndexState.loaded}
+			<h1 class="heading">journals{archiveState.mode ? ' · archive' : ''}</h1>
+			{#if journalIndexState.loaded && adminState.active}
 				<button class="new-btn" onclick={startCreate}>+ new</button>
 			{/if}
 		</div>
 
-		{#if indexError}
-			<p class="status error">{indexError}</p>
-		{:else if !journalIndexState.loaded}
-			<p class="status">decrypting index…</p>
-		{:else if journalIndexState.entries.length === 0}
-			<p class="status">no entries — click + new or run scripts/encrypt-journals.mjs to populate.</p>
-		{:else}
-			<ul class="list">
-				{#each journalIndexState.entries as entry (entry.slug)}
-					<li>
-						{#if confirmingSlug === entry.slug}
-							<div class="entry-row confirm-row">
-								<span class="dim">delete "{entry.title}"?</span>
-								<div class="row-actions">
-									<button class="action-btn danger" onclick={() => deleteEntry(entry)} disabled={deleteSaving}>
-										{deleteSaving ? '…' : 'confirm'}
-									</button>
-									<button class="action-btn" onclick={() => confirmingSlug = null}>cancel</button>
+		{#if adminState.active}
+			{#if indexError}
+				<p class="status error">{indexError}</p>
+			{:else if !journalIndexState.loaded}
+				<p class="status">decrypting index…</p>
+			{:else if journalIndexState.entries.length === 0}
+				<p class="status">no entries — click + new or run scripts/encrypt-journals.mjs to populate.</p>
+			{:else}
+				<ul class="list">
+					{#each journalIndexState.entries as entry (entry.slug)}
+						<li>
+							{#if confirmingSlug === entry.slug}
+								<div class="entry-row confirm-row">
+									<span class="dim">delete "{entry.title}"?</span>
+									<div class="row-actions">
+										<button class="action-btn danger" onclick={() => deleteEntry(entry)} disabled={deleteSaving}>
+											{deleteSaving ? '…' : 'confirm'}
+										</button>
+										<button class="action-btn" onclick={() => confirmingSlug = null}>cancel</button>
+									</div>
 								</div>
-							</div>
-						{:else}
+							{:else}
+								<div class="entry-row">
+									<button class="entry-title-btn" onclick={() => openReader(entry)}>
+										<span class="entry-title">{entry.title}</span>
+										{#if entry.sealed}
+											<span class="entry-meta sealed-meta">sealed · Feb 13, 2095</span>
+										{:else}
+											<span class="entry-meta">{entry.slug}{entry.date ? ' · ' + entry.date : ''}</span>
+										{/if}
+									</button>
+									<div class="row-actions">
+										{#if !entry.sealed}
+											<button class="action-btn" onclick={() => startEdit(entry)} title="Edit content">edit</button>
+										{/if}
+										<button class="action-btn danger" onclick={() => confirmingSlug = entry.slug} title="Delete">×</button>
+									</div>
+								</div>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+				<p class="count">{journalIndexState.entries.length} entries</p>
+			{/if}
+		{:else if archiveState.mode}
+			{#if activeIndex.length === 0}
+				<p class="status">no entries.</p>
+			{:else}
+				<ul class="list">
+					{#each activeIndex as entry (entry.slug)}
+						<li>
 							<div class="entry-row">
 								<button class="entry-title-btn" onclick={() => openReader(entry)}>
 									<span class="entry-title">{entry.title}</span>
-									<span class="entry-meta">{entry.slug}{entry.date ? ' · ' + entry.date : ''}</span>
+									{#if entry.sealed}
+										<span class="entry-meta sealed-meta">sealed · unlocked Feb 13, 2095</span>
+									{:else}
+										<span class="entry-meta">{entry.slug}{entry.date ? ' · ' + entry.date : ''}</span>
+									{/if}
 								</button>
-								<div class="row-actions">
-									<button class="action-btn" onclick={() => startEdit(entry)} title="Edit content">edit</button>
-									<button class="action-btn danger" onclick={() => confirmingSlug = entry.slug} title="Delete">×</button>
-								</div>
 							</div>
-						{/if}
-					</li>
-				{/each}
-			</ul>
-			<p class="count">{journalIndexState.entries.length} entries</p>
+						</li>
+					{/each}
+				</ul>
+				<p class="count">{activeIndex.length} entries</p>
+			{/if}
 		{/if}
+	</div>
+</div>
+
+{:else if sealedManifest.length > 0}
+
+<!-- ── public sealed manifest (no login) ─────────────────────────────── -->
+<div class="page">
+	<div class="inner">
+		<div class="page-header">
+			<h1 class="heading">journals</h1>
+		</div>
+		<ul class="list">
+			{#each sealedManifest as entry (entry.slug)}
+				<li>
+					<div class="entry-row">
+						<div class="entry-title-btn" style="cursor: default;">
+							<span class="entry-title">{entry.title}</span>
+							<span class="entry-meta sealed-meta">sealed · unlocks Feb 13, 2095</span>
+						</div>
+					</div>
+				</li>
+			{/each}
+		</ul>
 	</div>
 </div>
 
@@ -372,6 +555,7 @@
 		font-family: var(--font-ui);
 		font-size: 0.62rem; letter-spacing: 0.06em; color: var(--clr-text);
 	}
+	.sealed-meta { opacity: 0.55; font-style: italic; }
 
 	.row-actions {
 		display: flex; gap: 0.5rem; flex-shrink: 0; margin-left: auto;
@@ -425,9 +609,19 @@
 	}
 	.reader-meta { display: flex; align-items: baseline; gap: 1rem; }
 	.reader-title { font-family: Georgia, 'Times New Roman', Times, serif; font-size: 0.95rem; color: var(--clr-text); }
+	.sealed-tag {
+		font-family: 'Courier New', Courier, monospace;
+		font-size: 0.55rem; letter-spacing: 0.1em; text-transform: uppercase;
+		color: var(--clr-text); opacity: 0.5; font-style: italic;
+	}
 	.reader-body {
 		flex: 1; overflow-y: auto; padding: 2.5rem 3rem;
 		max-width: 72ch; margin: 0 auto; width: 100%;
+	}
+	.sealed-message {
+		font-family: 'Courier New', Courier, monospace;
+		font-size: 0.75rem; letter-spacing: 0.06em; color: var(--clr-text);
+		opacity: 0.6; margin-top: 3rem; text-align: center;
 	}
 	.reader-doc-title {
 		font-family: Georgia, 'Times New Roman', Times, serif;
@@ -488,4 +682,49 @@
 	.editor-footer button:hover:not(:disabled) { color: var(--clr-text); border-color: rgba(var(--ui-rgb), 0.40); }
 	.editor-footer button:disabled { opacity: 0.5; cursor: not-allowed; }
 	.save-btn { background: rgba(var(--ui-rgb),0.07) !important; border-color: rgba(var(--ui-rgb),0.25) !important; color: var(--clr-text) !important; }
+	.seal-btn { margin-right: auto; border-color: rgba(var(--ui-rgb), 0.15) !important; opacity: 0.6; }
+	.seal-btn:hover:not(:disabled) { opacity: 1 !important; }
+
+	/* ── seal confirmation modal ──────────────────────────── */
+	.seal-backdrop { z-index: 399; }
+	.seal-modal {
+		position: fixed; top: 50%; left: 50%;
+		transform: translate(-50%, -50%);
+		z-index: 400;
+		background: var(--glass-bg-dark);
+		backdrop-filter: var(--glass-blur-heavy);
+		-webkit-backdrop-filter: var(--glass-blur-heavy);
+		border: 1px solid var(--glass-border-dark);
+		padding: 2rem;
+		width: min(480px, 90vw);
+		display: flex; flex-direction: column; gap: 1.2rem;
+	}
+	.seal-modal-title {
+		font-family: 'Courier New', Courier, monospace;
+		font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase;
+		color: var(--clr-dark-text); margin: 0;
+	}
+	.seal-modal-body {
+		font-family: 'Courier New', Courier, monospace;
+		font-size: 0.65rem; line-height: 1.75; letter-spacing: 0.03em;
+		color: var(--clr-dark-text); opacity: 0.8; margin: 0;
+	}
+	.seal-modal-body code {
+		background: rgba(255,255,255,0.08);
+		padding: 0.1em 0.3em;
+		font-size: 0.9em;
+	}
+	.seal-modal-actions {
+		display: flex; gap: 0.5rem; justify-content: flex-end;
+		padding-top: 0.8rem;
+		border-top: 1px solid rgba(255,255,255,0.08);
+	}
+	.seal-modal-actions button {
+		background: none; border: 1px solid rgba(255,255,255,0.15);
+		color: var(--clr-dark-text); font-family: 'Courier New', Courier, monospace;
+		font-size: 0.6rem; letter-spacing: 0.08em;
+		padding: 0.4rem 0.9rem; cursor: pointer; transition: all 0.15s;
+	}
+	.seal-modal-actions button:hover { border-color: rgba(255,255,255,0.30); }
+	.seal-confirm-btn { background: rgba(255,255,255,0.06) !important; }
 </style>

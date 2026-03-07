@@ -4,14 +4,13 @@
 // reads glassDay/glassNight/textDay/textNight to interpolate --clr-text and
 // the three --glass-* vars per-frame as the sun moves.
 
-export type PaletteName = 'amber' | 'beige' | 'gray' | 'neutral';
+export type PaletteName = 'amber' | 'sky' | 'dusk' | 'neutral';
 
 export interface Palette {
 	label: string;
 	// CSS vars written once on palette switch
 	uiRgb: string;           // seed for rgba(var(--ui-rgb), x) — light-context borders/fills
 	darkPanelRgb: string;    // seed for rgba(var(--dark-panel-rgb), x) — dark-panel chrome
-	                         //   amber: amber-gold tint · neutral/gray: white · beige: warm tan
 	bodyBg: string;          // canvas fallback background
 	clrDarkText: string;     // text on dark glass panels
 	glassBgDark: string;     // dark panel background
@@ -28,6 +27,9 @@ export interface Palette {
 	glassNight: [number, number, number]; // RGB at full night
 	textDay: [number, number, number];    // --clr-text at full day
 	textNight: [number, number, number];  // --clr-text at full night
+	// Optional: if set, Garden.svelte also interpolates --dark-panel-rgb per-frame
+	darkPanelDay?:   [number, number, number];
+	darkPanelNight?: [number, number, number];
 	// Swatch preview colours shown in ThemePanel
 	swatchBg: string;
 	swatchBorder: string;
@@ -37,65 +39,64 @@ export const PALETTES: Record<PaletteName, Palette> = {
 	amber: {
 		label: 'amber',
 		uiRgb:        '160, 120, 60',
-		darkPanelRgb: '200, 150, 60',    // amber-gold tint on all dark-panel chrome
-		bodyBg:       '#0c0902',          // original dark amber body — near-black
-		clrDarkText:  '#c0b088',          // original amber body text
-		glassBgDark:     'rgba(18, 12, 3, 0.97)',    // near-opaque dark amber modals
-		glassBorderDark: 'rgba(200, 150, 60, 0.30)', // amber accent border
+		darkPanelRgb: '200, 152, 64',    // amber-gold tint on all dark-panel chrome
+		bodyBg:       '#0c0902',          // dark amber body — near-black
+		clrDarkText:  '#c8b890',          // warm amber text — readable on near-black
+		glassBgDark:     'rgba(20, 13, 3, 0.88)',    // dark amber modals — glass feel, not a wall
+		glassBorderDark: 'rgba(200, 150, 60, 0.28)', // amber accent border
 		// Dark-glass: solid opaque panels — no sky transparency
 		darkGlass:        true,
 		glassFixed:       'rgba(22, 14, 3, 0.88)',    // main content panels
 		glassBorderFixed: 'rgba(200, 150, 60, 0.15)', // amber panel border
-		glassNavBgFixed:  'rgba(12, 9, 2, 0.92)',     // original nav bg
-		glassHeavyFixed:  'rgba(18, 12, 2, 0.96)',    // fullscreen overlays
+		glassNavBgFixed:  'rgba(14, 10, 2, 0.88)',    // nav — lighter touch
+		glassHeavyFixed:  'rgba(18, 12, 2, 0.92)',    // fullscreen overlays
 		glassDay:   [22,  14,  3  ],  // kept for compat; not used for glass in dark mode
 		glassNight: [12,  8,   2  ],
-		textDay:    [192, 176, 136],  // #c0b088 — same day and night (always dark site)
-		textNight:  [192, 176, 136],
+		textDay:    [200, 184, 144],  // #c8b890 — same day and night (always dark site)
+		textNight:  [200, 184, 144],
 		swatchBg:     '#0c0902',
 		swatchBorder: '#c8a060',
 	},
-	beige: {
-		label: 'beige',
-		uiRgb:        '140, 120, 90',
-		darkPanelRgb: '155, 130, 95',    // same hue as uiRgb for cross-context consistency
-		bodyBg:       '#d8cdb5',          // warm sandy/parchment body
-		clrDarkText:  '#bfb090',
-		glassBgDark:     'rgba(22, 18, 8, 0.97)',
-		glassBorderDark: 'rgba(155, 130, 95, 0.28)',
-		// Light-cream glass: fixed warm parchment panels, no sky interpolation
-		darkGlass:        true,
-		glassFixed:       'rgba(240, 230, 208, 0.88)',  // warm cream content panels
-		glassBorderFixed: 'rgba(160, 135, 90, 0.22)',   // warm tan border
-		glassNavBgFixed:  'rgba(232, 222, 198, 0.82)',  // warm cream nav
-		glassHeavyFixed:  'rgba(244, 236, 215, 0.94)',  // very opaque cream for fullscreen
-		glassDay:   [240, 230, 208],
-		glassNight: [240, 230, 208],
-		textDay:    [48,  36,  18 ],   // dark warm brown — consistent
-		textNight:  [48,  36,  18 ],
-		swatchBg:     '#e8e0d0',
-		swatchBorder: '#b0a080',
+	sky: {
+		label: 'sky',
+		uiRgb:        '140, 168, 210',     // cool sky-blue light-context chrome
+		darkPanelRgb: '90, 130, 200',      // default mid-day (interpolated per-frame)
+		bodyBg:       '#c0cede',            // soft grey-blue canvas fallback
+		clrDarkText:  '#b8c8e4',           // cool blue-white — readable on deep navy glass
+		glassBgDark:     'rgba(12, 18, 42, 0.86)',    // deep navy dark panels (fixed)
+		glassBorderDark: 'rgba(100, 148, 230, 0.22)', // sky-blue accent border
+		// Light-glass: adapts with time of day — both light panels AND dark-panel chrome
+		darkGlass: false,
+		glassDay:   [210, 228, 250],   // pale sky-blue at noon
+		glassNight: [8,   12,  28 ],   // deep midnight
+		textDay:    [12,  16,  28 ],   // near-black on pale panels
+		textNight:  [205, 218, 240],   // cool blue-white on dark panels
+		// Adaptive dark-panel RGB: blue inputs at day, indigo at night
+		darkPanelDay:   [90,  130, 200],
+		darkPanelNight: [22,  28,  62 ],
+		swatchBg:     '#b0c4dc',
+		swatchBorder: '#5890d0',
 	},
-	gray: {
-		label: 'gray',
-		uiRgb:        '128, 128, 128',
-		darkPanelRgb: '190, 195, 210',   // cool blue-white tint
-		bodyBg:       '#b0b2b8',          // medium cool gray — clearly darker than neutral
-		clrDarkText:  '#bcc0c4',
-		glassBgDark:     'rgba(12, 14, 22, 0.86)',   // cool blue-gray dark
-		glassBorderDark: 'rgba(180, 190, 210, 0.22)',
-		// Fixed medium-gray panels — consistent, distinctly darker than neutral's white glass
+	dusk: {
+		label: 'dusk',
+		uiRgb:        '148, 110, 178',     // muted violet light-context chrome
+		darkPanelRgb: '175, 130, 205',     // mauve tint for panel chrome
+		bodyBg:       '#0e0a16',            // deep purple-black
+		clrDarkText:  '#c0b4d0',           // muted mauve — warm-cool on deep purple glass
+		glassBgDark:     'rgba(24, 14, 36, 0.88)',    // deep purple modals
+		glassBorderDark: 'rgba(165, 110, 210, 0.25)', // violet accent border
+		// Dark-glass: permanent twilight — panels never shift with sky
 		darkGlass:        true,
-		glassFixed:       'rgba(168, 172, 184, 0.84)',  // cool gray content panels
-		glassBorderFixed: 'rgba(140, 148, 168, 0.25)',  // cool gray border
-		glassNavBgFixed:  'rgba(160, 164, 176, 0.82)',  // cool gray nav
-		glassHeavyFixed:  'rgba(175, 179, 192, 0.92)',  // heavier gray for fullscreen
-		glassDay:   [168, 172, 184],
-		glassNight: [168, 172, 184],
-		textDay:    [16,  16,  20 ],   // near-black, slightly cool — consistent
-		textNight:  [16,  16,  20 ],
-		swatchBg:     '#b0b2b8',
-		swatchBorder: '#707880',
+		glassFixed:       'rgba(30, 18, 44, 0.88)',    // deep purple content panels
+		glassBorderFixed: 'rgba(165, 110, 180, 0.16)', // muted violet border
+		glassNavBgFixed:  'rgba(18, 11, 28, 0.88)',    // dark purple nav
+		glassHeavyFixed:  'rgba(26, 16, 40, 0.92)',    // fullscreen overlays
+		glassDay:   [30, 18, 44],  // kept for compat; not used in dark-glass mode
+		glassNight: [14,  9, 20],
+		textDay:    [192, 180, 210],  // #c0b4d2
+		textNight:  [192, 180, 210],
+		swatchBg:     '#0e0a16',
+		swatchBorder: '#a068c0',
 	},
 	neutral: {
 		label: 'neutral',

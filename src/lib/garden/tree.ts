@@ -4,12 +4,10 @@
 // stored in localStorage as normalised (0–1) coordinates so it scales to
 // any viewport size without regeneration.
 
-const SEG_LEN        = 7;    // px — growth step length (at generation canvas)
-const INFLUENCE_R    = 90;   // px — attractor influence radius
-const KILL_DIST      = 14;   // px — attractor consumed within this distance of a tip
-const NUM_ATTRACTORS = 900;
-const MAX_ITER       = 600;
-const CACHE_KEY      = 'cwc:tree-v2';
+const SEG_LEN     = 7;    // px — growth step length (at generation canvas)
+const INFLUENCE_R = 90;   // px — attractor influence radius
+const KILL_DIST   = 14;   // px — attractor consumed within this distance of a tip
+const CACHE_KEY   = 'cwc:tree-v3';
 
 // ── types ─────────────────────────────────────────────────────────────────
 export interface TreeSegment {
@@ -67,18 +65,32 @@ function nearestNode(
 // ── generation ────────────────────────────────────────────────────────────
 // W, H, horizonY are the canvas dimensions at generation time. Positions are
 // normalised to [0,1] fractions so they scale to any viewport on draw.
-export function generateTree(W: number, H: number, horizonY: number): TreeSegment[] {
+// ageFraction (0–1): treeGrowthFactor() output — scales trunk height, crown
+// size, attractor count, and branch thickness. At site launch (~31yr) ≈ 0.45.
+export function generateTree(W: number, H: number, horizonY: number, ageFraction = 1.0): TreeSegment[] {
 	const rng = makePRNG(0xDEADBEEF);
 
-	const baseX   = W * 0.28;
-	const baseY   = horizonY;
-	const trunkH  = Math.min(horizonY * 0.44, 195);
+	const gf    = Math.max(0.05, Math.min(1, ageFraction));
+	const baseX = W * 0.28;
+	const baseY = horizonY;
+	// Trunk height and crown radii all scale linearly with age.
+	// sqrt(gf) for thickness so a young trunk isn't a twig.
+	const trunkH       = Math.min(horizonY * 0.44, 195) * gf;
+	const crownRX      = 162 * gf;
+	const crownRY      = 112 * gf;
+	const crownOffset  = 80  * gf;  // gap between trunk top and crown centre
 
 	// Crown centre: above trunk, slightly left to look natural
 	const crownCX = baseX - 12;
-	const crownCY = baseY - trunkH - 80;
-	const crownRX = 162;   // horizontal radius — wide spreading oak shape
-	const crownRY = 112;   // vertical radius
+	const crownCY = baseY - trunkH - crownOffset;
+
+	// Attractor/iteration counts — fewer means sparser, less-developed crown
+	const numAttractors = Math.max(60, Math.round(900 * gf));
+	const maxIter       = Math.max(60, Math.round(600 * gf));
+
+	// Trunk thickness at base and top, sqrt-scaled so young trunks look believable
+	const trunkThickBase = Math.max(3,   18 * Math.sqrt(gf));
+	const trunkThickTop  = Math.max(1.5,  5 * Math.sqrt(gf));
 
 	// ── trunk nodes ─────────────────────────────────────────
 	const nodeX: number[]      = [];
@@ -99,17 +111,17 @@ export function generateTree(W: number, H: number, horizonY: number): TreeSegmen
 	const attY:      number[]  = [];
 	const attActive: boolean[] = [];
 
-	for (let i = 0; i < NUM_ATTRACTORS; i++) {
-		const angle     = rng() * Math.PI * 2;
-		const r         = Math.sqrt(rng()); // uniform in ellipse
-		const vertBias  = (rng() - 0.35) * 28; // slight upward bias
+	for (let i = 0; i < numAttractors; i++) {
+		const angle    = rng() * Math.PI * 2;
+		const r        = Math.sqrt(rng()); // uniform in ellipse
+		const vertBias = (rng() - 0.35) * 28; // slight upward bias
 		attX.push(crownCX + r * Math.cos(angle) * crownRX);
 		attY.push(crownCY + r * Math.sin(angle) * crownRY + vertBias);
 		attActive.push(true);
 	}
 
 	// ── space colonization main loop ─────────────────────────
-	for (let iter = 0; iter < MAX_ITER; iter++) {
+	for (let iter = 0; iter < maxIter; iter++) {
 		// Gather still-active attractor indices
 		const active: number[] = [];
 		for (let i = 0; i < attActive.length; i++) { if (attActive[i]) active.push(i); }
@@ -170,12 +182,12 @@ export function generateTree(W: number, H: number, horizonY: number): TreeSegmen
 
 		let thick: number;
 		if (isTrunk) {
-			// Trunk tapers from 18px at base to 5px at crown entry
-			thick = Math.max(5, 18 - (i / trunkCount) * 13);
+			// Trunk tapers from base to crown entry; both ends scaled by sqrt(gf)
+			thick = Math.max(trunkThickTop, trunkThickBase - (i / trunkCount) * (trunkThickBase - trunkThickTop));
 		} else {
-			// Crown branches thin with depth from trunk top
+			// Crown branches thin with depth; starter thickness scaled by gf
 			const crownDepth = depth - trunkCount;
-			thick = Math.max(0.5, 5.2 * Math.pow(0.80, crownDepth * 0.14));
+			thick = Math.max(0.5, 5.2 * gf * Math.pow(0.80, crownDepth * 0.14));
 		}
 
 		const color = thick > 8  ? '#4A2C17'
@@ -195,23 +207,27 @@ export function generateTree(W: number, H: number, horizonY: number): TreeSegmen
 }
 
 // ── localStorage cache ────────────────────────────────────────────────────
-export function loadTreeFromCache(W: number, H: number): TreeSegment[] | null {
+// gf is quantized to 2 decimal places — cache only invalidates when growth
+// changes by ≥0.005, which at the current growth rate takes ~250 real days.
+function quantizeGF(gf: number): number { return Math.round(gf * 100) / 100; }
+
+export function loadTreeFromCache(W: number, H: number, gf: number): TreeSegment[] | null {
 	try {
 		const raw = localStorage.getItem(CACHE_KEY);
 		if (!raw) return null;
-		const cached = JSON.parse(raw) as { version: number; W: number; H: number; segments: TreeSegment[] };
-		if (cached.version !== 2) return null;
-		// Invalidate if viewport changed by more than 4px in either dimension
+		const cached = JSON.parse(raw) as { version: number; W: number; H: number; gf: number; segments: TreeSegment[] };
+		if (cached.version !== 3) return null;
 		if (Math.abs(cached.W - W) > 4 || Math.abs(cached.H - H) > 4) return null;
+		if (Math.abs(cached.gf - quantizeGF(gf)) > 0.005) return null;
 		return cached.segments;
 	} catch {
 		return null;
 	}
 }
 
-export function saveTreeToCache(segments: TreeSegment[], W: number, H: number): void {
+export function saveTreeToCache(segments: TreeSegment[], W: number, H: number, gf: number): void {
 	try {
-		localStorage.setItem(CACHE_KEY, JSON.stringify({ version: 2, W, H, segments }));
+		localStorage.setItem(CACHE_KEY, JSON.stringify({ version: 3, W, H, gf: quantizeGF(gf), segments }));
 	} catch {
 		// localStorage full or unavailable — silently skip
 	}

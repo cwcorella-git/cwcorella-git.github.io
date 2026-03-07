@@ -2,6 +2,7 @@
 	import { adminState } from '$lib/admin/state.svelte';
 	import { validatePAT } from '$lib/admin/github';
 	import { toast } from '$lib/admin/toast.svelte';
+	import { isUnlockDay } from '$lib/admin/tlock';
 
 	let open = $state(false);
 	let pat = $state('');
@@ -11,6 +12,10 @@
 
 	export function trigger() {
 		if (adminState.active) return;
+		if (isUnlockDay()) {
+			toast.error('February 13, 2095 — this site is now a permanent archive. Admin access is closed.');
+			return;
+		}
 		open = true;
 		pat = '';
 		contentKey = '';

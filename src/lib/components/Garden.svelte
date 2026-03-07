@@ -1261,8 +1261,9 @@
 		horizonY = H * HORIZON_FRAC;
 		buildScene(W, H, horizonY);
 		if (Math.abs(W - prevW) > 4 || Math.abs(H - prevH) > 4) {
-			treeSegments = generateTree(W, H, horizonY);
-			saveTreeToCache(treeSegments, W, H);
+			const tgf = treeGrowthFactor(gardenAgeUnits);
+			treeSegments = generateTree(W, H, horizonY, tgf);
+			saveTreeToCache(treeSegments, W, H, tgf);
 		}
 	}
 
@@ -1288,13 +1289,14 @@
 
 		// Load tree from cache, or generate on first visit (deferred so first
 		// frame paints before the ~200ms generation runs).
-		const cached = loadTreeFromCache(W, H);
+		const tgf    = treeGrowthFactor(gardenAgeUnits);
+		const cached = loadTreeFromCache(W, H, tgf);
 		if (cached) {
 			treeSegments = cached;
 		} else {
 			setTimeout(() => {
-				treeSegments = generateTree(W, H, horizonY);
-				saveTreeToCache(treeSegments, W, H);
+				treeSegments = generateTree(W, H, horizonY, tgf);
+				saveTreeToCache(treeSegments, W, H, tgf);
 			}, 80);
 		}
 

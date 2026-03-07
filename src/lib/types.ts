@@ -1,5 +1,5 @@
 export interface BookDoc { file: string; visibility: 'public' | 'admin'; }
-export interface JournalMeta { slug: string; title: string; date: string | null; }
+export interface JournalMeta { slug: string; title: string; date: string | null; sealed?: boolean; }
 export interface BookLink { name: string; url: string; }
 export interface Book {
 	id: number;
