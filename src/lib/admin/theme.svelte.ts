@@ -60,20 +60,20 @@ export const PALETTES: Record<PaletteName, Palette> = {
 	sky: {
 		label: 'sky',
 		uiRgb:        '140, 168, 210',     // cool sky-blue light-context chrome
-		darkPanelRgb: '200, 220, 255',     // pale blue-white — luminance contrast against navy panel
+		darkPanelRgb: '20, 55, 130',       // dark navy — chrome on light sky panel
 		bodyBg:       '#c0cede',            // soft grey-blue canvas fallback
-		clrDarkText:  '#d8eaff',           // bright blue-white — high contrast on medium blue panel
-		glassBgDark:     'rgba(20, 36, 100, 0.92)',     // rich navy — dark but clearly sky-blue palette
-		glassBorderDark: 'rgba(100, 160, 255, 0.32)', // sky-blue border
+		clrDarkText:  '#0c1420',            // dark text — matches light sky panel context
+		glassBgDark:     'rgba(195, 215, 242, 0.88)', // light sky panel — matches page glass
+		glassBorderDark: 'rgba(80, 130, 180, 0.40)',  // darker sky-blue — visible on light bg
 		// Light-glass: adapts with time of day — both light panels AND dark-panel chrome
 		darkGlass: false,
 		glassDay:   [210, 228, 250],   // pale sky-blue at noon
 		glassNight: [8,   12,  28 ],   // deep midnight
 		textDay:    [12,  16,  28 ],   // near-black on pale panels
 		textNight:  [205, 218, 240],   // cool blue-white on dark panels
-		// Adaptive dark-panel RGB: pale blue-white at day, dimmer at night — both contrast against navy panel
-		darkPanelDay:   [200, 220, 255],
-		darkPanelNight: [80,  120, 200],
+		// Dark-panel chrome: dark navy at day/night — always contrasts against light sky panel
+		darkPanelDay:   [20,  55,  130],
+		darkPanelNight: [0,   30,  90 ],
 		swatchBg:     '#b0c4dc',
 		swatchBorder: '#5890d0',
 	},
@@ -101,11 +101,11 @@ export const PALETTES: Record<PaletteName, Palette> = {
 	neutral: {
 		label: 'neutral',
 		uiRgb:        '128, 128, 128',
-		darkPanelRgb: '200, 200, 205',   // neutral gray chrome
+		darkPanelRgb: '40, 40, 50',      // dark gray — chrome on light neutral panel
 		bodyBg:       '#d8d8d8',
-		clrDarkText:  '#d4d4d8',          // clean light gray — matches neutral gray body aesthetic
-		glassBgDark:     'rgba(32, 32, 40, 0.90)',    // medium-dark cool gray — palette-representative
-		glassBorderDark: 'rgba(200, 200, 208, 0.32)', // neutral gray border
+		clrDarkText:  '#0a0a0c',          // near-black — matches light neutral panel context
+		glassBgDark:     'rgba(238, 238, 242, 0.90)', // near-white panel — matches page glass
+		glassBorderDark: 'rgba(80, 80, 90, 0.30)',    // dark gray border — visible on light bg
 		darkGlass: false,
 		glassDay:   [255, 255, 255],
 		glassNight: [8,   6,   2  ],
