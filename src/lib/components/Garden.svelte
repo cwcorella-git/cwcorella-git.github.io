@@ -274,7 +274,7 @@
 			// perspFrac = 1 overhead, 0 near horizon.
 			const perspFrac  = 1 - yFrac / 0.38;
 			const size       = (110 + crng() * 130) * (0.50 + perspFrac * 0.50);
-			const aspectRatio = 0.10 + perspFrac * 0.34;   // 0.10 flat sliver → 0.44 tall dome
+			const aspectRatio = 0.20 + perspFrac * 0.32;   // 0.20 modest sliver → 0.52 tall dome
 			const alpha      = (0.52 + crng() * 0.32) * (0.38 + perspFrac * 0.62);
 			const prngseed   = Math.floor(crng() * 0x7FFFFFFF);
 			const speed      = 6 + crng() * 16;
@@ -1024,15 +1024,23 @@
 		const ctx = c.getContext('2d')!;
 
 		// ── Generate bump peaks ──────────────────────────────────────────────────
-		// Edge peaks are shorter → dome silhouette, not a flat bar.
-		const numBumps = 3 + Math.floor(rng() * 4);
+		// One dominant primary lobe + 2–4 shorter secondary lobes at random x.
+		// This breaks the uniform-scallop look: each cloud has a clear tallest turret.
 		const peaks: Array<{ x: number; y: number }> = [];
-		for (let i = 0; i < numBumps; i++) {
-			const xFrac    = (i + 0.15 + rng() * 0.70) / numBumps;
-			const px       = padX + xFrac * totalW;
-			const edgeness = Math.abs(xFrac - 0.5) * 2;
-			const h        = totalH * (0.58 + rng() * 0.42) * (1 - edgeness * 0.40);
-			peaks.push({ x: px, y: baseY - h });
+
+		// Primary peak — tallest, 30–70% from left
+		const primaryXFrac = 0.30 + rng() * 0.40;
+		const primaryH     = totalH * (0.88 + rng() * 0.12);
+		peaks.push({ x: padX + primaryXFrac * totalW, y: baseY - primaryH });
+
+		// Secondary peaks — 2–4 more, height decreases with distance from primary
+		const numSecondary = 2 + Math.floor(rng() * 3);
+		for (let i = 0; i < numSecondary; i++) {
+			const xFrac  = 0.04 + rng() * 0.92;
+			const px     = padX + xFrac * totalW;
+			const distFrac = Math.abs(xFrac - primaryXFrac);
+			const h      = totalH * (0.28 + rng() * 0.48) * (1 - distFrac * 0.52);
+			peaks.push({ x: px, y: baseY - Math.max(h, totalH * 0.14) });
 		}
 		peaks.sort((a, b) => a.x - b.x);
 
@@ -1056,7 +1064,7 @@
 			// Valley 28–50% of the way down toward base — deep enough for distinct puff silhouette
 			const valX  = (p1.x + p2.x) / 2 + (rng() - 0.5) * (p2.x - p1.x) * 0.18;
 			const lower = Math.max(p1.y, p2.y);
-			const valY  = lower + (baseY - lower) * (0.28 + rng() * 0.22);
+			const valY  = lower + (baseY - lower) * (0.48 + rng() * 0.24);
 			ctx.quadraticCurveTo(p1.x + (valX - p1.x) * 0.58, p1.y, valX, valY);
 			ctx.quadraticCurveTo(valX + (p2.x - valX) * 0.42, p2.y, p2.x, p2.y);
 		}
@@ -1138,7 +1146,7 @@
 		// ── Feather sides (destination-out) ──────────────────────────────────────
 		ctx.save();
 		ctx.globalCompositeOperation = 'destination-out';
-		const sw = padX * 1.15;
+		const sw = padX * 0.65;
 		const lf = ctx.createLinearGradient(0, 0, sw, 0);
 		lf.addColorStop(0, 'rgba(0,0,0,1)'); lf.addColorStop(1, 'rgba(0,0,0,0)');
 		ctx.fillStyle = lf; ctx.fillRect(0, 0, sw, CH);
