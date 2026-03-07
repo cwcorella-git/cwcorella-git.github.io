@@ -202,6 +202,9 @@
 	:global(.sky-ready body) {
 		transition: color var(--t-theme);
 	}
+	:global(.sky-ready) nav {
+		transition: background var(--t-theme), border-color var(--t-theme);
+	}
 
 	nav {
 		position: fixed;
@@ -216,7 +219,6 @@
 		backdrop-filter: var(--glass-blur-nav);
 		-webkit-backdrop-filter: var(--glass-blur-nav);
 		border-bottom: 1px solid var(--glass-border);
-		transition: background var(--t-theme), border-color var(--t-theme);
 		will-change: transform;
 	}
 	/* nav-items holds all links + toolbar; fades independently */

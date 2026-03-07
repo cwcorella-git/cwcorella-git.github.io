@@ -398,7 +398,6 @@
 		const altDeg  = sunAltitudeDeg(now);
 		const sxn     = sunXNorm(now, 39.53);
 		const isNight = altDeg < -8;
-		updateTheme(altDeg);
 
 		// Day: ~4fps (every 15 frames). Night: ~30fps (every 2 frames).
 		const skip = isNight ? 2 : 15;
@@ -407,6 +406,7 @@
 			return;
 		}
 
+		updateTheme(altDeg);
 		renderFrame(ctx, altDeg, sxn);
 		document.documentElement.classList.add('sky-ready');
 		animFrame = requestAnimationFrame(draw);
