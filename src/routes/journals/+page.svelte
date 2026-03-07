@@ -523,23 +523,18 @@
 	/* ── page ─────────────────────────────────────────────── */
 	.page {
 		min-height: 100vh;
-		padding-top: 6rem;
+		padding-top: 4rem;
 	}
 	.page-header {
-		max-width: 760px; margin: 0 auto;
-		padding: 0.75rem 2rem 1.25rem;
+		max-width: 760px; margin: 0 auto 2.5rem;
+		padding: 0.75rem 2rem;
 		display: flex; align-items: center; justify-content: space-between;
 		gap: 1rem;
-		background: var(--glass-bg);
-		backdrop-filter: var(--glass-blur);
-		-webkit-backdrop-filter: var(--glass-blur);
-		border: 1px solid var(--glass-border);
-		border-bottom: none;
 	}
 	.inner {
 		position: relative; z-index: 1;
 		max-width: 760px; margin: 0 auto;
-		padding: 2rem 2rem 6rem;
+		padding: 3rem 2rem 6rem;
 		background: var(--glass-bg);
 		backdrop-filter: var(--glass-blur);
 		-webkit-backdrop-filter: var(--glass-blur);
@@ -789,8 +784,8 @@
 	.seal-confirm-btn { background: rgba(255,255,255,0.06) !important; }
 
 	@media (max-width: 480px) {
-		.page { padding-top: 5.5rem; }
-		.page-header { padding: 0.5rem 1.25rem 0.85rem; }
+		.page { padding-top: 4.5rem; }
+		.page-header { padding: 0.5rem 1.25rem; margin-bottom: 1.5rem; }
 		.reader-body { padding: 1.5rem 1.25rem; }
 		.field-row { grid-template-columns: 1fr; }
 		.field-narrow { width: 100%; }
