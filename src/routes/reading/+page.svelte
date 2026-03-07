@@ -237,7 +237,7 @@
 <style>
 	.page {
 		min-height: 100vh;
-		padding-top: 6rem;
+		padding-top: 4rem;
 	}
 
 	.inner {
@@ -245,7 +245,7 @@
 		z-index: 1;
 		max-width: 760px;
 		margin: 0 auto;
-		padding: 2rem 2rem 6rem;
+		padding: 3rem 2rem 6rem;
 		background: var(--glass-bg);
 		backdrop-filter: var(--glass-blur);
 		-webkit-backdrop-filter: var(--glass-blur);
@@ -258,28 +258,29 @@
 	}
 
 	/* ── search area ─────────────────────────────────────────── */
-	.search-area { margin-bottom: 2rem; }
+	.search-area { margin-bottom: 2.5rem; }
 
 	.search-row {
 		display: flex;
-		align-items: flex-end;
+		align-items: center;
 		gap: 1rem;
 	}
 
 	.add-btn {
 		background: none;
-		border: 1px solid var(--glass-border);
+		border: 1px solid rgba(var(--ui-rgb), 0.28);
 		color: var(--clr-text);
 		font-family: var(--font-ui);
 		font-size: 0.6rem;
-		letter-spacing: 0.08em;
-		padding: 0.3rem 0.7rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		padding: 0.3rem 0.75rem;
 		cursor: pointer;
 		transition: all 0.15s;
 		white-space: nowrap;
 		flex-shrink: 0;
 	}
-	.add-btn:hover { color: var(--clr-text); border-color: var(--glass-border); }
+	.add-btn:hover { color: var(--clr-text); border-color: rgba(var(--ui-rgb), 0.45); }
 
 	.search-bar {
 		display: flex;
@@ -304,7 +305,7 @@
 		color: var(--clr-text); padding: 0.3rem 0;
 		caret-color: currentColor;
 	}
-	.search-input::placeholder { color: var(--clr-text); }
+	.search-input::placeholder { color: var(--clr-text); opacity: 0.45; }
 
 	.tag-chip {
 		display: inline-flex; align-items: center; gap: 0.4rem;
@@ -368,7 +369,7 @@
 
 	.row-wrap {
 		display: flex; align-items: center;
-		border-bottom: 1px solid rgba(var(--ui-rgb), 0.09);
+		border-bottom: 1px solid rgba(var(--ui-rgb), 0.16);
 	}
 
 	.row {
@@ -383,7 +384,7 @@
 	.row:hover { background: rgba(var(--ui-rgb), 0.03); }
 
 	.title {
-		font-family: var(--font-ui);
+		font-family: var(--font-prose);
 		font-size: 0.95rem;
 		color: var(--clr-text);
 		line-height: 1.4;
@@ -400,7 +401,7 @@
 		border: none;
 		cursor: pointer;
 		font-family: var(--font-ui);
-		font-size: 0.55rem;
+		font-size: 0.52rem;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
 		color: var(--clr-text);
@@ -418,7 +419,7 @@
 		border: none;
 		cursor: pointer;
 		font-family: var(--font-ui);
-		font-size: 0.55rem;
+		font-size: 0.52rem;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
 		color: var(--clr-text);
@@ -432,7 +433,7 @@
 	.cat-label {
 		background: none; border: none; cursor: pointer;
 		font-family: var(--font-ui);
-		font-size: 0.55rem; letter-spacing: 0.08em;
+		font-size: 0.52rem; letter-spacing: 0.08em;
 		text-transform: uppercase; color: var(--clr-text);
 		padding: 0 0 0 1rem; white-space: nowrap;
 		flex-shrink: 0; text-align: right; transition: color 0.15s;
@@ -485,7 +486,7 @@
 	}
 
 	@media (max-width: 480px) {
-		.page { padding-top: 5.5rem; }
+		.page { padding-top: 4.5rem; }
 		.inner { padding: 1.5rem 1.25rem 4rem; }
 		.search-area { margin-bottom: 1.5rem; }
 		.read-toggle, .edit-pencil {
