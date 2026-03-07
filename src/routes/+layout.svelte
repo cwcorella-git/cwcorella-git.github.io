@@ -228,6 +228,7 @@
 		-webkit-backdrop-filter: var(--glass-blur-nav);
 		border-bottom: 1px solid var(--glass-border);
 		transition: background var(--t-theme), border-color var(--t-theme);
+		will-change: transform;
 	}
 	/* nav-items holds all links + toolbar; fades independently */
 	.nav-items {

@@ -355,6 +355,16 @@
 			`rgb(${ri(textDay[0],textNight[0])},${ri(textDay[1],textNight[1])},${ri(textDay[2],textNight[2])})`
 		);
 
+		// Overlays + panels also track sky so they match the page at all times of day
+		r.style.setProperty('--glass-bg-dark',     `rgba(${gr},${gg},${gb},${(0.72*dl + 0.88*(1-dl)).toFixed(2)})`);
+		r.style.setProperty('--glass-border-dark', `rgba(${gr},${gg},${gb},${(0.38*dl + 0.22*(1-dl)).toFixed(2)})`);
+		r.style.setProperty('--glass-bg-heavy',    `rgba(${gr},${gg},${gb},${(0.78*dl + 0.92*(1-dl)).toFixed(2)})`);
+
+		const tr = ri(textDay[0], textNight[0]);
+		const tg = ri(textDay[1], textNight[1]);
+		const tb = ri(textDay[2], textNight[2]);
+		r.style.setProperty('--clr-dark-text', `rgb(${tr},${tg},${tb})`);
+
 		if (darkPanelDay && darkPanelNight) {
 			const [pr, pg, pb] = lerpRGB(darkPanelDay as RGB, darkPanelNight as RGB, 1 - dl);
 			r.style.setProperty('--dark-panel-rgb', `${pr},${pg},${pb}`);

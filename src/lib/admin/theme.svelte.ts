@@ -63,17 +63,17 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		darkPanelRgb: '20, 55, 130',       // dark navy — chrome on light sky panel
 		bodyBg:       '#c0cede',            // soft grey-blue canvas fallback
 		clrDarkText:  '#0c1420',            // dark text — matches light sky panel context
-		glassBgDark:     'rgba(195, 215, 242, 0.88)', // light sky panel — matches page glass
-		glassBorderDark: 'rgba(80, 130, 180, 0.40)',  // darker sky-blue — visible on light bg
+		glassBgDark:     'rgba(130, 168, 220, 0.82)', // initial fallback; Sky.svelte overrides per-frame
+		glassBorderDark: 'rgba(130, 168, 220, 0.35)', // initial fallback; Sky.svelte overrides per-frame
 		// Light-glass: adapts with time of day — both light panels AND dark-panel chrome
 		darkGlass: false,
 		glassDay:   [210, 228, 250],   // pale sky-blue at noon
 		glassNight: [8,   12,  28 ],   // deep midnight
 		textDay:    [12,  16,  28 ],   // near-black on pale panels
 		textNight:  [205, 218, 240],   // cool blue-white on dark panels
-		// Dark-panel chrome: dark navy at day/night — always contrasts against light sky panel
+		// Chrome inside panels: dark navy at day, pale blue-white at night (visible on dark panels)
 		darkPanelDay:   [20,  55,  130],
-		darkPanelNight: [0,   30,  90 ],
+		darkPanelNight: [120, 170, 240],
 		swatchBg:     '#b0c4dc',
 		swatchBorder: '#5890d0',
 	},
@@ -104,13 +104,16 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		darkPanelRgb: '40, 40, 50',      // dark gray — chrome on light neutral panel
 		bodyBg:       '#d8d8d8',
 		clrDarkText:  '#0a0a0c',          // near-black — matches light neutral panel context
-		glassBgDark:     'rgba(238, 238, 242, 0.90)', // near-white panel — matches page glass
-		glassBorderDark: 'rgba(80, 80, 90, 0.30)',    // dark gray border — visible on light bg
+		glassBgDark:     'rgba(150, 150, 158, 0.82)', // initial fallback; Sky.svelte overrides per-frame
+		glassBorderDark: 'rgba(80, 80, 90, 0.30)',    // initial fallback; Sky.svelte overrides per-frame
 		darkGlass: false,
 		glassDay:   [255, 255, 255],
 		glassNight: [8,   6,   2  ],
 		textDay:    [8,   8,   8  ],
 		textNight:  [248, 246, 242],
+		// Chrome inside panels: dark at day (on white panels), pale at night (on dark panels)
+		darkPanelDay:   [40,  40,  50 ],
+		darkPanelNight: [220, 220, 228],
 		swatchBg:     '#d8d8d8',
 		swatchBorder: '#a0a8b0',
 	},

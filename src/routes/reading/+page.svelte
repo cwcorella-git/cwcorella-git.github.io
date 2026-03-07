@@ -237,7 +237,7 @@
 <style>
 	.page {
 		min-height: 100vh;
-		padding-top: 4rem;
+		padding-top: 6rem;
 	}
 
 	.inner {
@@ -245,7 +245,7 @@
 		z-index: 1;
 		max-width: 760px;
 		margin: 0 auto;
-		padding: 3rem 2rem 6rem;
+		padding: 2rem 2rem 6rem;
 		background: var(--glass-bg);
 		backdrop-filter: var(--glass-blur);
 		-webkit-backdrop-filter: var(--glass-blur);
@@ -482,5 +482,23 @@
 	.menu a:hover {
 		color: var(--clr-dark-text);
 		background: rgba(var(--dark-panel-rgb), 0.06);
+	}
+
+	@media (max-width: 480px) {
+		.page { padding-top: 5.5rem; }
+		.inner { padding: 1.5rem 1.25rem 4rem; }
+		.search-area { margin-bottom: 1.5rem; }
+		.read-toggle, .edit-pencil {
+			padding: 0.5rem 0.4rem;
+			min-height: 44px;
+			display: inline-flex;
+			align-items: center;
+		}
+		.cat-label {
+			padding-left: 0.6rem;
+			min-height: 44px;
+			display: inline-flex;
+			align-items: center;
+		}
 	}
 </style>
