@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { makeGrassTuft, makeFern, tickWind, drawPlants, applyMouseForce, type PlantInstance } from '$lib/garden/plants';
-	import { generateTree, loadTreeFromCache, saveTreeToCache, drawTree, type TreeSegment } from '$lib/garden/tree';
-	import { loadGardenState, saveGardenState, creditVisit, accrueElapsedDays, growthFactor, treeGrowthFactor } from '$lib/garden/state';
+	import { generateFgTree, loadFgTreeFromCache, saveFgTreeToCache, clearFgTreeCache, generateBgTree, loadBgTreeFromCache, saveBgTreeToCache, drawTree, drawLeaves, type TreeSegment } from '$lib/garden/tree';
+	import { loadGardenState, saveGardenState, creditVisit, accrueElapsedDays, growthFactor, treeGrowthFactor, addAgeUnits } from '$lib/garden/state';
 	import { themeState } from '$lib/admin/theme.svelte';
+	import { adminState } from '$lib/admin/state.svelte';
+	import { isUnlockDay } from '$lib/admin/tlock';
+	import { toast } from '$lib/admin/toast.svelte';
 
 	// ── constants ─────────────────────────────────────────────────────────────
 	const HORIZON_FRAC = 0.68;   // horizon at 68% down canvas
@@ -220,7 +223,8 @@
 	let cirrus: CirrusDef[]         = [];
 	let bgPlants: PlantInstance[]   = [];  // drawn before midground trees (far, near horizon)
 	let fgPlants: PlantInstance[]   = [];  // drawn after trees (near, foreground)
-	let treeSegments: TreeSegment[] = [];
+	let fgTreeSegs:   TreeSegment[] = [];  // recursive branching — main foreground tree
+	let bgTreeSegs:   TreeSegment[] = [];  // space colonization — background silhouette
 	let gardenAgeUnits              = 11315;   // default; overwritten from localStorage on mount
 	let treeLeanAngle               = 0;       // stable per-seed foreground tree lean (±4°)
 	let W = 0, H = 0, horizonY = 0;
@@ -717,6 +721,8 @@
 		const clr = isNight    ? 'rgb(8,10,20)'
 		          : isTwilight ? 'rgb(42,46,55)'
 		          :              'rgb(55,68,38)';
+		// Leaf cluster alpha — zero at night, fades in through civil twilight
+		const leafAlpha = isNight ? 0 : Math.max(0, Math.min(1, (altDeg + 2) / 12));
 
 		// Recursive deciduous crown. angle: math radians, π/2 = straight up.
 		// spread0/spreadR: base + RNG range for split angle; ratio0/ratioR: length ratio.
@@ -731,6 +737,12 @@
 			const y2 = y - Math.sin(angle) * length;
 			ctx.lineWidth = Math.max(0.3, thick);
 			ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x2, y2); ctx.stroke();
+			// Leaf cluster at terminal nodes
+			if (depth <= 1 && leafAlpha > 0.01) {
+				ctx.globalAlpha = 0.82 * leafAlpha * (0.25 + rng() * 0.25);
+				ctx.beginPath(); ctx.arc(x2, y2, 4 + rng() * 4, 0, Math.PI * 2); ctx.fill();
+				ctx.globalAlpha = 0.82;
+			}
 			const ratio  = ratio0 + rng() * ratioR;
 			const spread = spread0 + rng() * spreadR;
 			const bias   = (rng() - 0.5) * 0.22;
@@ -814,6 +826,29 @@
 
 			ctx.restore();
 		}
+	}
+
+	// ── draw: background tree (space colonization silhouette) ─────────────────
+	// Rendered far right at 60% scale, before midground trees so it sits behind
+	// them. Uses hardcoded bark colors but globalAlpha drives night darkening.
+	function drawBgTree(ctx: CanvasRenderingContext2D, altDeg: number): void {
+		if (bgTreeSegs.length === 0) return;
+		const dayness  = Math.max(0, Math.min(1, (altDeg + 2) / 14));
+		const bgBaseX  = W * 0.86;
+		const bgScale  = 0.58;
+		const treeAlpha = Math.max(0.12, dayness * 0.42);
+		const leafAlpha = dayness * 0.28;
+
+		// Canvas transform: translate base from W*0.28 to bgBaseX, scale around base
+		ctx.save();
+		ctx.translate(bgBaseX - W * 0.28, 0);
+		ctx.translate(W * 0.28, horizonY);
+		ctx.scale(bgScale, bgScale);
+		ctx.translate(-W * 0.28, -horizonY);
+		ctx.globalAlpha = treeAlpha;
+		drawTree(ctx, bgTreeSegs, W, H);
+		if (leafAlpha > 0.01) drawLeaves(ctx, bgTreeSegs, W, H, 'rgb(52,68,34)', leafAlpha / bgScale);
+		ctx.restore();
 	}
 
 	// ── draw: tree shadow pool ────────────────────────────────────────────────
@@ -1209,6 +1244,34 @@
 		cursorActive = true;
 		clearTimeout(cursorTimeout);
 		cursorTimeout = window.setTimeout(() => { cursorActive = false; }, 2000);
+		// Show seed cursor when admin is hovering over the foreground tree area
+		if (canvas && adminState.active && !isUnlockDay()) {
+			const px = e.clientX * dpr;
+			const py = e.clientY * dpr;
+			const near = Math.abs(px - W * 0.28) < 200 && py > horizonY - treeGrowthFactor(gardenAgeUnits) * 220 && py < horizonY + 20;
+			canvas.style.cursor = near ? 'cell' : '';
+		} else if (canvas) {
+			canvas.style.cursor = '';
+		}
+	}
+
+	// ── admin: seed the foreground tree ────────────────────────────────────────
+	// Each click injects 365 age units (≈ 1 yr equivalent) and regenerates the
+	// foreground tree immediately. Locked off permanently after 2095.
+	function onCanvasClick(e: MouseEvent): void {
+		if (!adminState.active || isUnlockDay()) return;
+		const px = e.clientX * dpr;
+		const py = e.clientY * dpr;
+		// Hit-test: rough bounding area of the foreground tree
+		const trunkH = Math.min(horizonY * 0.44, 195) * treeGrowthFactor(gardenAgeUnits);
+		if (Math.abs(px - W * 0.28) > 200 || py > horizonY + 20 || py < horizonY - trunkH - 180) return;
+		addAgeUnits(365);
+		gardenAgeUnits += 365;
+		const tgf = treeGrowthFactor(gardenAgeUnits);
+		clearFgTreeCache();
+		fgTreeSegs = generateFgTree(W, H, horizonY, tgf);
+		saveFgTreeToCache(fgTreeSegs, W, H, tgf);
+		toast.success(`+1 yr of growth · tree age ${Math.round(gardenAgeUnits / 365.25)} yr`);
 	}
 
 	function onTouchMove(e: TouchEvent): void {
@@ -1278,20 +1341,25 @@
 		drawGround(ctx, altDeg);
 		drawGroundContours(ctx, altDeg);
 		drawTerrain(ctx, altDeg);
+		drawBgTree(ctx, altDeg);            // space-colonization silhouette — far right background
 		drawMidgroundTrees(ctx, altDeg);
 		drawHorizonBlend(ctx, altDeg);
 		drawPlants(ctx, bgPlants, horizonY, H);   // far grass — behind tree
 		drawCirrus(ctx, altDeg);
 		drawClouds(ctx, altDeg);
 		drawTreeShadow(ctx, altDeg);
-		if (treeSegments.length > 0) {
+		if (fgTreeSegs.length > 0) {
 			// Apply seeded trunk lean — rotate the whole tree around its base
-			const bx = W * 0.28;
+			const bx       = W * 0.28;
+			const tgf      = treeGrowthFactor(gardenAgeUnits);
+			const dayness  = Math.max(0, Math.min(1, (altDeg + 2) / 14));
+			const leafAlpha = tgf * dayness * 0.55;
 			ctx.save();
 			ctx.translate(bx, horizonY);
 			ctx.rotate(treeLeanAngle);
 			ctx.translate(-bx, -horizonY);
-			drawTree(ctx, treeSegments, W, H);
+			drawTree(ctx, fgTreeSegs, W, H);
+			drawLeaves(ctx, fgTreeSegs, W, H, 'rgb(62,84,40)', leafAlpha);
 			ctx.restore();
 		}
 		drawPlants(ctx, fgPlants, horizonY, H);   // near grass — in front of everything
@@ -1315,8 +1383,10 @@
 		buildScene(W, H, horizonY);
 		if (Math.abs(W - prevW) > 4 || Math.abs(H - prevH) > 4) {
 			const tgf = treeGrowthFactor(gardenAgeUnits);
-			treeSegments = generateTree(W, H, horizonY, tgf);
-			saveTreeToCache(treeSegments, W, H, tgf);
+			fgTreeSegs = generateFgTree(W, H, horizonY, tgf);
+			saveFgTreeToCache(fgTreeSegs, W, H, tgf);
+			bgTreeSegs = generateBgTree(W, H, horizonY, tgf);
+			saveBgTreeToCache(bgTreeSegs, W, H, tgf);
 		}
 	}
 
@@ -1341,17 +1411,22 @@
 		window.addEventListener('resize', resize);
 		window.addEventListener('mousemove', onMouseMove);
 		window.addEventListener('touchmove', onTouchMove, { passive: true });
+		canvas!.addEventListener('click', onCanvasClick);
 
-		// Load tree from cache, or generate on first visit (deferred so first
-		// frame paints before the ~200ms generation runs).
-		const tgf    = treeGrowthFactor(gardenAgeUnits);
-		const cached = loadTreeFromCache(W, H, tgf);
-		if (cached) {
-			treeSegments = cached;
+		// Load / generate both trees. Foreground (recursive) is fast; background
+		// (space colonization) is deferred 80ms so the first frame paints first.
+		const tgf     = treeGrowthFactor(gardenAgeUnits);
+		const fgCache = loadFgTreeFromCache(W, H, tgf);
+		fgTreeSegs    = fgCache ?? generateFgTree(W, H, horizonY, tgf);
+		if (!fgCache) saveFgTreeToCache(fgTreeSegs, W, H, tgf);
+
+		const bgCache = loadBgTreeFromCache(W, H, tgf);
+		if (bgCache) {
+			bgTreeSegs = bgCache;
 		} else {
 			setTimeout(() => {
-				treeSegments = generateTree(W, H, horizonY, tgf);
-				saveTreeToCache(treeSegments, W, H, tgf);
+				bgTreeSegs = generateBgTree(W, H, horizonY, tgf);
+				saveBgTreeToCache(bgTreeSegs, W, H, tgf);
 			}, 80);
 		}
 
@@ -1360,6 +1435,7 @@
 			window.removeEventListener('resize', resize);
 			window.removeEventListener('mousemove', onMouseMove);
 			window.removeEventListener('touchmove', onTouchMove);
+			canvas?.removeEventListener('click', onCanvasClick);
 			clearTimeout(cursorTimeout);
 		};
 	});

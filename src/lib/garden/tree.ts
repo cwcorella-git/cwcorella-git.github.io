@@ -1,13 +1,12 @@
-// Space Colonization Tree
-// Generates an organic, mature oak-like branch structure by growing segment
-// tips toward scattered crown attractors. Run once on first load; result
-// stored in localStorage as normalised (0–1) coordinates so it scales to
-// any viewport size without regeneration.
+// Tree generation — two approaches:
+//   generateFgTree: recursive binary branching — fast, controllable, used for the foreground tree
+//   generateBgTree: space colonization — slow but organic, used as background silhouette
 
 const SEG_LEN     = 7;    // px — growth step length (at generation canvas)
 const INFLUENCE_R = 90;   // px — attractor influence radius
 const KILL_DIST   = 14;   // px — attractor consumed within this distance of a tip
-const CACHE_KEY   = 'cwc:tree-v3';
+const BG_CACHE_KEY = 'cwc:tree-v3';
+const FG_CACHE_KEY = 'cwc:fg-tree-v1';
 
 // ── types ─────────────────────────────────────────────────────────────────
 export interface TreeSegment {
@@ -62,12 +61,10 @@ function nearestNode(
 	return best;
 }
 
-// ── generation ────────────────────────────────────────────────────────────
-// W, H, horizonY are the canvas dimensions at generation time. Positions are
-// normalised to [0,1] fractions so they scale to any viewport on draw.
-// ageFraction (0–1): treeGrowthFactor() output — scales trunk height, crown
-// size, attractor count, and branch thickness. At site launch (~31yr) ≈ 0.45.
-export function generateTree(W: number, H: number, horizonY: number, ageFraction = 1.0): TreeSegment[] {
+// ── background tree: space colonization ───────────────────────────────────
+// Used as a background silhouette. Slow to generate (~150ms) so cached in
+// localStorage. Base position W*0.28 — caller translates via ctx.translate.
+export function generateBgTree(W: number, H: number, horizonY: number, ageFraction = 1.0): TreeSegment[] {
 	const rng = makePRNG(0xDEADBEEF);
 
 	const gf    = Math.max(0.05, Math.min(1, ageFraction));
@@ -211,9 +208,9 @@ export function generateTree(W: number, H: number, horizonY: number, ageFraction
 // changes by ≥0.005, which at the current growth rate takes ~250 real days.
 function quantizeGF(gf: number): number { return Math.round(gf * 100) / 100; }
 
-export function loadTreeFromCache(W: number, H: number, gf: number): TreeSegment[] | null {
+export function loadBgTreeFromCache(W: number, H: number, gf: number): TreeSegment[] | null {
 	try {
-		const raw = localStorage.getItem(CACHE_KEY);
+		const raw = localStorage.getItem(BG_CACHE_KEY);
 		if (!raw) return null;
 		const cached = JSON.parse(raw) as { version: number; W: number; H: number; gf: number; segments: TreeSegment[] };
 		if (cached.version !== 3) return null;
@@ -225,12 +222,138 @@ export function loadTreeFromCache(W: number, H: number, gf: number): TreeSegment
 	}
 }
 
-export function saveTreeToCache(segments: TreeSegment[], W: number, H: number, gf: number): void {
+export function saveBgTreeToCache(segments: TreeSegment[], W: number, H: number, gf: number): void {
 	try {
-		localStorage.setItem(CACHE_KEY, JSON.stringify({ version: 3, W, H, gf: quantizeGF(gf), segments }));
-	} catch {
-		// localStorage full or unavailable — silently skip
+		localStorage.setItem(BG_CACHE_KEY, JSON.stringify({ version: 3, W, H, gf: quantizeGF(gf), segments }));
+	} catch {}
+}
+
+// ── foreground tree: recursive binary branching ───────────────────────────
+// Fast (~1ms), fully controllable, supports scaffold branches and growth age.
+// Same base position as generateBgTree (W*0.28) so the lean transform works.
+export function generateFgTree(W: number, H: number, horizonY: number, ageFraction = 1.0): TreeSegment[] {
+	const rng = makePRNG(0xDEADBEEF);
+	const gf  = Math.max(0.05, Math.min(1, ageFraction));
+	const segments: TreeSegment[] = [];
+
+	const bx      = W * 0.28;
+	const by      = horizonY;
+	const trunkH  = Math.min(horizonY * 0.44, 195) * gf;
+	const thkBase = Math.max(3, 18 * Math.sqrt(gf));
+	const thkTop  = Math.max(1.5, 5 * Math.sqrt(gf));
+
+	function barkColor(thick: number): string {
+		return thick > 8   ? '#4A2C17'
+		     : thick > 3.5 ? '#6B4423'
+		     : thick > 1.5 ? '#8B5E3C'
+		     :                '#9B7050';
 	}
+
+	// Recursive crown — s0/sR: spread base+range; r0/rR: length-ratio base+range
+	function addBranch(
+		x: number, y: number,
+		angle: number, length: number, thick: number,
+		depth: number,
+		s0 = 0.50, sR = 0.24, r0 = 0.67, rR = 0.08
+	): void {
+		if (depth <= 0 || length < 2.5) return;
+		const x2 = x + Math.cos(angle) * length;
+		const y2 = y - Math.sin(angle) * length;
+		segments.push({ x1f: x/W, y1f: y/H, x2f: x2/W, y2f: y2/H, thick, color: barkColor(thick) });
+		const ratio  = r0 + rng() * rR;
+		const spread = s0 + rng() * sR;
+		const bias   = (rng() - 0.5) * 0.22;
+		addBranch(x2, y2, angle + spread + bias, length * ratio,        thick * 0.62, depth - 1, s0, sR, r0, rR);
+		addBranch(x2, y2, angle - spread + bias, length * ratio * 0.94, thick * 0.60, depth - 1, s0, sR, r0, rR);
+		if (depth >= 5 && rng() < 0.28)
+			addBranch(x2, y2, angle + bias * 0.3, length * ratio * 0.72, thick * 0.50, depth - 2, s0, sR, r0, rR);
+	}
+
+	// Trunk: segmented with organic x-jitter
+	const steps = Math.max(5, Math.floor(trunkH / 7));
+	let tx = bx;
+	for (let i = 0; i < steps; i++) {
+		const t1  = i / steps;
+		const t2  = (i + 1) / steps;
+		const x1  = tx + (rng() - 0.5) * 2;
+		const x2  = tx + (rng() - 0.5) * 2;
+		const y1  = by - t1 * trunkH;
+		const y2  = by - t2 * trunkH;
+		const thk = Math.max(thkTop, thkBase - t1 * (thkBase - thkTop));
+		segments.push({ x1f: x1/W, y1f: y1/H, x2f: x2/W, y2f: y2/H, thick: thk, color: barkColor(thk) });
+		tx = x2;
+	}
+	const topX = tx;
+	const topY = by - trunkH;
+
+	// Scaffold branches at 3 heights — open-grown trees retain lower limbs
+	if (gf >= 0.3) {
+		const scaffolds = [
+			{ t: 0.35, depth: 8, dir:  1 },
+			{ t: 0.52, depth: 8, dir: -1 },
+			{ t: 0.67, depth: 7, dir:  1 },
+		];
+		for (const s of scaffolds) {
+			const sx  = bx + (rng() - 0.5) * 4;
+			const sy  = by - s.t * trunkH;
+			const thk = Math.max(1.5, thkTop * (1.3 - s.t * 0.4));
+			const len = trunkH * (0.34 + rng() * 0.12) * gf;
+			addBranch(sx, sy, Math.PI / 2 + s.dir * (0.44 + rng() * 0.20), len, thk, s.depth);
+			if (rng() < 0.65)
+				addBranch(sx, sy, Math.PI / 2 - s.dir * (0.38 + rng() * 0.18), len * 0.60, thk * 0.72, s.depth - 1);
+		}
+	}
+
+	// Main crown from trunk top
+	addBranch(topX, topY, Math.PI / 2, trunkH * 0.44 * gf, thkTop * 0.9, 10);
+
+	return segments;
+}
+
+export function loadFgTreeFromCache(W: number, H: number, gf: number): TreeSegment[] | null {
+	try {
+		const raw = localStorage.getItem(FG_CACHE_KEY);
+		if (!raw) return null;
+		const c = JSON.parse(raw) as { version: number; W: number; H: number; gf: number; segments: TreeSegment[] };
+		if (c.version !== 1) return null;
+		if (Math.abs(c.W - W) > 4 || Math.abs(c.H - H) > 4) return null;
+		if (Math.abs(c.gf - quantizeGF(gf)) > 0.005) return null;
+		return c.segments;
+	} catch { return null; }
+}
+
+export function saveFgTreeToCache(segments: TreeSegment[], W: number, H: number, gf: number): void {
+	try { localStorage.setItem(FG_CACHE_KEY, JSON.stringify({ version: 1, W, H, gf: quantizeGF(gf), segments })); } catch {}
+}
+
+export function clearFgTreeCache(): void {
+	try { localStorage.removeItem(FG_CACHE_KEY); } catch {}
+}
+
+// ── leaves ─────────────────────────────────────────────────────────────────
+// Draws foliage blobs at the tips of fine twigs (thick ≤ 1.8).
+// Overlapping semi-transparent circles build a pointillist foliage cloud.
+export function drawLeaves(
+	ctx: CanvasRenderingContext2D,
+	segments: TreeSegment[],
+	W: number, H: number,
+	leafColor: string,
+	alpha: number,
+): void {
+	if (alpha < 0.01) return;
+	ctx.save();
+	ctx.fillStyle = leafColor;
+	let n = 0;
+	for (const seg of segments) {
+		if (seg.thick > 1.8) continue;
+		n++;
+		if (n % 3 !== 0) continue;  // every 3rd twig — balances density vs perf
+		ctx.globalAlpha = alpha * (0.22 + (n % 7) * 0.04);
+		ctx.beginPath();
+		ctx.arc(seg.x2f * W, seg.y2f * H, 7 + (n % 5) * 0.8, 0, Math.PI * 2);
+		ctx.fill();
+	}
+	ctx.restore();
 }
 
 // ── draw ──────────────────────────────────────────────────────────────────
