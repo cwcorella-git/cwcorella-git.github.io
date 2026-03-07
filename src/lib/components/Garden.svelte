@@ -570,22 +570,22 @@
 			: Math.max(0.06, Math.min(0.36, (altDeg + 8) / 28));
 		const { horizon } = getSkyColors(altDeg);
 
-		// Far mountains (most atmospheric haze — notably lighter base, heavy haze overlay)
-		const farColor = isNight    ? 'rgba(14,18,35,0.78)'
-		               : isTwilight ? 'rgba(112,98,120,0.75)'
-		               :              'rgba(170,158,142,0.72)';
+		// Far mountains — fully opaque fill; haze overlay handles aerial perspective separately
+		const farColor = isNight    ? 'rgb(14,18,35)'
+		               : isTwilight ? 'rgb(112,98,120)'
+		               :              'rgb(170,158,142)';
 		fillMountainRange(ctx, 2.3, horizonY * 0.20, farColor, horizon, Math.min(0.95, hazeBase * 1.30));
 
 		// Near mountains
-		const nearColor = isNight    ? 'rgba(8,10,22,0.90)'
-		                : isTwilight ? 'rgba(58,46,62,0.88)'
-		                :              'rgba(95,82,62,0.88)';
+		const nearColor = isNight    ? 'rgb(8,10,22)'
+		                : isTwilight ? 'rgb(58,46,62)'
+		                :              'rgb(95,82,62)';
 		fillMountainRange(ctx, 5.7, horizonY * 0.26, nearColor, horizon, Math.min(0.72, hazeBase * 0.58));
 
-		// Rolling hills (fBm — softer, greener)
-		const hillColor = isNight    ? 'rgba(6,8,16,0.92)'
-		                : isTwilight ? 'rgba(40,44,32,0.90)'
-		                :              'rgba(70,82,46,0.88)';
+		// Rolling hills
+		const hillColor = isNight    ? 'rgb(6,8,16)'
+		                : isTwilight ? 'rgb(40,44,32)'
+		                :              'rgb(70,82,46)';
 		fillHillRange(ctx, 8.1, horizonY * 0.14, hillColor, horizon, hazeBase * 0.24);
 	}
 
