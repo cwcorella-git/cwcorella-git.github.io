@@ -17,10 +17,12 @@
 
 	let drawerRef: AdminDrawer;
 	let buffer = '';
+	let uiHidden = $state(false);
 
 	function handleKeydown(e: KeyboardEvent) {
 		const tag = (e.target as HTMLElement).tagName;
 		if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+		if (e.key === 'h' || e.key === 'H') { uiHidden = !uiHidden; return; }
 		buffer = (buffer + e.key).slice(-ADMIN_SEQUENCE.length);
 		if (buffer === ADMIN_SEQUENCE) {
 			e.preventDefault();
@@ -60,16 +62,23 @@
 	/>
 {/if}
 
-<nav>
+<nav class:ui-hidden={uiHidden}>
 	<a href="/" class:active={$page.url.pathname === '/'}>cwcorella</a>
 	<a href="/reading" class:active={$page.url.pathname === '/reading'}>reading</a>
 	{#if adminState.active || archiveState.mode}
 		<a href="/journals" class:active={$page.url.pathname === '/journals'}>journals</a>
 	{/if}
 	<AdminToolbar />
+	<button class="hide-btn" onclick={() => uiHidden = !uiHidden} title="hide interface (H)">⊟</button>
 </nav>
 
-{@render children()}
+{#if uiHidden}
+	<button class="restore-strip" onclick={() => uiHidden = false} title="restore interface (H)"></button>
+{/if}
+
+<div class="page-content" class:ui-hidden={uiHidden}>
+	{@render children()}
+</div>
 
 <style>
 	:global(:root) {
@@ -183,4 +192,43 @@
 	}
 	nav a:hover { opacity: 1; }
 	nav a.active { opacity: 1; }
+
+	/* ── hide button ───────────────────────────────────────── */
+	.hide-btn {
+		margin-left: auto;
+		background: none; border: none; cursor: pointer;
+		color: var(--clr-text);
+		font-size: 0.9rem; line-height: 1;
+		padding: 0 0.1rem;
+		opacity: 0.35;
+		transition: opacity var(--t-ui);
+	}
+	.hide-btn:hover { opacity: 0.8; }
+
+	/* ── ui hidden state ───────────────────────────────────── */
+	nav.ui-hidden {
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 0.4s, background var(--t-theme), border-color var(--t-theme);
+	}
+	.page-content { display: contents; }
+	.page-content.ui-hidden :global(.inner),
+	.page-content.ui-hidden :global(.content-panel),
+	.page-content.ui-hidden :global(.page) {
+		opacity: 0 !important;
+		pointer-events: none;
+		transition: opacity 0.4s;
+	}
+
+	/* ── restore strip ─────────────────────────────────────── */
+	.restore-strip {
+		position: fixed;
+		top: 0; left: 0; right: 0;
+		height: 6px;
+		z-index: 200;
+		background: rgba(var(--ui-rgb), 0.18);
+		border: none; cursor: pointer;
+		transition: background 0.2s;
+	}
+	.restore-strip:hover { background: rgba(var(--ui-rgb), 0.45); }
 </style>
