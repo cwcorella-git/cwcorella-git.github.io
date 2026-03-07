@@ -527,14 +527,12 @@
 	.page-header {
 		display: flex; align-items: center; justify-content: space-between;
 		gap: 1rem;
-		padding-bottom: 0.75rem;
-		margin-bottom: 1.5rem;
-		border-bottom: 1px solid rgba(var(--ui-rgb), 0.16);
+		margin-bottom: 2.5rem;
 	}
 	.inner {
 		position: relative; z-index: 1;
 		max-width: 760px; margin: 0 auto;
-		padding: 2rem 2rem 6rem;
+		padding: 3rem 2rem 6rem;
 		background: var(--glass-bg);
 		backdrop-filter: var(--glass-blur);
 		-webkit-backdrop-filter: var(--glass-blur);
