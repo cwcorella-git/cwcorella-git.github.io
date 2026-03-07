@@ -572,7 +572,7 @@
 		const farColor = isNight    ? 'rgba(14,18,35,0.78)'
 		               : isTwilight ? 'rgba(112,98,120,0.75)'
 		               :              'rgba(170,158,142,0.72)';
-		fillMountainRange(ctx, 2.3, horizonY * 0.20, farColor, horizon, Math.min(0.92, hazeBase * 1.15));
+		fillMountainRange(ctx, 2.3, horizonY * 0.20, farColor, horizon, Math.min(0.95, hazeBase * 1.30));
 
 		// Near mountains
 		const nearColor = isNight    ? 'rgba(8,10,22,0.90)'
@@ -592,17 +592,17 @@
 		seed: number, heightScale: number, color: string,
 		hazeRGB: RGB = [255, 255, 255], hazeAlpha = 0
 	): void {
+		// Extend terrain 60px beyond each edge so the range appears to continue
+		// off-screen; the canvas clips the visual output naturally.
+		const OVER = 60;
 		ctx.save();
 		ctx.beginPath();
-		ctx.moveTo(0, H);
-		for (let px = 0; px <= W; px += 3) {
-			// Lateral edge fade: terrain sinks into haze at both canvas edges
-			const lf = fade(Math.min(1, px / (W * 0.10)));
-			const rf = fade(Math.min(1, (W - px) / (W * 0.10)));
-			const h = ridged1D((px / W) * 3.5 + seed) * heightScale * lf * rf;
+		ctx.moveTo(-OVER, H);
+		for (let px = -OVER; px <= W + OVER; px += 3) {
+			const h = ridged1D((px / W) * 3.5 + seed) * heightScale;
 			ctx.lineTo(px, horizonY - h);
 		}
-		ctx.lineTo(W, H);
+		ctx.lineTo(W + OVER, H);
 		ctx.closePath();
 		ctx.fillStyle = color;
 		ctx.fill();
@@ -619,16 +619,15 @@
 		seed: number, heightScale: number, color: string,
 		hazeRGB: RGB = [255, 255, 255], hazeAlpha = 0
 	): void {
+		const OVER = 60;
 		ctx.save();
 		ctx.beginPath();
-		ctx.moveTo(0, H);
-		for (let px = 0; px <= W; px += 4) {
-			const lf = fade(Math.min(1, px / (W * 0.10)));
-			const rf = fade(Math.min(1, (W - px) / (W * 0.10)));
-			const h = fbm1D((px / W) * 4.5 + seed) * heightScale * lf * rf;
+		ctx.moveTo(-OVER, H);
+		for (let px = -OVER; px <= W + OVER; px += 4) {
+			const h = fbm1D((px / W) * 4.5 + seed) * heightScale;
 			ctx.lineTo(px, horizonY - h);
 		}
-		ctx.lineTo(W, H);
+		ctx.lineTo(W + OVER, H);
 		ctx.closePath();
 		ctx.fillStyle = color;
 		ctx.fill();
@@ -1117,7 +1116,7 @@
 		lastThemeAlt   = altDeg;
 		lastPaletteVer = themeState.version;
 
-		// Dark-glass palettes (amber, beige) set their own fixed glass/text vars
+		// Dark-glass palettes (amber, dusk) set their own fixed glass/text vars
 		// in applyPalette() — don't override them per-frame.
 		if (themeState.palette.darkGlass) return;
 
@@ -1126,7 +1125,7 @@
 		function ri(d: number, n: number): number { return Math.round(d + (n - d) * (1 - dl)); }
 
 		const r = document.documentElement;
-		const { glassDay, glassNight, textDay, textNight } = themeState.palette;
+		const { glassDay, glassNight, textDay, textNight, darkPanelDay, darkPanelNight } = themeState.palette;
 
 		// Glass surfaces — RGB interpolates between palette day and night seeds
 		const gr = ri(glassDay[0], glassNight[0]);
@@ -1140,6 +1139,14 @@
 		r.style.setProperty('--clr-text',
 			`rgb(${ri(textDay[0],textNight[0])},${ri(textDay[1],textNight[1])},${ri(textDay[2],textNight[2])})`
 		);
+
+		// Adaptive dark-panel chrome — palettes that define darkPanelDay/Night get
+		// their --dark-panel-rgb interpolated too, so inputs/borders in BookForm etc.
+		// shift colour with the sky.
+		if (darkPanelDay && darkPanelNight) {
+			const [pr, pg, pb] = lerpRGB(darkPanelDay as RGB, darkPanelNight as RGB, 1 - dl);
+			r.style.setProperty('--dark-panel-rgb', `${pr},${pg},${pb}`);
+		}
 	}
 
 	// ── cursor tracking ────────────────────────────────────────────────────────
