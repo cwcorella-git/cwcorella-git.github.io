@@ -245,6 +245,11 @@
 		max-width: 760px;
 		margin: 0 auto;
 		padding: 0.75rem 2rem 1.25rem;
+		background: var(--glass-bg);
+		backdrop-filter: var(--glass-blur);
+		-webkit-backdrop-filter: var(--glass-blur);
+		border: 1px solid var(--glass-border);
+		border-bottom: none;
 	}
 
 	.inner {
@@ -486,7 +491,7 @@
 
 	@media (max-width: 480px) {
 		.page { padding-top: 5.5rem; }
-		.search-area { padding: 0.5rem 1.25rem 1rem; }
+		.search-area { padding: 0.5rem 1.25rem 0.85rem; }
 		.inner { padding: 1.5rem 1.25rem 4rem; }
 		.read-toggle, .edit-pencil {
 			padding: 0.5rem 0.4rem;

@@ -530,6 +530,11 @@
 		padding: 0.75rem 2rem 1.25rem;
 		display: flex; align-items: center; justify-content: space-between;
 		gap: 1rem;
+		background: var(--glass-bg);
+		backdrop-filter: var(--glass-blur);
+		-webkit-backdrop-filter: var(--glass-blur);
+		border: 1px solid var(--glass-border);
+		border-bottom: none;
 	}
 	.inner {
 		position: relative; z-index: 1;
@@ -785,7 +790,7 @@
 
 	@media (max-width: 480px) {
 		.page { padding-top: 5.5rem; }
-		.page-header { padding: 0.5rem 1.25rem 1rem; }
+		.page-header { padding: 0.5rem 1.25rem 0.85rem; }
 		.reader-body { padding: 1.5rem 1.25rem; }
 		.field-row { grid-template-columns: 1fr; }
 		.field-narrow { width: 100%; }
