@@ -64,7 +64,9 @@
 	function openMenu(e: MouseEvent, book: Book) {
 		e.preventDefault();
 		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-		menu = { book, x: rect.left, y: rect.bottom + window.scrollY + 4 };
+		const menuWidth = 200;
+		const x = Math.min(rect.left, window.innerWidth - menuWidth - 8);
+		menu = { book, x, y: rect.bottom + 4 };
 	}
 
 	function closeMenu() { menu = null; }
@@ -145,18 +147,16 @@
 						autocomplete="off"
 						spellcheck="false"
 					/>
+					{#if showSuggestions}
+						{#each tagSuggestions as cat}
+							<button class="pill" onclick={() => setTag(cat)}>{cat}</button>
+						{/each}
+					{/if}
 				</div>
 				{#if adminState.active}
 					<button class="add-btn" onclick={() => bookFormState.openAdd()}>+ add</button>
 				{/if}
 			</div>
-			{#if showSuggestions}
-				<div class="suggestions">
-					{#each tagSuggestions as cat}
-						<button class="pill" onclick={() => setTag(cat)}>{cat}</button>
-					{/each}
-				</div>
-			{/if}
 		</div>
 
 		<ul class="list">
@@ -202,7 +202,7 @@
 			{/each}
 		</ul>
 
-		<p class="count">{filtered.length} titles</p>
+		<p class="count">{filtered.length} {filtered.length === 1 ? 'title' : 'titles'}</p>
 	</div>
 </div>
 
@@ -256,6 +256,7 @@
 	.search-bar {
 		display: flex;
 		align-items: center;
+		flex-wrap: wrap;
 		gap: 0.5rem;
 		flex: 1;
 		border-bottom: 1px solid rgba(var(--ui-rgb), 0.22);
@@ -287,9 +288,6 @@
 	}
 	.chip-clear:hover { opacity: 1; }
 
-	.suggestions {
-		display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.6rem;
-	}
 
 	/* ── pills ───────────────────────────────────────────────── */
 	.pill {
@@ -351,6 +349,7 @@
 	.row:hover { background: rgba(var(--ui-rgb), 0.03); }
 
 	.title {
+		font-family: var(--font-ui);
 		font-size: 0.95rem;
 		color: var(--clr-text);
 		line-height: 1.4;
@@ -422,7 +421,7 @@
 		z-index: 199;
 	}
 	.menu {
-		position: absolute;
+		position: fixed;
 		z-index: 200;
 		background: var(--glass-bg-dark);
 		border: 1px solid var(--glass-border-dark);
