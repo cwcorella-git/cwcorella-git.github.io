@@ -28,6 +28,31 @@
 
 	let showSuggestions = $derived(tagSuggestions.length > 0 && !suggestionsDismissed);
 
+	// ── search bar sizing ────────────────────────────────────────
+	let searchBarEl = $state<HTMLElement | undefined>();
+	let searchBarWidth = $state(0);
+	$effect(() => {
+		if (!searchBarEl) return;
+		const ro = new ResizeObserver(([e]) => { searchBarWidth = e.contentRect.width; });
+		ro.observe(searchBarEl);
+		return () => ro.disconnect();
+	});
+	// Courier New is monospace: ~7px/char at 0.62rem + 0.1em letter-spacing
+	// Pill overhead: 2×0.65rem padding + border ≈ 24px. Gap: 0.5rem ≈ 8px.
+	const CHAR_W = 7, PILL_PAD = 24, PILL_GAP = 8, INPUT_MIN = 100, OVERFLOW_W = 30;
+	let maxPills = $derived.by(() => {
+		if (!searchBarWidth || !tagSuggestions.length) return 3;
+		let available = searchBarWidth - INPUT_MIN;
+		let used = 0, count = 0;
+		for (let i = 0; i < tagSuggestions.length; i++) {
+			const w = tagSuggestions[i].length * CHAR_W + PILL_PAD + PILL_GAP;
+			const hasMore = i < tagSuggestions.length - 1;
+			if (used + w + (hasMore ? OVERFLOW_W : 0) > available) break;
+			used += w; count++;
+		}
+		return Math.max(1, count);
+	});
+
 	let filtered = $derived(
 		activeTag
 			? books.filter((b) => b.category === activeTag)
@@ -129,7 +154,7 @@
 	<div class="inner">
 		<div class="search-area">
 			<div class="search-row">
-				<div class="search-bar">
+				<div class="search-bar" bind:this={searchBarEl}>
 					{#if activeTag}
 						<span class="tag-chip">
 							{activeTag}
@@ -148,11 +173,11 @@
 						spellcheck="false"
 					/>
 					{#if showSuggestions}
-						{#each tagSuggestions.slice(0, 3) as cat}
+						{#each tagSuggestions.slice(0, maxPills) as cat}
 							<button class="pill" onclick={() => setTag(cat)}>{cat}</button>
 						{/each}
-						{#if tagSuggestions.length > 3}
-							<span class="pill-more">+{tagSuggestions.length - 3}</span>
+						{#if tagSuggestions.length > maxPills}
+							<span class="pill-more">+{tagSuggestions.length - maxPills}</span>
 						{/if}
 					{/if}
 				</div>
