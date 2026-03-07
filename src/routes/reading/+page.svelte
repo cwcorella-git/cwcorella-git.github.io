@@ -148,9 +148,12 @@
 						spellcheck="false"
 					/>
 					{#if showSuggestions}
-						{#each tagSuggestions as cat}
+						{#each tagSuggestions.slice(0, 3) as cat}
 							<button class="pill" onclick={() => setTag(cat)}>{cat}</button>
 						{/each}
+						{#if tagSuggestions.length > 3}
+							<span class="pill-more">+{tagSuggestions.length - 3}</span>
+						{/if}
 					{/if}
 				</div>
 				{#if adminState.active}
@@ -256,11 +259,17 @@
 	.search-bar {
 		display: flex;
 		align-items: center;
-		flex-wrap: wrap;
 		gap: 0.5rem;
 		flex: 1;
 		border-bottom: 1px solid rgba(var(--ui-rgb), 0.22);
 		padding-bottom: 0.4rem;
+		overflow: hidden;
+	}
+	.pill-more {
+		font-family: var(--font-ui);
+		font-size: 0.62rem; letter-spacing: 0.06em;
+		color: var(--clr-text); opacity: 0.5;
+		white-space: nowrap; flex-shrink: 0;
 	}
 
 	.search-input {
