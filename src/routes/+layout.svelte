@@ -17,7 +17,6 @@
 
 	let drawerRef: AdminDrawer;
 	let buffer = '';
-	let uiHidden = $state(false);
 	let logoutConfirmOpen = $state(false);
 
 	async function confirmLogout() {
@@ -29,7 +28,6 @@
 		const tag = (e.target as HTMLElement).tagName;
 		if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 		if (e.key === 'Escape') { logoutConfirmOpen = false; return; }
-		if (e.key === 'h' || e.key === 'H') { uiHidden = !uiHidden; return; }
 		buffer = (buffer + e.key).slice(-ADMIN_SEQUENCE.length);
 		if (buffer === ADMIN_SEQUENCE) {
 			e.preventDefault();
@@ -69,7 +67,7 @@
 	/>
 {/if}
 
-<nav class:ui-hidden={uiHidden}>
+<nav>
 	<div class="nav-items">
 		<a href="/" class:active={$page.url.pathname === '/'}>cwcorella</a>
 		<a href="/reading" class:active={$page.url.pathname === '/reading'}>reading</a>
@@ -78,12 +76,6 @@
 		{/if}
 		<AdminToolbar onLogoutRequest={() => logoutConfirmOpen = true} />
 	</div>
-	<button
-		class="eye-btn"
-		class:hidden={uiHidden}
-		onclick={() => uiHidden = !uiHidden}
-		title="{uiHidden ? 'show' : 'hide'} interface (H)"
-	>· <span class="eye-label">{uiHidden ? 'show' : 'hide'}</span></button>
 </nav>
 
 {#if logoutConfirmOpen}
@@ -100,7 +92,7 @@
 	</div>
 {/if}
 
-<div class="page-content" class:ui-hidden={uiHidden}>
+<div class="page-content">
 	{@render children()}
 </div>
 
@@ -249,56 +241,7 @@
 	nav a:hover { opacity: 1; }
 	nav a.active { opacity: 1; }
 
-	/* ── toggle button — same style as AdminToolbar buttons ─── */
-	.eye-btn {
-		background: none;
-		border: 1px solid var(--glass-border);
-		color: var(--clr-text);
-		font-family: var(--font-ui);
-		font-size: 0.58rem;
-		line-height: 1;
-		letter-spacing: 0.08em;
-		padding: 0.25rem 0.55rem;
-		min-height: 44px;
-		min-width: 44px;
-		cursor: pointer;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		white-space: nowrap;
-		flex-shrink: 0;
-		opacity: 0.7;
-		transition: opacity var(--t-ui), border-color var(--t-ui);
-	}
-	.eye-btn:hover { opacity: 1; }
-	.eye-btn.hidden {
-		border-color: transparent;
-		opacity: 0.35;
-	}
-	.eye-btn.hidden:hover { opacity: 0.8; }
-	@media (max-width: 580px) {
-		.eye-label { display: none; }
-	}
-
-	/* ── ui hidden state ───────────────────────────────────── */
-	nav.ui-hidden {
-		background: transparent;
-		border-bottom-color: transparent;
-		backdrop-filter: none;
-		-webkit-backdrop-filter: none;
-	}
-	nav.ui-hidden .nav-items {
-		opacity: 0;
-		pointer-events: none;
-	}
 	.page-content { display: contents; }
-	.page-content.ui-hidden :global(.inner),
-	.page-content.ui-hidden :global(.content-panel),
-	.page-content.ui-hidden :global(.page) {
-		opacity: 0 !important;
-		pointer-events: none;
-		transition: opacity 0.4s;
-	}
 
 	/* ── logout confirmation modal ─────────────────────────── */
 	.logout-backdrop {
