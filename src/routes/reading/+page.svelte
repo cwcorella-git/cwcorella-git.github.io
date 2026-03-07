@@ -249,7 +249,7 @@
 		backdrop-filter: var(--glass-blur);
 		-webkit-backdrop-filter: var(--glass-blur);
 		border: 1px solid var(--glass-border);
-		margin-bottom: 0.5rem;
+		border-bottom: none;
 	}
 
 	.inner {
@@ -262,6 +262,7 @@
 		backdrop-filter: var(--glass-blur);
 		-webkit-backdrop-filter: var(--glass-blur);
 		border: 1px solid var(--glass-border);
+		border-top: none;
 	}
 
 	.search-row {

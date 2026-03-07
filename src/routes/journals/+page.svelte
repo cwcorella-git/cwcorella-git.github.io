@@ -534,7 +534,7 @@
 		backdrop-filter: var(--glass-blur);
 		-webkit-backdrop-filter: var(--glass-blur);
 		border: 1px solid var(--glass-border);
-		margin-bottom: 0.5rem;
+		border-bottom: none;
 	}
 	.inner {
 		position: relative; z-index: 1;
@@ -544,6 +544,7 @@
 		backdrop-filter: var(--glass-blur);
 		-webkit-backdrop-filter: var(--glass-blur);
 		border: 1px solid var(--glass-border);
+		border-top: none;
 	}
 	.heading {
 		font-family: var(--font-prose);
