@@ -138,7 +138,7 @@
 		justify-content: space-between;
 		align-items: center;
 		padding: 1rem 2rem;
-		border-bottom: 1px solid rgba(var(--ui-rgb), 0.12);
+		border-bottom: 1px solid rgba(var(--ui-rgb), 0.20);
 		flex-shrink: 0;
 	}
 
@@ -209,7 +209,7 @@
 		flex-shrink: 0;
 		overflow-y: auto;
 		padding: 1.5rem 1rem;
-		border-right: 1px solid rgba(var(--ui-rgb), 0.10);
+		border-right: 1px solid rgba(var(--ui-rgb), 0.18);
 	}
 
 	.toc-label {
@@ -257,13 +257,13 @@
 		font-weight: normal;
 		margin-top: 2rem;
 	}
-	:global(.doc-content h1) { font-size: 1.4rem; border-bottom: 1px solid rgba(var(--ui-rgb),0.15); padding-bottom: 0.5rem; }
+	:global(.doc-content h1) { font-size: 1.4rem; border-bottom: 1px solid rgba(var(--ui-rgb),0.25); padding-bottom: 0.5rem; }
 	:global(.doc-content h2) { font-size: 1.1rem; }
 	:global(.doc-content h3) { font-size: 0.95rem; color: var(--clr-text); }
 	:global(.doc-content p) { line-height: 1.9; color: var(--clr-text); margin-bottom: 1rem; }
 	:global(.doc-content a) { color: var(--clr-text); }
 	:global(.doc-content blockquote) {
-		border-left: 2px solid rgba(var(--ui-rgb),0.25);
+		border-left: 2px solid rgba(var(--ui-rgb),0.38);
 		margin: 1rem 0;
 		padding: 0.3rem 1rem;
 		color: var(--clr-text);
@@ -272,13 +272,13 @@
 	:global(.doc-content code) {
 		font-family: var(--font-ui);
 		font-size: 0.82em;
-		background: rgba(var(--ui-rgb),0.07);
+		background: rgba(var(--ui-rgb),0.12);
 		padding: 0.1em 0.35em;
 		color: var(--clr-text);
 	}
 	:global(.doc-content pre) {
-		background: rgba(var(--ui-rgb),0.04);
-		border: 1px solid rgba(var(--ui-rgb),0.12);
+		background: rgba(var(--ui-rgb),0.08);
+		border: 1px solid rgba(var(--ui-rgb),0.20);
 		padding: 1rem;
 		overflow-x: auto;
 	}
