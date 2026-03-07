@@ -244,7 +244,7 @@
 	.search-area {
 		max-width: 760px;
 		margin: 0 auto;
-		padding: 0.75rem 2rem 1.25rem;
+		padding: 0.75rem 2rem 0.6rem;
 		background: var(--glass-bg);
 		backdrop-filter: var(--glass-blur);
 		-webkit-backdrop-filter: var(--glass-blur);
@@ -257,7 +257,7 @@
 		z-index: 1;
 		max-width: 760px;
 		margin: 0 auto;
-		padding: 2rem 2rem 6rem;
+		padding: 1.25rem 2rem 6rem;
 		background: var(--glass-bg);
 		backdrop-filter: var(--glass-blur);
 		-webkit-backdrop-filter: var(--glass-blur);
@@ -492,7 +492,7 @@
 
 	@media (max-width: 480px) {
 		.page { padding-top: 5.5rem; }
-		.search-area { padding: 0.5rem 1.25rem 0.85rem; }
+		.search-area { padding: 0.5rem 1.25rem 0.5rem; }
 		.inner { padding: 1.5rem 1.25rem 4rem; }
 		.read-toggle, .edit-pencil {
 			padding: 0.5rem 0.4rem;
