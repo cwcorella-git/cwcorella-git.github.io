@@ -527,7 +527,7 @@
 	}
 	.page-header {
 		max-width: 760px; margin: 0 auto;
-		padding: 0.75rem 2rem 0.6rem;
+		padding: 1rem 2rem 0.85rem;
 		display: flex; align-items: center; justify-content: space-between;
 		gap: 1rem;
 		background: var(--glass-bg);
@@ -539,7 +539,7 @@
 	.inner {
 		position: relative; z-index: 1;
 		max-width: 760px; margin: 0 auto;
-		padding: 2rem 2rem 6rem;
+		padding: 1rem 2rem 6rem;
 		background: var(--glass-bg);
 		backdrop-filter: var(--glass-blur);
 		-webkit-backdrop-filter: var(--glass-blur);
