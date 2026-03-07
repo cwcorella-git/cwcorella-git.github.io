@@ -398,7 +398,8 @@
 
 <!-- ── main page ──────────────────────────────────────────────────────── -->
 <div class="page">
-	<div class="page-header">
+	<div class="inner">
+		<div class="page-header">
 			<div class="search-bar">
 				<input
 					type="text"
@@ -416,8 +417,6 @@
 				<button class="new-btn" onclick={startCreate}>+ new</button>
 			{/if}
 		</div>
-
-	<div class="inner">
 		{#if adminState.active}
 			{#if indexError}
 				<p class="status error">{indexError}</p>
@@ -494,10 +493,10 @@
 
 <!-- ── public view (no login) ─────────────────────────────────────────── -->
 <div class="page">
-	<div class="page-header">
-		<h1 class="heading">journals</h1>
-	</div>
 	<div class="inner">
+		<div class="page-header">
+			<h1 class="heading">journals</h1>
+		</div>
 		{#if sealedManifest.length > 0}
 			<ul class="list">
 				{#each sealedManifest as entry (entry.slug)}
@@ -526,15 +525,16 @@
 		padding-top: 4rem;
 	}
 	.page-header {
-		max-width: 760px; margin: 0 auto 2.5rem;
-		padding: 0.75rem 2rem;
 		display: flex; align-items: center; justify-content: space-between;
 		gap: 1rem;
+		padding-bottom: 0.75rem;
+		margin-bottom: 1.5rem;
+		border-bottom: 1px solid rgba(var(--ui-rgb), 0.16);
 	}
 	.inner {
 		position: relative; z-index: 1;
 		max-width: 760px; margin: 0 auto;
-		padding: 3rem 2rem 6rem;
+		padding: 2rem 2rem 6rem;
 		background: var(--glass-bg);
 		backdrop-filter: var(--glass-blur);
 		-webkit-backdrop-filter: var(--glass-blur);
@@ -785,7 +785,6 @@
 
 	@media (max-width: 480px) {
 		.page { padding-top: 4.5rem; }
-		.page-header { padding: 0.5rem 1.25rem; margin-bottom: 1.5rem; }
 		.reader-body { padding: 1.5rem 1.25rem; }
 		.field-row { grid-template-columns: 1fr; }
 		.field-narrow { width: 100%; }
