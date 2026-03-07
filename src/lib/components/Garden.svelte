@@ -222,6 +222,7 @@
 	let fgPlants: PlantInstance[]   = [];  // drawn after trees (near, foreground)
 	let treeSegments: TreeSegment[] = [];
 	let gardenAgeUnits              = 11315;   // default; overwritten from localStorage on mount
+	let treeLeanAngle               = 0;       // stable per-seed foreground tree lean (±4°)
 	let W = 0, H = 0, horizonY = 0;
 	let dpr = 1;   // devicePixelRatio — canvas works in physical pixels so zoom has no effect
 
@@ -707,8 +708,9 @@
 	}
 
 	// ── draw: midground tree silhouettes ──────────────────────────────────────
-	// Two species, four trees. Deciduous: decurrent recursive branching (wide
-	// spreading crown). Conifer: excurrent central leader + whorled side branches.
+	// Two species, four trees. Oak: wide decurrent crown, ±8° trunk lean,
+	// scaffold branches at 42–64% trunk height. Maple: tighter dome, ±5° lean.
+	// Both species draw a curved trunk (quadratic bezier) following the lean.
 	function drawMidgroundTrees(ctx: CanvasRenderingContext2D, altDeg: number): void {
 		const isNight    = altDeg < -6;
 		const isTwilight = !isNight && altDeg < 6;
@@ -716,33 +718,35 @@
 		          : isTwilight ? 'rgb(42,46,55)'
 		          :              'rgb(55,68,38)';
 
-		// Recursive deciduous crown. angle: standard math radians, π/2 = straight up.
-		function branchDeciduous(
+		// Recursive deciduous crown. angle: math radians, π/2 = straight up.
+		// spread0/spreadR: base + RNG range for split angle; ratio0/ratioR: length ratio.
+		function branch(
 			x: number, y: number,
 			angle: number, length: number, thick: number,
-			depth: number, rng: () => number
+			depth: number, rng: () => number,
+			spread0 = 0.50, spreadR = 0.24, ratio0 = 0.67, ratioR = 0.08
 		): void {
 			if (depth <= 0 || length < 1.2) return;
 			const x2 = x + Math.cos(angle) * length;
 			const y2 = y - Math.sin(angle) * length;
 			ctx.lineWidth = Math.max(0.3, thick);
 			ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x2, y2); ctx.stroke();
-			const ratio  = 0.67 + rng() * 0.08;
-			const spread = 0.50 + rng() * 0.24;  // ±29–43° each side
-			const bias   = (rng() - 0.5) * 0.22; // asymmetric lean
-			branchDeciduous(x2, y2, angle + spread + bias, length * ratio,        thick * 0.62, depth - 1, rng);
-			branchDeciduous(x2, y2, angle - spread + bias, length * ratio * 0.94, thick * 0.60, depth - 1, rng);
-			// Occasional third shoot — adds mid-crown density
+			const ratio  = ratio0 + rng() * ratioR;
+			const spread = spread0 + rng() * spreadR;
+			const bias   = (rng() - 0.5) * 0.22;
+			branch(x2, y2, angle + spread + bias, length * ratio,        thick * 0.62, depth - 1, rng, spread0, spreadR, ratio0, ratioR);
+			branch(x2, y2, angle - spread + bias, length * ratio * 0.94, thick * 0.60, depth - 1, rng, spread0, spreadR, ratio0, ratioR);
+			// Occasional third shoot — mid-crown density
 			if (depth >= 4 && rng() < 0.28)
-				branchDeciduous(x2, y2, angle + bias * 0.3, length * ratio * 0.72, thick * 0.50, depth - 2, rng);
+				branch(x2, y2, angle + bias * 0.3, length * ratio * 0.72, thick * 0.50, depth - 2, rng, spread0, spreadR, ratio0, ratioR);
 		}
 
-		type Kind = 'deciduous' | 'conifer';
+		type Kind = 'oak' | 'maple';
 		const specs: { xf: number; bornAgo: number; kind: Kind }[] = [
-			{ xf: 0.49, bornAgo: 54750, kind: 'deciduous' },  // +150yr — ancient spreading oak
-			{ xf: 0.61, bornAgo: 10950, kind: 'deciduous' },  // +30yr  — mid-growth
-			{ xf: 0.74, bornAgo: 0,     kind: 'conifer'   },  // same age — most dramatic growth arc
-			{ xf: 0.85, bornAgo: -5475, kind: 'conifer'   },  // −15yr  — young sapling pine
+			{ xf: 0.49, bornAgo: 54750, kind: 'oak'   },  // +150yr — ancient spreading oak
+			{ xf: 0.61, bornAgo: 10950, kind: 'maple' },  // +30yr  — mid-growth maple
+			{ xf: 0.74, bornAgo: 0,     kind: 'oak'   },  // same age as site — oak
+			{ xf: 0.85, bornAgo: -5475, kind: 'maple' },  // −15yr  — young maple
 		];
 
 		for (const spec of specs) {
@@ -758,51 +762,54 @@
 			ctx.globalAlpha = 0.82;
 			ctx.lineCap     = 'round';
 
-			if (spec.kind === 'deciduous') {
-				const trunkH   = 72 * gf;
-				const startLen = trunkH * 0.55;
-				// Trunk
+			if (spec.kind === 'oak') {
+				const trunkH    = 72 * gf;
+				const leanAngle = (rng() - 0.5) * 0.14;  // ±8° — wind/phototropism lean
+				const topX      = bx + Math.sin(leanAngle) * trunkH;
+				const topY      = by - trunkH;
+				// Bezier control point — trunk curves into the lean direction
+				const cpX = bx + Math.sin(leanAngle) * trunkH * 0.45;
+				const cpY = by - trunkH * 0.55;
 				ctx.lineWidth = tw;
-				ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx, by - trunkH); ctx.stroke();
-				// Crown: depth 8 binary branching → ~300 segments
-				branchDeciduous(bx, by - trunkH, Math.PI / 2, startLen, tw * 0.78, 8, rng);
+				ctx.beginPath(); ctx.moveTo(bx, by); ctx.quadraticCurveTo(cpX, cpY, topX, topY); ctx.stroke();
+
+				// Scaffold branches at ~45–65% trunk height — dominant side first
+				const scaffT    = 0.42 + rng() * 0.22;
+				const scaffX    = bx + Math.sin(leanAngle) * scaffT * trunkH;
+				const scaffY    = by - scaffT * trunkH;
+				const leanSign  = leanAngle >= 0 ? 1 : -1;
+				const scaffLen  = trunkH * (0.38 + rng() * 0.12);
+				branch(scaffX, scaffY, Math.PI / 2 + leanSign * (0.42 + rng() * 0.25), scaffLen, tw * 0.50, 5, rng);
+				// Secondary scaffold on opposite side (smaller)
+				if (rng() < 0.70)
+					branch(scaffX, scaffY, Math.PI / 2 - leanSign * (0.36 + rng() * 0.20), scaffLen * 0.68, tw * 0.38, 4, rng);
+
+				// Crown from trunk top — angle biased toward lean
+				branch(topX, topY, Math.PI / 2 + leanAngle * 0.5, trunkH * 0.55, tw * 0.78, 8, rng);
 
 			} else {
-				// Dominant central leader
-				const totalH = 145 * gf;
-				const WHORLS = 8;
+				// Maple: tighter dome, ±5° lean, compact spreading crown
+				const trunkH    = 60 * gf;
+				const leanAngle = (rng() - 0.5) * 0.09;  // ±5°
+				const topX      = bx + Math.sin(leanAngle) * trunkH;
+				const topY      = by - trunkH;
+				const cpX = bx + Math.sin(leanAngle) * trunkH * 0.45;
+				const cpY = by - trunkH * 0.55;
 				ctx.lineWidth = tw;
-				ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx, by - totalH); ctx.stroke();
+				ctx.beginPath(); ctx.moveTo(bx, by); ctx.quadraticCurveTo(cpX, cpY, topX, topY); ctx.stroke();
 
-				// Whorled side branches — widest at base, shortest at tip
-				for (let w = 0; w < WHORLS; w++) {
-					const t    = w / WHORLS;
-					const wy   = by - (0.12 + t * 0.80) * totalH;
-					const blen = (44 - 34 * t) * gf * (0.88 + rng() * 0.12);
-					const wTw  = Math.max(0.25, tw * 0.45 * (1 - t * 0.65));
-
-					for (const dir of [-1, 1]) {
-						const wx2 = bx + dir * blen;
-						const wy2 = wy - blen * 0.08; // slight upward tilt
-						ctx.lineWidth = wTw;
-						ctx.beginPath(); ctx.moveTo(bx, wy); ctx.lineTo(wx2, wy2); ctx.stroke();
-
-						// Branchlets fanning outward along the whorl branch
-						const subs = 3 + Math.floor(rng() * 2);
-						for (let s = 0; s < subs; s++) {
-							const tSub = (s + 0.5) / subs;
-							const sx   = bx  + (wx2 - bx) * tSub;
-							const sy   = wy  + (wy2 - wy) * tSub;
-							const sLen = blen * (0.22 + (1 - tSub) * 0.12) * (0.8 + rng() * 0.2);
-							const ang  = (rng() - 0.5) * 0.55; // ±15° from horizontal
-							ctx.lineWidth = Math.max(0.2, wTw * 0.45);
-							ctx.beginPath();
-							ctx.moveTo(sx, sy);
-							ctx.lineTo(sx + dir * Math.cos(ang) * sLen, sy - Math.sin(ang) * sLen);
-							ctx.stroke();
-						}
-					}
+				// One scaffold branch at ~55% height (only on mature trees)
+				if (gf > 0.25 && rng() < 0.80) {
+					const scaffT   = 0.48 + rng() * 0.18;
+					const scaffX   = bx + Math.sin(leanAngle) * scaffT * trunkH;
+					const scaffY   = by - scaffT * trunkH;
+					const leanSign = leanAngle >= 0 ? 1 : -1;
+					const scaffLen = trunkH * (0.30 + rng() * 0.10);
+					branch(scaffX, scaffY, Math.PI / 2 + leanSign * (0.35 + rng() * 0.20), scaffLen, tw * 0.42, 4, rng, 0.28, 0.17, 0.73, 0.07);
 				}
+
+				// Crown — tighter spread (±16–26°), higher length ratio → dome shape
+				branch(topX, topY, Math.PI / 2 + leanAngle * 0.5, trunkH * 0.58, tw * 0.75, 9, rng, 0.28, 0.17, 0.73, 0.07);
 			}
 
 			ctx.restore();
@@ -1277,7 +1284,16 @@
 		drawCirrus(ctx, altDeg);
 		drawClouds(ctx, altDeg);
 		drawTreeShadow(ctx, altDeg);
-		if (treeSegments.length > 0) drawTree(ctx, treeSegments, W, H);
+		if (treeSegments.length > 0) {
+			// Apply seeded trunk lean — rotate the whole tree around its base
+			const bx = W * 0.28;
+			ctx.save();
+			ctx.translate(bx, horizonY);
+			ctx.rotate(treeLeanAngle);
+			ctx.translate(-bx, -horizonY);
+			drawTree(ctx, treeSegments, W, H);
+			ctx.restore();
+		}
 		drawPlants(ctx, fgPlants, horizonY, H);   // near grass — in front of everything
 		drawVignette(ctx);
 
@@ -1316,6 +1332,8 @@
 		creditVisit(gs);
 		saveGardenState(gs);
 		gardenAgeUnits = gs.ageUnits;
+		// Seeded lean — stable per visitor, changes only if they reset localStorage
+		treeLeanAngle = (makePRNG(gs.seed)() - 0.5) * 0.14; // ±4° windward lean
 
 		buildScene(W, H, horizonY);
 
