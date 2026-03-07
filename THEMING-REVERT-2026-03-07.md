@@ -168,3 +168,20 @@ border-color: rgba(var(--ui-rgb), 0.40);
 color: var(--clr-danger);
 border-color: rgba(var(--ui-rgb), 0.20);
 ```
+---
+
+## src/routes/journals/+page.svelte (editor overlay — second pass 2026-03-07)
+
+### .editor background (was glass-bg-heavy, now glass-bg-dark)
+```css
+background: var(--glass-bg-heavy);
+```
+No scoped `.editor .overlay-label` / `.editor .close-btn` / `.editor .dim` / `.editor .status` rules existed.
+
+### .field-label: `color: var(--clr-text)` (now --clr-dark-text)
+### .editor-fields inputs: `rgba(var(--ui-rgb), 0.08)` bg / `0.28` border / `--clr-text` (now dark-panel-rgb + --clr-dark-text)
+### .editor-fields focus: `rgba(var(--ui-rgb), 0.50)` (now dark-panel-rgb 0.38)
+### .editor-footer border: `rgba(var(--ui-rgb), 0.18)` (now dark-panel-rgb 0.12)
+### .editor-footer button: `rgba(var(--ui-rgb), 0.30)` border / `--clr-text` / hover `0.50` (now dark-panel-rgb + --clr-dark-text)
+### .save-btn: `rgba(var(--ui-rgb),0.12)` bg / `0.38` border / `--clr-text` (now dark-panel-rgb + --clr-dark-text)
+### .seal-btn: `border-color: rgba(var(--ui-rgb), 0.15)` (now dark-panel-rgb)
