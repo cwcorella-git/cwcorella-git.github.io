@@ -60,11 +60,11 @@ export const PALETTES: Record<PaletteName, Palette> = {
 	sky: {
 		label: 'sky',
 		uiRgb:        '140, 168, 210',     // cool sky-blue light-context chrome
-		darkPanelRgb: '90, 130, 200',      // default mid-day (interpolated per-frame)
+		darkPanelRgb: '108, 152, 228',     // brighter sky-blue chrome
 		bodyBg:       '#c0cede',            // soft grey-blue canvas fallback
-		clrDarkText:  '#b8c8e4',           // cool blue-white — readable on deep navy glass
-		glassBgDark:     'rgba(12, 18, 42, 0.86)',    // deep navy dark panels (fixed)
-		glassBorderDark: 'rgba(100, 148, 230, 0.22)', // sky-blue accent border
+		clrDarkText:  '#ccddf8',           // bright cool blue-white — high contrast on deep navy
+		glassBgDark:     'rgba(8, 14, 40, 0.92)',     // deep saturated navy dark panels
+		glassBorderDark: 'rgba(120, 170, 255, 0.26)', // bright sky-blue accent border
 		// Light-glass: adapts with time of day — both light panels AND dark-panel chrome
 		darkGlass: false,
 		glassDay:   [210, 228, 250],   // pale sky-blue at noon
@@ -72,7 +72,7 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		textDay:    [12,  16,  28 ],   // near-black on pale panels
 		textNight:  [205, 218, 240],   // cool blue-white on dark panels
 		// Adaptive dark-panel RGB: blue inputs at day, indigo at night
-		darkPanelDay:   [90,  130, 200],
+		darkPanelDay:   [108, 152, 228],
 		darkPanelNight: [22,  28,  62 ],
 		swatchBg:     '#b0c4dc',
 		swatchBorder: '#5890d0',
@@ -101,11 +101,11 @@ export const PALETTES: Record<PaletteName, Palette> = {
 	neutral: {
 		label: 'neutral',
 		uiRgb:        '128, 128, 128',
-		darkPanelRgb: '255, 255, 255',   // pure white — baseline appearance
+		darkPanelRgb: '232, 232, 238',   // near-white — high contrast chrome
 		bodyBg:       '#d8d8d8',
-		clrDarkText:  '#c0c4c8',
-		glassBgDark:     'rgba(10, 12, 16, 0.78)',
-		glassBorderDark: 'rgba(200, 210, 220, 0.15)',
+		clrDarkText:  '#eaeaee',          // near-white — maximum contrast on pure black
+		glassBgDark:     'rgba(6, 6, 8, 0.92)',       // pure near-black panels
+		glassBorderDark: 'rgba(232, 232, 238, 0.24)', // bright near-white border
 		darkGlass: false,
 		glassDay:   [255, 255, 255],
 		glassNight: [8,   6,   2  ],

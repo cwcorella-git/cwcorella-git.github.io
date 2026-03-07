@@ -417,11 +417,12 @@
 							{:else}
 								<div class="entry-row">
 									<button class="entry-title-btn" onclick={() => openReader(entry)}>
-										<span class="entry-title">{entry.title}</span>
 										{#if entry.sealed}
+											<span class="entry-title">{entry.slug}</span>
 											<span class="entry-meta sealed-meta">sealed · Feb 13, 2095</span>
 										{:else}
-											<span class="entry-meta">{entry.slug}{entry.date ? ' · ' + entry.date : ''}</span>
+											<span class="entry-title">{entry.slug}</span>
+											{#if entry.date}<span class="entry-meta">{entry.date}</span>{/if}
 										{/if}
 									</button>
 									<div class="row-actions">
@@ -446,11 +447,12 @@
 						<li>
 							<div class="entry-row">
 								<button class="entry-title-btn" onclick={() => openReader(entry)}>
-									<span class="entry-title">{entry.title}</span>
 									{#if entry.sealed}
+										<span class="entry-title">{entry.slug}</span>
 										<span class="entry-meta sealed-meta">sealed · unlocked Feb 13, 2095</span>
 									{:else}
-										<span class="entry-meta">{entry.slug}{entry.date ? ' · ' + entry.date : ''}</span>
+										<span class="entry-title">{entry.slug}</span>
+										{#if entry.date}<span class="entry-meta">{entry.date}</span>{/if}
 									{/if}
 								</button>
 							</div>
@@ -538,7 +540,7 @@
 		display: flex; align-items: center; gap: 1rem;
 		border-bottom: 1px solid rgba(var(--ui-rgb), 0.09);
 	}
-	.confirm-row { gap: 1.5rem; }
+	.confirm-row { gap: 1.5rem; padding: 0.85rem 0; }
 
 	.entry-title-btn {
 		flex: 1; background: none; border: none; cursor: pointer;
