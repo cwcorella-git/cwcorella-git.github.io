@@ -249,7 +249,7 @@
 		backdrop-filter: var(--glass-blur);
 		-webkit-backdrop-filter: var(--glass-blur);
 		border: 1px solid var(--glass-border);
-		border-bottom: none;
+		margin-bottom: 0.5rem;
 	}
 
 	.inner {
