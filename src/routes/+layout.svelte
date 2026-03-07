@@ -11,7 +11,7 @@
 	import AdminToolbar from '$lib/components/AdminToolbar.svelte';
 	import BookForm from '$lib/components/BookForm.svelte';
 	import Toasts from '$lib/components/Toasts.svelte';
-	import Garden from '$lib/components/Garden.svelte';
+	import Sky from '$lib/components/Sky.svelte';
 
 	let { children } = $props();
 
@@ -57,7 +57,7 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<Garden />
+<Sky />
 <AdminDrawer bind:this={drawerRef} />
 <Toasts />
 
@@ -139,7 +139,7 @@
 		/* [theme: --dark-panel-rgb] amber=200,152,64 | sky=90,130,200→22,28,62 (adaptive) | dusk=175,130,205 | neutral=255,255,255 */
 		--dark-panel-rgb: 255, 255, 255;
 
-		/* Glass — light (day defaults; updated per-frame by Garden.svelte) */
+		/* Glass — light (day defaults; updated per-frame by Sky.svelte) */
 		--glass-bg:         rgba(255, 255, 255, 0.22);
 		--glass-bg-heavy:   rgba(255, 255, 255, 0.78);
 		--glass-border:     rgba(255, 255, 255, 0.40);
@@ -152,10 +152,10 @@
 		--glass-bg-dark:     rgba(10, 12, 16, 0.78);
 		--glass-border-dark: rgba(200, 210, 220, 0.15);
 
-		/* Glass — nav (day default; updated per-frame by Garden.svelte) */
+		/* Glass — nav (day default; updated per-frame by Sky.svelte) */
 		--glass-nav-bg: rgba(255, 255, 255, 0.30);
 
-		/* Text — light context (day default; updated per-frame by Garden.svelte)        */
+		/* Text — light context (day default; updated per-frame by Sky.svelte)        */
 		/* One color for all text; hierarchy via size / weight / spacing, not shade.      */
 		/* [theme: day val] amber=#3d2e1a | sky=#0c1020 | dusk=#c0b4d2 | neutral=#080808 */
 		--clr-text: #080808;
@@ -172,7 +172,7 @@
 		/* Backdrop overlay (modals) */
 		--backdrop-overlay: rgba(0, 0, 0, 0.45);
 
-		/* Body background (canvas fallback before Garden.svelte paints) */
+		/* Body background (canvas fallback before Sky.svelte paints) */
 		/* [theme: --body-bg] amber=#0c0902 | sky=#c0cede | dusk=#0e0a16 | neutral=#d8d8d8 */
 		--body-bg: #d8d8d8;
 	}
@@ -182,13 +182,13 @@
 	:global(button, input, textarea, select) { font: inherit; }
 	:global(body, html) {
 		margin: 0; padding: 0;
-		background: var(--body-bg); /* ground fallback before canvas paints */
+		background: var(--body-bg); /* fallback before canvas paints */
 		color: var(--clr-text);
 		font-family: var(--font-prose);
 		-webkit-font-smoothing: antialiased;
 	}
 	:global(a) { color: inherit; }
-	/* All page content sits above the garden canvas */
+	/* All page content sits above the sky canvas */
 	:global(.page), :global(main), :global(.inner) {
 		position: relative;
 		z-index: 1;

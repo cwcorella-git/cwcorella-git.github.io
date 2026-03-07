@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { adminState, writeQueue } from '$lib/admin/state.svelte';
+	import { adminState, canvasEditState, writeQueue } from '$lib/admin/state.svelte';
+	import { isUnlockDay } from '$lib/admin/tlock';
 	import ThemePanel from '$lib/components/ThemePanel.svelte';
 
 	let { onLogoutRequest }: { onLogoutRequest: () => void } = $props();
@@ -30,6 +31,13 @@
 		{:else if writeQueue.status === 'error'}
 			<button class="sync-btn error" onclick={handleSync} title={writeQueue.error}>⚠ retry</button>
 		{/if}
+
+		<!-- Canvas overlay editor (stub) -->
+		<button
+			class:active={canvasEditState.editMode}
+			onclick={() => canvasEditState.toggle()}
+			title="toggle canvas editor"
+		>⊹ edit</button>
 
 		<!-- Theme palette picker -->
 		<div class="theme-wrapper" use:handleClickOutside>
@@ -93,6 +101,11 @@
 	/* Theme button wrapper — positions the dropdown panel */
 	.theme-wrapper {
 		position: relative;
+	}
+
+	button.active {
+		opacity: 1;
+		background: rgba(var(--ui-rgb), 0.10);
 	}
 
 	.theme-btn.active {

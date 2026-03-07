@@ -1,6 +1,6 @@
 // ── Palette system ─────────────────────────────────────────────────────────
 // Four named palettes. Each defines the CSS seed vars that cascade into all
-// borders, glass tints, body background, and dark-panel colours. Garden.svelte
+// borders, glass tints, body background, and dark-panel colours. Sky.svelte
 // reads glassDay/glassNight/textDay/textNight to interpolate --clr-text and
 // the three --glass-* vars per-frame as the sun moves.
 
@@ -16,18 +16,18 @@ export interface Palette {
 	glassBgDark: string;     // dark panel background
 	glassBorderDark: string; // dark panel outer border
 	// Dark-glass mode: applyPalette sets all glass/text vars directly;
-	// Garden.svelte does NOT override them per-frame.
+	// Sky.svelte does NOT override them per-frame.
 	darkGlass: boolean;
 	glassFixed?: string;        // --glass-bg  (main content panels)
 	glassBorderFixed?: string;  // --glass-border
 	glassNavBgFixed?: string;   // --glass-nav-bg
 	glassHeavyFixed?: string;   // --glass-bg-heavy (fullscreen overlays)
-	// Garden.svelte seeds for per-frame day↔night interpolation (light-glass only)
+	// Sky.svelte seeds for per-frame day↔night interpolation (light-glass only)
 	glassDay: [number, number, number];   // RGB at full day
 	glassNight: [number, number, number]; // RGB at full night
 	textDay: [number, number, number];    // --clr-text at full day
 	textNight: [number, number, number];  // --clr-text at full night
-	// Optional: if set, Garden.svelte also interpolates --dark-panel-rgb per-frame
+	// Optional: if set, Sky.svelte also interpolates --dark-panel-rgb per-frame
 	darkPanelDay?:   [number, number, number];
 	darkPanelNight?: [number, number, number];
 	// Swatch preview colours shown in ThemePanel
@@ -118,7 +118,7 @@ export const PALETTES: Record<PaletteName, Palette> = {
 
 const STORAGE_KEY = 'cwc-theme';
 
-// version increments on every palette switch so Garden.svelte can detect
+// version increments on every palette switch so Sky.svelte can detect
 // the change and force a full re-render of glass + text vars immediately.
 let _active  = $state<PaletteName>('neutral');
 let _version = $state(0);
@@ -136,7 +136,7 @@ function applyPalette(name: PaletteName): void {
 
 	if (p.darkGlass) {
 		// Dark-glass palettes: set all glass/text vars directly.
-		// Garden.svelte detects darkGlass=true and skips per-frame overrides.
+		// Sky.svelte detects darkGlass=true and skips per-frame overrides.
 		r.style.setProperty('--glass-bg',       p.glassFixed!);
 		r.style.setProperty('--glass-border',   p.glassBorderFixed!);
 		r.style.setProperty('--glass-nav-bg',   p.glassNavBgFixed!);
@@ -145,7 +145,7 @@ function applyPalette(name: PaletteName): void {
 			`rgb(${p.textDay[0]},${p.textDay[1]},${p.textDay[2]})`);
 	} else {
 		// Light-glass palettes: derive --glass-bg-heavy from glassDay;
-		// Garden.svelte handles --glass-bg, --glass-border, --glass-nav-bg, --clr-text per-frame.
+		// Sky.svelte handles --glass-bg, --glass-border, --glass-nav-bg, --clr-text per-frame.
 		const [dr, dg, db] = p.glassDay;
 		r.style.setProperty('--glass-bg-heavy', `rgba(${dr}, ${dg}, ${db}, 0.78)`);
 	}
