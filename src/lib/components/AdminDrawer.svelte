@@ -151,6 +151,11 @@
 		cursor: pointer;
 		padding: 0;
 		line-height: 1;
+		min-width: 44px;
+		min-height: 44px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 		transition: color 0.15s;
 	}
 	.close-btn:hover { color: var(--clr-dark-text); }

@@ -45,7 +45,7 @@
 			{/if}
 		</div>
 
-		<button onclick={onLogoutRequest}>× <span class="btn-label">logout</span></button>
+		<button onclick={onLogoutRequest} aria-label="Logout">× <span class="btn-label">logout</span></button>
 	</div>
 {/if}
 

@@ -462,4 +462,12 @@
 		color: var(--clr-danger-muted);
 	}
 	.delete-btn:hover:not(:disabled) { color: var(--clr-danger); border-color: rgba(180, 60, 60, 0.6); background: rgba(180, 60, 60, 0.06); }
+
+	@media (max-width: 480px) {
+		.modal-body { padding: 1rem; }
+		.modal-header { padding: 1rem; }
+		.row { grid-template-columns: 1fr; }
+		.link-row { grid-template-columns: 1fr; gap: 0.35rem; }
+		.link-row input:last-of-type { margin-bottom: 0.2rem; }
+	}
 </style>

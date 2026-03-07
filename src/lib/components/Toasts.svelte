@@ -15,12 +15,14 @@
 	.toasts {
 		position: fixed;
 		bottom: 1.5rem;
-		right: 1.5rem;
+		right: 1rem;
+		left: 1rem;
 		z-index: 600;
 		display: flex;
 		flex-direction: column;
 		gap: 0.5rem;
 		max-width: 340px;
+		margin-left: auto;
 		pointer-events: none;
 	}
 

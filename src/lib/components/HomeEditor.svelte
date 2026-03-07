@@ -90,8 +90,8 @@
 		color: var(--clr-text);
 		font-family: var(--font-ui);
 		font-size: 0.75rem;
-		width: 1.8rem;
-		height: 1.6rem;
+		min-width: 2.4rem;
+		min-height: 2.4rem;
 		cursor: pointer;
 		transition: all 0.15s;
 		display: flex;
