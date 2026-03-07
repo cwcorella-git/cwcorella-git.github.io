@@ -60,11 +60,11 @@ export const PALETTES: Record<PaletteName, Palette> = {
 	sky: {
 		label: 'sky',
 		uiRgb:        '140, 168, 210',     // cool sky-blue light-context chrome
-		darkPanelRgb: '108, 152, 228',     // brighter sky-blue chrome
+		darkPanelRgb: '120, 168, 240',     // sky-blue chrome tint
 		bodyBg:       '#c0cede',            // soft grey-blue canvas fallback
-		clrDarkText:  '#ccddf8',           // bright cool blue-white — high contrast on deep navy
-		glassBgDark:     'rgba(8, 14, 40, 0.92)',     // deep saturated navy dark panels
-		glassBorderDark: 'rgba(120, 170, 255, 0.26)', // bright sky-blue accent border
+		clrDarkText:  '#d8eaff',           // bright blue-white — high contrast on medium blue panel
+		glassBgDark:     'rgba(28, 60, 130, 0.86)',   // medium sky-blue panels — matches palette identity
+		glassBorderDark: 'rgba(140, 190, 255, 0.28)', // bright sky-blue border
 		// Light-glass: adapts with time of day — both light panels AND dark-panel chrome
 		darkGlass: false,
 		glassDay:   [210, 228, 250],   // pale sky-blue at noon
@@ -72,7 +72,7 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		textDay:    [12,  16,  28 ],   // near-black on pale panels
 		textNight:  [205, 218, 240],   // cool blue-white on dark panels
 		// Adaptive dark-panel RGB: blue inputs at day, indigo at night
-		darkPanelDay:   [108, 152, 228],
+		darkPanelDay:   [120, 168, 240],
 		darkPanelNight: [22,  28,  62 ],
 		swatchBg:     '#b0c4dc',
 		swatchBorder: '#5890d0',
@@ -101,11 +101,11 @@ export const PALETTES: Record<PaletteName, Palette> = {
 	neutral: {
 		label: 'neutral',
 		uiRgb:        '128, 128, 128',
-		darkPanelRgb: '232, 232, 238',   // near-white — high contrast chrome
+		darkPanelRgb: '200, 200, 205',   // neutral gray chrome
 		bodyBg:       '#d8d8d8',
-		clrDarkText:  '#eaeaee',          // near-white — maximum contrast on pure black
-		glassBgDark:     'rgba(6, 6, 8, 0.92)',       // pure near-black panels
-		glassBorderDark: 'rgba(232, 232, 238, 0.24)', // bright near-white border
+		clrDarkText:  '#d4d4d8',          // clean light gray — matches neutral gray body aesthetic
+		glassBgDark:     'rgba(32, 32, 36, 0.88)',    // dark neutral gray — no color cast
+		glassBorderDark: 'rgba(200, 200, 208, 0.22)', // neutral gray border
 		darkGlass: false,
 		glassDay:   [255, 255, 255],
 		glassNight: [8,   6,   2  ],
