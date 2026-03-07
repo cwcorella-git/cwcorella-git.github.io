@@ -63,33 +63,34 @@
 {/if}
 
 <nav class:ui-hidden={uiHidden}>
-	<a href="/" class:active={$page.url.pathname === '/'}>cwcorella</a>
-	<a href="/reading" class:active={$page.url.pathname === '/reading'}>reading</a>
-	{#if adminState.active || archiveState.mode}
-		<a href="/journals" class:active={$page.url.pathname === '/journals'}>journals</a>
-	{/if}
-	<AdminToolbar />
+	<div class="nav-items">
+		<a href="/" class:active={$page.url.pathname === '/'}>cwcorella</a>
+		<a href="/reading" class:active={$page.url.pathname === '/reading'}>reading</a>
+		{#if adminState.active || archiveState.mode}
+			<a href="/journals" class:active={$page.url.pathname === '/journals'}>journals</a>
+		{/if}
+		<AdminToolbar />
+	</div>
+	<button
+		class="eye-btn"
+		class:hidden={uiHidden}
+		onclick={() => uiHidden = !uiHidden}
+		title="{uiHidden ? 'show' : 'hide'} interface (H)"
+	>
+		{#if uiHidden}
+			<!-- Heroicons eye-slash outline -->
+			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="14" height="14" aria-hidden="true">
+				<path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+			</svg>
+		{:else}
+			<!-- Heroicons eye outline -->
+			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="14" height="14" aria-hidden="true">
+				<path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.641 0-8.508-3.007-9.964-7.178Z" />
+				<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+			</svg>
+		{/if}
+	</button>
 </nav>
-
-<!-- Fixed outside the nav so it survives the nav opacity collapse -->
-<button
-	class="eye-btn"
-	class:ui-hidden={uiHidden}
-	onclick={() => uiHidden = !uiHidden}
-	title="{uiHidden ? 'show' : 'hide'} interface (H)"
->
-	{#if uiHidden}
-		<svg width="14" height="9" viewBox="0 0 14 9" fill="none" aria-hidden="true">
-			<path d="M1,4 Q7,-1 13,4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-			<path d="M3,6.5 Q7,10 11,6.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-		</svg>
-	{:else}
-		<svg width="14" height="9" viewBox="0 0 14 9" fill="none" aria-hidden="true">
-			<path d="M1,4.5 Q7,-0.5 13,4.5 Q7,9.5 1,4.5Z" stroke="currentColor" stroke-width="1.2"/>
-			<circle cx="7" cy="4.5" r="1.8" fill="currentColor"/>
-		</svg>
-	{/if}
-</button>
 
 <div class="page-content" class:ui-hidden={uiHidden}>
 	{@render children()}
@@ -189,13 +190,21 @@
 		z-index: 100;
 		padding: 1.2rem 2rem;
 		display: flex;
-		gap: 2rem;
+		gap: 0.6rem;
 		align-items: center;
 		background: var(--glass-nav-bg);
 		backdrop-filter: var(--glass-blur-nav);
 		-webkit-backdrop-filter: var(--glass-blur-nav);
 		border-bottom: 1px solid var(--glass-border);
 		transition: background var(--t-theme), border-color var(--t-theme);
+	}
+	/* nav-items holds all links + toolbar; fades independently */
+	.nav-items {
+		display: flex;
+		gap: 2rem;
+		align-items: center;
+		flex: 1;
+		transition: opacity 0.4s;
 	}
 	nav a {
 		font-size: 0.82rem;
@@ -208,35 +217,35 @@
 	nav a:hover { opacity: 1; }
 	nav a.active { opacity: 1; }
 
-	/* ── eye button (always fixed, survives nav opacity collapse) ── */
+	/* ── eye button ─────────────────────────────────────────── */
 	.eye-btn {
-		position: fixed;
-		top: 1.08rem; right: 2rem;
-		z-index: 200;
 		background: none;
 		border: 1px solid var(--glass-border);
 		color: var(--clr-text);
-		font-family: 'Courier New', Courier, monospace;
-		font-size: 0.58rem;
 		padding: 0.25rem 0.55rem;
 		cursor: pointer;
 		display: flex; align-items: center;
 		opacity: 0.7;
 		transition: opacity var(--t-ui), border-color var(--t-ui);
+		flex-shrink: 0;
 	}
 	.eye-btn:hover { opacity: 1; }
-	/* When UI is hidden: drop the border so the button becomes a ghost */
-	.eye-btn.ui-hidden {
+	.eye-btn.hidden {
 		border-color: transparent;
 		opacity: 0.35;
 	}
-	.eye-btn.ui-hidden:hover { opacity: 0.8; }
+	.eye-btn.hidden:hover { opacity: 0.8; }
 
 	/* ── ui hidden state ───────────────────────────────────── */
 	nav.ui-hidden {
+		background: transparent;
+		border-bottom-color: transparent;
+		backdrop-filter: none;
+		-webkit-backdrop-filter: none;
+	}
+	nav.ui-hidden .nav-items {
 		opacity: 0;
 		pointer-events: none;
-		transition: opacity 0.4s, background var(--t-theme), border-color var(--t-theme);
 	}
 	.page-content { display: contents; }
 	.page-content.ui-hidden :global(.inner),
