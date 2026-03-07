@@ -398,8 +398,7 @@
 
 <!-- ── main page ──────────────────────────────────────────────────────── -->
 <div class="page">
-	<div class="inner">
-		<div class="page-header">
+	<div class="page-header">
 			<div class="search-bar">
 				<input
 					type="text"
@@ -418,6 +417,7 @@
 			{/if}
 		</div>
 
+	<div class="inner">
 		{#if adminState.active}
 			{#if indexError}
 				<p class="status error">{indexError}</p>
@@ -494,10 +494,10 @@
 
 <!-- ── public view (no login) ─────────────────────────────────────────── -->
 <div class="page">
+	<div class="page-header">
+		<h1 class="heading">journals</h1>
+	</div>
 	<div class="inner">
-		<div class="page-header">
-			<h1 class="heading">journals</h1>
-		</div>
 		{#if sealedManifest.length > 0}
 			<ul class="list">
 				{#each sealedManifest as entry (entry.slug)}
@@ -523,21 +523,22 @@
 	/* ── page ─────────────────────────────────────────────── */
 	.page {
 		min-height: 100vh;
-		padding-top: 4rem;
+		padding-top: 6rem;
+	}
+	.page-header {
+		max-width: 760px; margin: 0 auto;
+		padding: 0.75rem 2rem 1.25rem;
+		display: flex; align-items: center; justify-content: space-between;
+		gap: 1rem;
 	}
 	.inner {
 		position: relative; z-index: 1;
 		max-width: 760px; margin: 0 auto;
-		padding: 3rem 2rem 6rem;
+		padding: 2rem 2rem 6rem;
 		background: var(--glass-bg);
 		backdrop-filter: var(--glass-blur);
 		-webkit-backdrop-filter: var(--glass-blur);
 		border: 1px solid var(--glass-border);
-	}
-	.page-header {
-		display: flex; align-items: center; justify-content: space-between;
-		gap: 1rem;
-		margin-bottom: 2.5rem;
 	}
 	.heading {
 		font-family: var(--font-prose);
@@ -783,10 +784,12 @@
 	.seal-confirm-btn { background: rgba(255,255,255,0.06) !important; }
 
 	@media (max-width: 480px) {
+		.page { padding-top: 5.5rem; }
+		.page-header { padding: 0.5rem 1.25rem 1rem; }
 		.reader-body { padding: 1.5rem 1.25rem; }
 		.field-row { grid-template-columns: 1fr; }
 		.field-narrow { width: 100%; }
-		.inner { padding: 2rem 1.25rem 4rem; }
+		.inner { padding: 1.5rem 1.25rem 4rem; }
 		.overlay-header { padding: 1rem 1.25rem; }
 		.editor-body { padding: 1.25rem; }
 	}

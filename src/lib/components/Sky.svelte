@@ -408,6 +408,7 @@
 		}
 
 		renderFrame(ctx, altDeg, sxn);
+		document.documentElement.classList.add('sky-ready');
 		animFrame = requestAnimationFrame(draw);
 	}
 
