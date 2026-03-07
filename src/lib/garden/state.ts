@@ -1,7 +1,11 @@
 // Garden persistence — age units, growth curve, localStorage state
 
-const GARDEN_KEY  = 'cwc:garden-v1';
-const INITIAL_AGE = 11315;   // ~31 years of pre-seeded growth
+const GARDEN_KEY = 'cwc:garden-v1';
+// Age in real calendar days since birth (Feb 13, 1995).
+// Computed at module load so new visitors always initialize to the correct age —
+// exactly 31 years on Feb 13, 2026, growing each day after that.
+const BIRTH_DATE_MS = Date.UTC(1995, 1, 13); // month is 0-indexed: 1 = February
+const INITIAL_AGE   = Math.floor((Date.now() - BIRTH_DATE_MS) / 86_400_000);
 
 export interface GardenState {
 	version:         number;
