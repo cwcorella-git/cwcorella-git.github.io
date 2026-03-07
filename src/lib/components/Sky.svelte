@@ -365,6 +365,19 @@
 	let animFrame  = 0;
 	let frameCount = 0;
 
+	function renderFrame(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
+		ctx.clearRect(0, 0, W, H);
+		drawSky(ctx, altDeg);
+		drawMoon(ctx, altDeg, sxn);
+		drawCircumsolarGlow(ctx, altDeg, sxn);
+		drawSun(ctx, altDeg, sxn);
+		drawCrepuscularRays(ctx, altDeg, sxn);
+		drawBeltOfVenus(ctx, altDeg);
+		drawPurpleLight(ctx, altDeg, sxn);
+		drawHorizonBlend(ctx, altDeg);
+		drawVignette(ctx);
+	}
+
 	function draw(): void {
 		if (!canvas) return;
 		const ctx = canvas.getContext('2d');
@@ -384,18 +397,7 @@
 			return;
 		}
 
-		ctx.clearRect(0, 0, W, H);
-
-		drawSky(ctx, altDeg);
-		drawMoon(ctx, altDeg, sxn);
-		drawCircumsolarGlow(ctx, altDeg, sxn);
-		drawSun(ctx, altDeg, sxn);
-		drawCrepuscularRays(ctx, altDeg, sxn);
-		drawBeltOfVenus(ctx, altDeg);
-		drawPurpleLight(ctx, altDeg, sxn);
-		drawHorizonBlend(ctx, altDeg);
-		drawVignette(ctx);
-
+		renderFrame(ctx, altDeg, sxn);
 		animFrame = requestAnimationFrame(draw);
 	}
 
@@ -408,6 +410,15 @@
 		W = canvas.width  = newW;
 		H = canvas.height = newH;
 		horizonY = H * HORIZON_FRAC;
+		// Redraw synchronously — setting canvas.width clears the buffer instantly,
+		// and the RAF throttle (up to 15 frames) would cause a visible flash otherwise.
+		const ctx = canvas.getContext('2d');
+		if (!ctx) return;
+		const now    = new Date();
+		const altDeg = sunAltitudeDeg(now);
+		const sxn    = sunXNorm(now, 39.53);
+		updateTheme(altDeg);
+		renderFrame(ctx, altDeg, sxn);
 	}
 
 	onMount(() => {

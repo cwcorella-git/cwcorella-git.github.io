@@ -100,6 +100,8 @@
 	/* Theme button wrapper — positions the dropdown panel */
 	.theme-wrapper {
 		position: relative;
+		display: inline-flex;
+		align-items: center;
 	}
 
 	button.active {
