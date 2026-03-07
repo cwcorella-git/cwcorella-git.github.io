@@ -151,8 +151,9 @@
 
 <div class="page" role="main" oncontextmenu={(e) => e.preventDefault()}>
 
-	<div class="search-area">
-		<div class="search-row">
+	<div class="inner">
+		<div class="search-area">
+			<div class="search-row">
 				<div class="search-bar" bind:this={searchBarEl}>
 					{#if activeTag}
 						<span class="tag-chip">
@@ -186,7 +187,6 @@
 			</div>
 		</div>
 
-	<div class="inner">
 		<ul class="list">
 			{#each filtered as book (book.id)}
 				<li class:done={book.read}>
@@ -237,27 +237,18 @@
 <style>
 	.page {
 		min-height: 100vh;
-		padding-top: 6rem;
+		padding-top: 4rem;
 	}
 
-	/* ── search area — floats above the panel in open sky ────── */
-	.search-area {
-		max-width: 760px;
-		margin: 0 auto;
-		padding: 0.75rem 2rem 1.25rem;
-		background: var(--glass-bg);
-		backdrop-filter: var(--glass-blur);
-		-webkit-backdrop-filter: var(--glass-blur);
-		border: 1px solid var(--glass-border);
-		border-bottom: none;
-	}
+	/* ── search area ─────────────────────────────────────────── */
+	.search-area { margin-bottom: 2.5rem; }
 
 	.inner {
 		position: relative;
 		z-index: 1;
 		max-width: 760px;
 		margin: 0 auto;
-		padding: 2rem 2rem 6rem;
+		padding: 3rem 2rem 6rem;
 		background: var(--glass-bg);
 		backdrop-filter: var(--glass-blur);
 		-webkit-backdrop-filter: var(--glass-blur);
@@ -490,8 +481,8 @@
 	}
 
 	@media (max-width: 480px) {
-		.page { padding-top: 5.5rem; }
-		.search-area { padding: 0.5rem 1.25rem 0.85rem; }
+		.page { padding-top: 4.5rem; }
+		.search-area { margin-bottom: 1.5rem; }
 		.inner { padding: 1.5rem 1.25rem 4rem; }
 		.read-toggle, .edit-pencil {
 			padding: 0.5rem 0.4rem;
