@@ -18,10 +18,17 @@
 	let drawerRef: AdminDrawer;
 	let buffer = '';
 	let uiHidden = $state(false);
+	let logoutConfirmOpen = $state(false);
+
+	async function confirmLogout() {
+		logoutConfirmOpen = false;
+		await adminState.logout();
+	}
 
 	function handleKeydown(e: KeyboardEvent) {
 		const tag = (e.target as HTMLElement).tagName;
 		if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+		if (e.key === 'Escape') { logoutConfirmOpen = false; return; }
 		if (e.key === 'h' || e.key === 'H') { uiHidden = !uiHidden; return; }
 		buffer = (buffer + e.key).slice(-ADMIN_SEQUENCE.length);
 		if (buffer === ADMIN_SEQUENCE) {
@@ -69,7 +76,7 @@
 		{#if adminState.active || archiveState.mode}
 			<a href="/journals" class:active={$page.url.pathname === '/journals'}>journals</a>
 		{/if}
-		<AdminToolbar />
+		<AdminToolbar onLogoutRequest={() => logoutConfirmOpen = true} />
 	</div>
 	<button
 		class="eye-btn"
@@ -91,6 +98,20 @@
 		{/if}
 	</button>
 </nav>
+
+{#if logoutConfirmOpen}
+	<div class="logout-backdrop" role="presentation" onclick={() => logoutConfirmOpen = false}></div>
+	<div class="logout-modal" role="dialog" aria-modal="true" aria-label="Confirm logout">
+		<p class="logout-title">log out?</p>
+		{#if writeQueue.isDirty}
+			<p class="logout-warn">you have unsynced changes — they will be lost.</p>
+		{/if}
+		<div class="logout-actions">
+			<button class="logout-cancel" onclick={() => logoutConfirmOpen = false}>cancel</button>
+			<button class="logout-confirm" onclick={confirmLogout}>× logout</button>
+		</div>
+	</div>
+{/if}
 
 <div class="page-content" class:ui-hidden={uiHidden}>
 	{@render children()}
@@ -255,4 +276,49 @@
 		pointer-events: none;
 		transition: opacity 0.4s;
 	}
+
+	/* ── logout confirmation modal ─────────────────────────── */
+	.logout-backdrop {
+		position: fixed; inset: 0; z-index: 400;
+		background: var(--backdrop-overlay);
+	}
+	.logout-modal {
+		position: fixed; top: 50%; left: 50%;
+		transform: translate(-50%, -50%);
+		z-index: 401;
+		background: var(--glass-bg-heavy);
+		backdrop-filter: var(--glass-blur-heavy);
+		-webkit-backdrop-filter: var(--glass-blur-heavy);
+		border: 1px solid var(--glass-border);
+		padding: 1.6rem 1.8rem;
+		width: min(300px, 90vw);
+		display: flex; flex-direction: column; gap: 0.9rem;
+	}
+	.logout-title {
+		font-family: 'Courier New', Courier, monospace;
+		font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase;
+		color: var(--clr-text); margin: 0;
+	}
+	.logout-warn {
+		font-family: 'Courier New', Courier, monospace;
+		font-size: 0.62rem; line-height: 1.6; letter-spacing: 0.03em;
+		color: var(--clr-danger); margin: 0;
+	}
+	.logout-actions {
+		display: flex; gap: 0.5rem; justify-content: flex-end;
+		padding-top: 0.6rem;
+		border-top: 1px solid rgba(var(--ui-rgb), 0.12);
+	}
+	.logout-cancel, .logout-confirm {
+		background: none;
+		border: 1px solid rgba(var(--ui-rgb), 0.20);
+		color: var(--clr-text);
+		font-family: 'Courier New', Courier, monospace;
+		font-size: 0.6rem; letter-spacing: 0.08em;
+		padding: 0.35rem 0.8rem; cursor: pointer;
+		transition: all var(--t-ui);
+	}
+	.logout-cancel:hover  { border-color: rgba(var(--ui-rgb), 0.40); }
+	.logout-confirm { color: var(--clr-danger); border-color: rgba(var(--ui-rgb), 0.20); }
+	.logout-confirm:hover { border-color: var(--clr-danger); }
 </style>

@@ -2,17 +2,9 @@
 	import { adminState, writeQueue } from '$lib/admin/state.svelte';
 	import ThemePanel from '$lib/components/ThemePanel.svelte';
 
+	let { onLogoutRequest }: { onLogoutRequest: () => void } = $props();
+
 	let themePanelOpen = $state(false);
-	let logoutConfirmOpen = $state(false);
-
-	async function confirmLogout() {
-		logoutConfirmOpen = false;
-		await adminState.logout();
-	}
-
-	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') logoutConfirmOpen = false;
-	}
 
 	async function handleSync() {
 		await writeQueue.flush();
@@ -26,22 +18,6 @@
 		return { destroy() { document.removeEventListener('click', onClick, true); } };
 	}
 </script>
-
-<svelte:window onkeydown={handleKeydown} />
-
-{#if logoutConfirmOpen}
-	<div class="logout-backdrop" role="presentation" onclick={() => logoutConfirmOpen = false}></div>
-	<div class="logout-modal" role="dialog" aria-modal="true" aria-label="Confirm logout">
-		<p class="logout-title">log out?</p>
-		{#if writeQueue.isDirty}
-			<p class="logout-body">you have unsynced changes. they will be lost.</p>
-		{/if}
-		<div class="logout-actions">
-			<button onclick={() => logoutConfirmOpen = false}>cancel</button>
-			<button class="confirm-btn" onclick={confirmLogout}>× logout</button>
-		</div>
-	</div>
-{/if}
 
 {#if adminState.active}
 	<div class="toolbar">
@@ -69,7 +45,7 @@
 			{/if}
 		</div>
 
-		<button onclick={() => logoutConfirmOpen = true}>× logout</button>
+		<button onclick={onLogoutRequest}>× logout</button>
 	</div>
 {/if}
 
@@ -129,45 +105,4 @@
 		button { font-size: 0.55rem; padding: 0.2rem 0.4rem; }
 	}
 
-	/* ── logout confirmation modal ─────────────────────────── */
-	.logout-backdrop {
-		position: fixed; inset: 0; z-index: 400;
-		background: var(--backdrop-overlay);
-	}
-	.logout-modal {
-		position: fixed; top: 50%; left: 50%;
-		transform: translate(-50%, -50%);
-		z-index: 401;
-		background: var(--glass-bg-dark);
-		backdrop-filter: var(--glass-blur-heavy);
-		-webkit-backdrop-filter: var(--glass-blur-heavy);
-		border: 1px solid var(--glass-border-dark);
-		padding: 1.6rem 1.8rem;
-		width: min(300px, 90vw);
-		display: flex; flex-direction: column; gap: 0.9rem;
-	}
-	.logout-title {
-		font-family: 'Courier New', Courier, monospace;
-		font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase;
-		color: var(--clr-dark-text); margin: 0;
-	}
-	.logout-body {
-		font-family: 'Courier New', Courier, monospace;
-		font-size: 0.62rem; line-height: 1.6; letter-spacing: 0.03em;
-		color: var(--clr-danger); margin: 0;
-	}
-	.logout-actions {
-		display: flex; gap: 0.5rem; justify-content: flex-end;
-		padding-top: 0.6rem;
-		border-top: 1px solid rgba(255, 255, 255, 0.08);
-	}
-	.logout-actions button {
-		background: none; border: 1px solid rgba(255, 255, 255, 0.15);
-		color: var(--clr-dark-text);
-		font-size: 0.6rem; letter-spacing: 0.08em;
-		padding: 0.35rem 0.8rem; cursor: pointer; transition: all var(--t-ui);
-	}
-	.logout-actions button:hover { border-color: rgba(255, 255, 255, 0.35); opacity: 1; }
-	.confirm-btn { color: var(--clr-danger) !important; border-color: rgba(190, 80, 60, 0.35) !important; }
-	.confirm-btn:hover { border-color: rgba(190, 80, 60, 0.65) !important; }
 </style>
