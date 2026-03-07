@@ -51,6 +51,9 @@ async function shot(page: Page, name: string) {
 
 async function adminLogin(page: Page) {
 	if (!hasCredentials) test.skip();
+	// Wait for the page to fully settle before dispatching key events —
+	// svelte:window onkeydown attaches during component mount, which needs hydration to complete.
+	await page.waitForLoadState('networkidle');
 	// Dispatch keydown events directly on window — svelte:window onkeydown catches these.
 	// e.target is window (tagName undefined), so the INPUT/TEXTAREA guard doesn't block them.
 	// Avoids clicking nav (navigates) or body on /reading (opens DocReader).
@@ -60,7 +63,7 @@ async function adminLogin(page: Page) {
 		}
 	});
 	const drawer = page.locator('[aria-label="Admin login"]');
-	await drawer.waitFor({ state: 'visible', timeout: 5000 });
+	await drawer.waitFor({ state: 'visible', timeout: 8000 });
 	await page.locator('input[placeholder="ghp_..."]').fill(ADMIN_PAT);
 	await page.locator('input[placeholder="passphrase for encrypted docs"]').fill(ADMIN_KEY);
 	await page.locator('button[type="submit"]').click();

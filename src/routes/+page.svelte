@@ -139,4 +139,12 @@
 		main { padding: 1.25rem; }
 		.content-panel { padding: 1.5rem 1.25rem; }
 	}
+	@media (max-width: 480px) {
+		:global(.prose p),
+		:global(.prose blockquote) {
+			line-height: 1.65;
+			font-size: 0.95rem;
+			margin-bottom: 1.1rem;
+		}
+	}
 </style>

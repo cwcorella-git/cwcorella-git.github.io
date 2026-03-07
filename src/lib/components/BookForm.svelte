@@ -233,19 +233,19 @@
 		{#if validationError}
 			<p class="error">{validationError}</p>
 		{/if}
+	</div>
 
-		<div class="modal-footer">
-			{#if !isNew}
-				<button class="delete-btn" onclick={deleteBook} disabled={deleting || saving}>
-					{deleting ? 'deleting…' : 'delete'}
-				</button>
-			{/if}
-			<div class="footer-right">
-				<button onclick={onClose} disabled={saving || deleting}>cancel</button>
-				<button class="save-btn" onclick={save} disabled={saving || deleting}>
-					{saving ? 'saving…' : 'save'}
-				</button>
-			</div>
+	<div class="modal-footer">
+		{#if !isNew}
+			<button class="delete-btn" onclick={deleteBook} disabled={deleting || saving}>
+				{deleting ? 'deleting…' : 'delete'}
+			</button>
+		{/if}
+		<div class="footer-right">
+			<button onclick={onClose} disabled={saving || deleting}>cancel</button>
+			<button class="save-btn" onclick={save} disabled={saving || deleting}>
+				{saving ? 'saving…' : 'save'}
+			</button>
 		</div>
 	</div>
 </div>
@@ -427,8 +427,12 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding-top: 0.8rem;
-		border-top: 1px solid rgba(var(--dark-panel-rgb), 0.06);
+		padding: 0.8rem 1.6rem;
+		border-top: 1px solid rgba(var(--dark-panel-rgb), 0.10);
+		flex-shrink: 0;
+	}
+	@media (max-width: 480px) {
+		.modal-footer { padding: 0.8rem 1rem; }
 	}
 
 	.footer-right {

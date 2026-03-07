@@ -83,7 +83,7 @@
 		class:hidden={uiHidden}
 		onclick={() => uiHidden = !uiHidden}
 		title="{uiHidden ? 'show' : 'hide'} interface (H)"
-	>{uiHidden ? '⊞' : '⊟'}</button>
+	>· <span class="eye-label">{uiHidden ? 'show' : 'hide'}</span></button>
 </nav>
 
 {#if logoutConfirmOpen}
@@ -275,6 +275,9 @@
 		opacity: 0.35;
 	}
 	.eye-btn.hidden:hover { opacity: 0.8; }
+	@media (max-width: 580px) {
+		.eye-label { display: none; }
+	}
 
 	/* ── ui hidden state ───────────────────────────────────── */
 	nav.ui-hidden {
