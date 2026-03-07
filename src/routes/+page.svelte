@@ -74,11 +74,6 @@
 		padding: 2.5rem 2.5rem 2.5rem;
 		display: flex;
 		flex-direction: column;
-		animation: reveal 0.18s ease both;
-	}
-	@keyframes reveal {
-		from { opacity: 0; }
-		to   { opacity: 1; }
 	}
 
 	/* Prose styles for markdown-rendered content */

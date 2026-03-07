@@ -194,10 +194,6 @@
 		position: relative;
 		z-index: 1;
 	}
-	/* Prevent FOUC: panels start invisible; each page CSS applies animation: reveal to fade in */
-	:global(.inner), :global(.content-panel) {
-		opacity: 0;
-	}
 	/* Smooth day→night transitions on glass panels and text */
 	:global(.inner), :global(.content-panel) {
 		transition: background var(--t-theme), border-color var(--t-theme);
