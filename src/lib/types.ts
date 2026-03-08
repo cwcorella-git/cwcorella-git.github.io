@@ -17,6 +17,7 @@ export interface LinkMeta {
 	url: string;
 	title: string;
 	category: string;
+	subcategory?: string;
 	tags: string[];
 	added: string;
 	notes?: string;

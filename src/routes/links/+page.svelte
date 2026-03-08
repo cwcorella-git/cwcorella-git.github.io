@@ -3,6 +3,8 @@
 	import { encryptDoc, decryptDoc } from '$lib/admin/crypto';
 	import { toast } from '$lib/admin/toast.svelte';
 	import type { LinkMeta } from '$lib/types';
+	import CategorySection from '$lib/components/CategorySection.svelte';
+	import LinkRow from '$lib/components/LinkRow.svelte';
 
 	// ── index ─────────────────────────────────────────────────────────────
 	let indexError = $state('');
