@@ -1,9 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <style>
-    text { fill: #0a0a0a; }
-    @media (prefers-color-scheme: dark) { text { fill: #ffffff; } }
+    rect { stroke: #0a0a0a; }
+    @media (prefers-color-scheme: dark) { rect { stroke: #ffffff; } }
   </style>
-  <text x="16" y="22" text-anchor="middle"
-    font-family="Georgia, 'Times New Roman', Times, serif"
-    font-size="13" letter-spacing="0.5">cwc</text>
+  <rect x="10" y="10" width="12" height="12" fill="none" stroke-width="1.5" transform="rotate(45 16 16)"/>
 </svg>
