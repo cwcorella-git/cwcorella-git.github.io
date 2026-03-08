@@ -593,53 +593,23 @@
 				<p class="status">no matches.</p>
 			{:else}
 				{#each grouped as group (group.category)}
-					<div class="category-section-wrapper">
-						<!-- Category actions overlay -->
-						{#if catActionMode !== 'none' && catActionTarget === group.category}
-							<div class="cat-actions-overlay">
-								{#if catActionMode === 'rename'}
-									<input
-										type="text"
-										class="cat-rename-input"
-										bind:value={renameValue}
-										onkeydown={(e) => { if (e.key === 'Enter') commitRenameCategory(); if (e.key === 'Escape') catActionMode = 'none'; }}
-									/>
-									<button class="cat-action-btn" onclick={commitRenameCategory} disabled={categorySaving}>
-										{categorySaving ? '…' : 'save'}
-									</button>
-									<button class="cat-action-btn" onclick={() => catActionMode = 'none'}>cancel</button>
-								{:else if catActionMode === 'delete'}
-									<span class="dim">move to Uncategorized?</span>
-									<button class="cat-action-btn danger" onclick={() => deleteCategory(group.category)} disabled={categorySaving}>
-										{categorySaving ? '…' : 'confirm'}
-									</button>
-									<button class="cat-action-btn" onclick={() => catActionMode = 'none'}>cancel</button>
-								{/if}
-							</div>
-						{:else}
-							<div class="cat-actions">
-								<button class="cat-action-btn" onclick={() => startRenameCategory(group.category)}>rename</button>
-								<button class="cat-action-btn danger" onclick={() => { catActionTarget = group.category; catActionMode = 'delete'; }}>delete</button>
-								<button class="cat-action-btn" onclick={() => exportCategory(group.category)}>export</button>
-							</div>
-						{/if}
-
-						<!-- Category with subcategories and links -->
-						<CategorySection
-							category={group.category}
-							links={group.links}
-							{selectMode}
-							selected={selected}
-							confirmingId={confirmingId}
-							deleteSaving={deleteSaving}
-							onSelect={toggleSelect}
-							onEdit={startEdit}
-							onDelete={(id) => confirmingId = id}
-							onCancelDelete={() => confirmingId = null}
-							onConfirmDelete={deleteLink}
-							onTagClick={setTag}
-						/>
-					</div>
+					<CategorySection
+						category={group.category}
+						links={group.links}
+						{selectMode}
+						selected={selected}
+						confirmingId={confirmingId}
+						deleteSaving={deleteSaving}
+						onSelect={toggleSelect}
+						onEdit={startEdit}
+						onDelete={(id) => confirmingId = id}
+						onCancelDelete={() => confirmingId = null}
+						onConfirmDelete={deleteLink}
+						onTagClick={setTag}
+						onCatRename={startRenameCategory}
+						onCatDelete={(cat) => { catActionTarget = cat; catActionMode = 'delete'; }}
+						onCatExport={exportCategory}
+					/>
 				{/each}
 
 				<div class="footer-row">
@@ -759,36 +729,6 @@
 	}
 	.header-btn:hover { border-color: rgba(var(--ui-rgb), 0.45); }
 
-	/* ── category section wrapper ─────────────────────────── */
-	.category-section-wrapper { margin-bottom: 1.5rem; }
-	.cat-actions-overlay {
-		display: flex; align-items: center; gap: 0.5rem;
-		padding: 0.5rem 0; margin-bottom: 0.5rem;
-		flex-wrap: wrap;
-	}
-	.cat-actions {
-		display: flex; align-items: center; gap: 0.35rem;
-		flex-shrink: 0; margin-top: 0.5rem;
-	}
-	.cat-action-btn {
-		background: none; border: none; cursor: pointer;
-		font-family: var(--font-ui);
-		font-size: 0.46rem; letter-spacing: 0.08em; text-transform: uppercase;
-		color: var(--clr-text); opacity: 0.35;
-		padding: 0.1rem 0.25rem; transition: opacity var(--t-ui);
-	}
-	.cat-action-btn:hover:not(:disabled) { opacity: 0.85; }
-	.cat-action-btn.danger:hover:not(:disabled) { color: var(--clr-danger); opacity: 0.85; }
-	.cat-action-btn:disabled { opacity: 0.2; cursor: not-allowed; }
-	.cat-rename-input {
-		background: none; border: none;
-		border-bottom: 1px solid rgba(var(--ui-rgb), 0.30);
-		color: var(--clr-text);
-		font-family: var(--font-ui);
-		font-size: 0.6rem; letter-spacing: 0.06em;
-		padding: 0.1rem 0.3rem; width: 8rem; outline: none;
-	}
-	.cat-rename-input:focus { border-color: rgba(var(--ui-rgb), 0.55); }
 
 	/* ── bulk bar ─────────────────────────────────────────── */
 	.bulk-bar {
@@ -921,6 +861,5 @@
 		.overlay-header { padding: 1rem 1.25rem; }
 		.editor-body { padding: 1.25rem; }
 		.field-row { grid-template-columns: 1fr; }
-		.cat-actions { display: none; }
 	}
 </style>

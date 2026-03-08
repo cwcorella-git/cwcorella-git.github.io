@@ -21,6 +21,9 @@
 		onCancelDelete?: () => void;
 		onConfirmDelete?: (id: string) => void;
 		onTagClick?: (tag: string) => void;
+		onCatRename?: (name: string) => void;
+		onCatDelete?: (name: string) => void;
+		onCatExport?: (name: string) => void;
 	}
 
 	const {
@@ -35,7 +38,10 @@
 		onDelete = () => {},
 		onCancelDelete = () => {},
 		onConfirmDelete = () => {},
-		onTagClick = () => {}
+		onTagClick = () => {},
+		onCatRename = () => {},
+		onCatDelete = () => {},
+		onCatExport = () => {}
 	}: Props = $props();
 
 	let isExpanded = $state(false);
@@ -60,14 +66,22 @@
 </script>
 
 <div class="category-section">
-	<button
-		class="category-header"
-		onclick={() => (isExpanded = !isExpanded)}
-		aria-expanded={isExpanded}
-	>
-		<span class="expand-icon">{isExpanded ? '∨' : '∧'}</span>
-		<h2>{category} ({links.length})</h2>
-	</button>
+	<div class="category-header">
+		<button
+			class="expand-btn"
+			onclick={() => (isExpanded = !isExpanded)}
+			aria-expanded={isExpanded}
+		>
+			<span class="expand-icon">{isExpanded ? '∨' : '∧'}</span>
+			<span class="cat-name">{category}</span>
+			<span class="cat-count">({links.length})</span>
+		</button>
+		<div class="cat-actions">
+			<button class="cat-btn" onclick={() => onCatRename(category)} title="Rename">rename</button>
+			<button class="cat-btn danger" onclick={() => onCatDelete(category)} title="Delete">delete</button>
+			<button class="cat-btn" onclick={() => onCatExport(category)} title="Export">export</button>
+		</div>
+	</div>
 
 	{#if isExpanded}
 		<div class="category-content">
@@ -113,22 +127,28 @@
 
 <style>
 	.category-section {
-		margin-bottom: 0.25rem;
+		margin-bottom: 2rem;
 	}
 
 	.category-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		border-bottom: 1px solid rgba(var(--ui-rgb), 0.22);
+		padding: 0.75rem 0;
+		margin-bottom: 0.5rem;
+	}
+
+	.expand-btn {
 		background: none;
 		border: none;
 		cursor: pointer;
 		display: flex;
 		align-items: center;
-		gap: 0.4rem;
+		gap: 0.5rem;
 		padding: 0;
 		flex: 1;
 		min-width: 0;
-		border-bottom: 1px solid rgba(var(--ui-rgb), 0.22);
-		padding: 0.6rem 0;
-		width: 100%;
 		color: var(--clr-text);
 		text-align: left;
 		transition: none;
@@ -136,23 +156,69 @@
 
 	.expand-icon {
 		display: inline-block;
-		width: 1rem;
+		width: 0.6rem;
 		text-align: center;
-		font-size: 0.7rem;
+		font-size: 0.6rem;
 		color: var(--clr-text);
 		opacity: 0.4;
-		transition: transform var(--t-ui);
+		transition: opacity var(--t-ui);
+		flex-shrink: 0;
 	}
 
-	.category-header h2 {
-		margin: 0;
+	.expand-btn:hover .expand-icon {
+		opacity: 0.7;
+	}
+
+	.cat-name {
 		font-family: var(--font-ui);
-		font-size: 0.62rem;
+		font-size: 0.65rem;
 		letter-spacing: 0.12em;
 		text-transform: uppercase;
 		color: var(--clr-text);
 		font-weight: normal;
-		flex: 1;
+	}
+
+	.cat-count {
+		font-family: var(--font-ui);
+		font-size: 0.55rem;
+		letter-spacing: 0.06em;
+		color: var(--clr-text);
+		opacity: 0.45;
+		flex-shrink: 0;
+	}
+
+	.cat-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		flex-shrink: 0;
+	}
+
+	.cat-btn {
+		background: none;
+		border: none;
+		cursor: pointer;
+		font-family: var(--font-ui);
+		font-size: 0.48rem;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--clr-text);
+		opacity: 0.35;
+		padding: 0.1rem 0.25rem;
+		transition: opacity var(--t-ui);
+	}
+
+	.cat-btn:hover:not(:disabled) {
+		opacity: 0.85;
+	}
+
+	.cat-btn:disabled {
+		opacity: 0.15;
+		cursor: not-allowed;
+	}
+
+	.cat-btn.danger {
+		color: var(--clr-danger);
 	}
 
 	.category-content {
