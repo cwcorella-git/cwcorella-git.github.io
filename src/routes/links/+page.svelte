@@ -34,20 +34,14 @@
 		linksState.set(newIndex);
 	}
 
-	// ── search + filter + sort ────────────────────────────────────────────
-	let searchQuery = $state('');
-	let activeCategory = $state<string | null>(null);
-	let activeTags = $state<Set<string>>(new Set());
-	let sortBy = $state<'date' | 'alpha' | 'category'>('date');
-
+	// ── categories ────────────────────────────────────────────────────────
 	const categories = $derived(
 		(() => {
 			const counts: Record<string, number> = {};
 			for (const l of linksState.entries) counts[l.category] = (counts[l.category] || 0) + 1;
 			return Object.entries(counts)
-				.filter(([cat, count]) => cat !== 'Uncategorized' || count > 0)
+				.filter(([cat]) => cat !== 'Uncategorized' || counts[cat] > 0)
 				.sort((a, b) => {
-					// Uncategorized always last
 					if (a[0] === 'Uncategorized') return 1;
 					if (b[0] === 'Uncategorized') return -1;
 					return b[1] - a[1];
@@ -55,15 +49,57 @@
 		})()
 	);
 
+	// All unique tags sorted by frequency
 	const allTags = $derived(
 		(() => {
 			const counts: Record<string, number> = {};
 			for (const l of linksState.entries) for (const t of l.tags) counts[t] = (counts[t] || 0) + 1;
-			return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+			return Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([t]) => t);
 		})()
 	);
 
+	// ── search + tag filter ───────────────────────────────────────────────
+	let searchQuery = $state('');
+	let activeTag = $state('');
+	let suggestionsDismissed = $state(false);
+
+	let tagSuggestions = $derived(
+		(searchQuery.trim() && !activeTag)
+			? allTags.filter(t => t.includes(searchQuery.trim().toLowerCase())).slice(0, 6)
+			: []
+	);
+
+	let showSuggestions = $derived(tagSuggestions.length > 0 && !suggestionsDismissed);
+
+	// Search bar sizing (same approach as reading page)
+	let searchBarEl = $state<HTMLElement | undefined>();
+	let searchBarWidth = $state(0);
+	$effect(() => {
+		if (!searchBarEl) return;
+		const ro = new ResizeObserver(([e]) => { searchBarWidth = e.contentRect.width; });
+		ro.observe(searchBarEl);
+		return () => ro.disconnect();
+	});
+	const CHAR_W = 7, PILL_PAD = 24, PILL_GAP = 8, INPUT_MIN = 100, OVERFLOW_W = 30;
+	let maxPills = $derived.by(() => {
+		if (!searchBarWidth || !tagSuggestions.length) return 3;
+		let available = searchBarWidth - INPUT_MIN;
+		let used = 0, count = 0;
+		for (let i = 0; i < tagSuggestions.length; i++) {
+			const w = tagSuggestions[i].length * CHAR_W + PILL_PAD + PILL_GAP;
+			const hasMore = i < tagSuggestions.length - 1;
+			if (used + w + (hasMore ? OVERFLOW_W : 0) > available) break;
+			used += w; count++;
+		}
+		return Math.max(1, count);
+	});
+
+	function setTag(tag: string) { activeTag = tag; searchQuery = ''; }
+	function clearTag() { activeTag = ''; }
+	function clearAll() { activeTag = ''; searchQuery = ''; }
+
 	function matchesSearch(l: LinkMeta): boolean {
+		if (activeTag) return l.tags.includes(activeTag);
 		const q = searchQuery.trim().toLowerCase();
 		if (!q) return true;
 		return l.title.toLowerCase().includes(q)
@@ -73,37 +109,33 @@
 			|| (l.notes?.toLowerCase().includes(q) ?? false);
 	}
 
-	function matchesFilters(l: LinkMeta): boolean {
-		if (activeCategory && l.category !== activeCategory) return false;
-		if (activeTags.size > 0 && !l.tags.some(t => activeTags.has(t))) return false;
-		return true;
+	let filtered = $derived(linksState.entries.filter(matchesSearch));
+
+	// ── collapsible sections ──────────────────────────────────────────────
+	let collapsedCats = $state<Set<string>>(new Set());
+
+	function toggleCollapse(cat: string) {
+		const next = new Set(collapsedCats);
+		if (next.has(cat)) next.delete(cat); else next.add(cat);
+		collapsedCats = next;
 	}
 
-	function sortFn(a: LinkMeta, b: LinkMeta): number {
-		if (sortBy === 'alpha') return a.title.localeCompare(b.title);
-		if (sortBy === 'category') return a.category.localeCompare(b.category) || a.title.localeCompare(b.title);
-		return b.added.localeCompare(a.added); // date desc
-	}
-
-	let filtered = $derived(
-		linksState.entries.filter(l => matchesSearch(l) && matchesFilters(l)).sort(sortFn)
+	// Group filtered links by category, preserving category sort order
+	const grouped = $derived(
+		(() => {
+			const groups: Record<string, LinkMeta[]> = {};
+			for (const l of filtered) {
+				(groups[l.category] ??= []).push(l);
+			}
+			// Sort links within each group by title
+			for (const arr of Object.values(groups)) arr.sort((a, b) => a.title.localeCompare(b.title));
+			// Return in category order
+			const catOrder = categories.map(([c]) => c);
+			return catOrder
+				.filter(c => groups[c])
+				.map(c => ({ category: c, links: groups[c] }));
+		})()
 	);
-
-	function toggleCategory(cat: string) {
-		activeCategory = activeCategory === cat ? null : cat;
-	}
-
-	function toggleTag(tag: string) {
-		const next = new Set(activeTags);
-		if (next.has(tag)) next.delete(tag); else next.add(tag);
-		activeTags = next;
-	}
-
-	function clearFilters() {
-		activeCategory = null;
-		activeTags = new Set();
-		searchQuery = '';
-	}
 
 	// ── selection (for bulk ops) ──────────────────────────────────────────
 	let selected = $state<Set<string>>(new Set());
@@ -201,9 +233,7 @@
 		editNotes = link.notes ?? '';
 	}
 
-	function closeEdit() {
-		editingLink = null;
-	}
+	function closeEdit() { editingLink = null; }
 
 	async function saveEdit() {
 		if (!editingLink) return;
@@ -261,8 +291,7 @@
 			const id = crypto.randomUUID().slice(0, 12);
 			const tags = addTags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
 			const link: LinkMeta = {
-				id,
-				url,
+				id, url,
 				title: addTitle.trim() || url,
 				category: addCategory.trim() || 'Personal',
 				tags,
@@ -270,10 +299,7 @@
 			};
 			await saveIndex([link, ...linksState.entries], `add link: ${link.title}`);
 			addOpen = false;
-			addUrl = '';
-			addTitle = '';
-			addCategory = 'Personal';
-			addTags = '';
+			addUrl = ''; addTitle = ''; addCategory = 'Personal'; addTags = '';
 		} catch (e: unknown) {
 			toast.error(e instanceof Error ? e.message : 'Save failed.');
 		} finally {
@@ -282,30 +308,29 @@
 	}
 
 	// ── category operations ──────────────────────────────────────────────
-	let renamingCategory = $state(false);
+	let catActionTarget = $state<string | null>(null);
+	let catActionMode = $state<'none' | 'rename' | 'delete'>('none');
 	let renameValue = $state('');
 	let categorySaving = $state(false);
-	let confirmDeleteCategory = $state(false);
 
-	function startRenameCategory() {
-		if (!activeCategory) return;
-		renameValue = activeCategory;
-		renamingCategory = true;
+	function startRenameCategory(cat: string) {
+		catActionTarget = cat;
+		renameValue = cat;
+		catActionMode = 'rename';
 	}
 
 	async function commitRenameCategory() {
-		const oldName = activeCategory;
+		const oldName = catActionTarget;
 		const newName = renameValue.trim();
-		if (!oldName || !newName || newName === oldName) { renamingCategory = false; return; }
+		if (!oldName || !newName || newName === oldName) { catActionMode = 'none'; return; }
 		categorySaving = true;
 		try {
 			const newIndex = linksState.entries.map(l =>
 				l.category === oldName ? { ...l, category: newName } : l
 			);
 			await saveIndex(newIndex, `rename category: ${oldName} → ${newName}`);
-			activeCategory = newName;
 			toast.success(`renamed "${oldName}" → "${newName}"`);
-			renamingCategory = false;
+			catActionMode = 'none';
 		} catch (e: unknown) {
 			toast.error(e instanceof Error ? e.message : 'Rename failed.');
 		} finally {
@@ -313,18 +338,15 @@
 		}
 	}
 
-	async function deleteCategory() {
-		if (!activeCategory) return;
-		const cat = activeCategory;
-		confirmDeleteCategory = false;
+	async function deleteCategory(cat: string) {
 		categorySaving = true;
 		try {
 			const newIndex = linksState.entries.map(l =>
 				l.category === cat ? { ...l, category: 'Uncategorized' } : l
 			);
 			await saveIndex(newIndex, `delete category: ${cat} → Uncategorized`);
-			activeCategory = null;
 			toast.success(`"${cat}" deleted — links moved to Uncategorized`);
+			catActionMode = 'none';
 		} catch (e: unknown) {
 			toast.error(e instanceof Error ? e.message : 'Delete failed.');
 		} finally {
@@ -332,66 +354,49 @@
 		}
 	}
 
-	function exportCategory(cat: string | null) {
-		const links = cat
-			? linksState.entries.filter(l => l.category === cat)
-			: linksState.entries;
-		const label = cat ?? 'all-links';
-
+	function exportCategory(cat: string) {
+		const links = linksState.entries.filter(l => l.category === cat);
 		const lines = [
 			'<!DOCTYPE NETSCAPE-Bookmark-file-1>',
 			'<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">',
-			`<TITLE>${label}</TITLE>`,
-			`<H1>${label}</H1>`,
+			`<TITLE>${esc(cat)}</TITLE>`,
+			`<H1>${esc(cat)}</H1>`,
 			'<DL><p>',
 		];
-
-		// Group by category if exporting all
-		if (!cat) {
-			const grouped: Record<string, LinkMeta[]> = {};
-			for (const l of links) {
-				(grouped[l.category] ??= []).push(l);
-			}
-			for (const [groupCat, groupLinks] of Object.entries(grouped).sort((a, b) => a[0].localeCompare(b[0]))) {
-				lines.push(`    <DT><H3>${esc(groupCat)}</H3>`);
-				lines.push('    <DL><p>');
-				for (const l of groupLinks) {
-					lines.push(`        <DT><A HREF="${esc(l.url)}" ADD_DATE="${Math.floor(new Date(l.added).getTime() / 1000)}">${esc(l.title)}</A>`);
-				}
-				lines.push('    </DL><p>');
-			}
-		} else {
-			for (const l of links) {
-				lines.push(`    <DT><A HREF="${esc(l.url)}" ADD_DATE="${Math.floor(new Date(l.added).getTime() / 1000)}">${esc(l.title)}</A>`);
-			}
+		for (const l of links) {
+			lines.push(`    <DT><A HREF="${esc(l.url)}" ADD_DATE="${Math.floor(new Date(l.added).getTime() / 1000)}">${esc(l.title)}</A>`);
 		}
-
 		lines.push('</DL><p>');
-
-		const blob = new Blob([lines.join('\n')], { type: 'text/html' });
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = `${label.toLowerCase().replace(/\s+/g, '-')}.html`;
-		a.click();
-		URL.revokeObjectURL(url);
+		downloadFile(lines.join('\n'), `${cat.toLowerCase().replace(/\s+/g, '-')}.html`, 'text/html');
 		toast.success(`exported ${links.length} links`);
 	}
 
-	function exportJson(cat: string | null) {
-		const links = cat
-			? linksState.entries.filter(l => l.category === cat)
-			: linksState.entries;
-		const label = cat ?? 'all-links';
+	function exportAll() {
+		const lines = [
+			'<!DOCTYPE NETSCAPE-Bookmark-file-1>',
+			'<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">',
+			'<TITLE>links</TITLE>', '<H1>links</H1>', '<DL><p>',
+		];
+		const grouped: Record<string, LinkMeta[]> = {};
+		for (const l of linksState.entries) (grouped[l.category] ??= []).push(l);
+		for (const [cat, links] of Object.entries(grouped).sort((a, b) => a[0].localeCompare(b[0]))) {
+			lines.push(`    <DT><H3>${esc(cat)}</H3>`, '    <DL><p>');
+			for (const l of links) {
+				lines.push(`        <DT><A HREF="${esc(l.url)}" ADD_DATE="${Math.floor(new Date(l.added).getTime() / 1000)}">${esc(l.title)}</A>`);
+			}
+			lines.push('    </DL><p>');
+		}
+		lines.push('</DL><p>');
+		downloadFile(lines.join('\n'), 'all-links.html', 'text/html');
+		toast.success(`exported ${linksState.entries.length} links`);
+	}
 
-		const blob = new Blob([JSON.stringify(links, null, 2)], { type: 'application/json' });
+	function downloadFile(content: string, filename: string, type: string) {
+		const blob = new Blob([content], { type });
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement('a');
-		a.href = url;
-		a.download = `${label.toLowerCase().replace(/\s+/g, '-')}.json`;
-		a.click();
+		a.href = url; a.download = filename; a.click();
 		URL.revokeObjectURL(url);
-		toast.success(`exported ${links.length} links as JSON`);
 	}
 
 	function esc(s: string): string {
@@ -400,6 +405,7 @@
 
 	// ── strip source indicators ──────────────────────────────────────────
 	let stripSaving = $state(false);
+	const hasSources = $derived(linksState.entries.some(l => l.source));
 
 	async function stripSources() {
 		stripSaving = true;
@@ -414,18 +420,16 @@
 		}
 	}
 
-	const hasSources = $derived(linksState.entries.some(l => l.source));
-
 	// ── keyboard ──────────────────────────────────────────────────────────
 	function handleKeydown(e: KeyboardEvent) {
 		if (e.key === 'Escape') {
-			if (renamingCategory) { renamingCategory = false; }
-			else if (confirmDeleteCategory) { confirmDeleteCategory = false; }
+			if (catActionMode !== 'none') { catActionMode = 'none'; }
 			else if (editingLink) closeEdit();
 			else if (addOpen) { addOpen = false; }
 			else if (selectMode) deselectAll();
-			else { confirmingId = null; }
+			else { confirmingId = null; clearAll(); }
 		}
+		if (e.key === 'Enter' && !editingLink && !addOpen) { suggestionsDismissed = true; }
 	}
 
 	// ── helpers ───────────────────────────────────────────────────────────
@@ -527,28 +531,45 @@
 <!-- ── main page ──────────────────────────────────────────────────────── -->
 <div class="page">
 	<div class="inner">
-		<div class="page-header">
-			<div class="search-bar">
-				<input
-					type="text"
-					class="search-input"
-					placeholder="search links…"
-					bind:value={searchQuery}
-					autocomplete="off"
-					spellcheck="false"
-					aria-label="Search links"
-					onkeydown={(e) => { if (e.key === 'Escape') { searchQuery = ''; (e.target as HTMLInputElement).blur(); } }}
-				/>
-			</div>
-			<div class="header-actions">
-				{#if linksState.loaded}
-					{#if selectMode}
-						<button class="header-btn" onclick={deselectAll}>cancel</button>
-					{:else}
-						<button class="header-btn" onclick={() => selectMode = true}>select</button>
+		<div class="search-area">
+			<div class="search-row">
+				<div class="search-bar" bind:this={searchBarEl}>
+					{#if activeTag}
+						<span class="tag-chip">
+							{activeTag}
+							<button class="chip-clear" onclick={clearTag} aria-label="clear filter">×</button>
+						</span>
 					{/if}
-					<button class="header-btn" onclick={() => addOpen = true}>+ add</button>
-				{/if}
+					<input
+						type="text"
+						class="search-input"
+						class:with-chip={!!activeTag}
+						placeholder={activeTag ? '' : 'search links, tags, or categories…'}
+						bind:value={searchQuery}
+						oninput={() => { suggestionsDismissed = false; if (searchQuery.trim()) activeTag = ''; }}
+						aria-label="Search links"
+						autocomplete="off"
+						spellcheck="false"
+					/>
+					{#if showSuggestions}
+						{#each tagSuggestions.slice(0, maxPills) as tag}
+							<button class="pill" onclick={() => setTag(tag)}>{tag}</button>
+						{/each}
+						{#if tagSuggestions.length > maxPills}
+							<span class="pill-more">+{tagSuggestions.length - maxPills}</span>
+						{/if}
+					{/if}
+				</div>
+				<div class="header-actions">
+					{#if linksState.loaded}
+						{#if selectMode}
+							<button class="header-btn" onclick={deselectAll}>cancel</button>
+						{:else}
+							<button class="header-btn" onclick={() => selectMode = true}>select</button>
+						{/if}
+						<button class="header-btn" onclick={() => addOpen = true}>+ add</button>
+					{/if}
+				</div>
 			</div>
 		</div>
 
@@ -557,80 +578,6 @@
 		{:else if !linksState.loaded}
 			<p class="status">decrypting index…</p>
 		{:else}
-			<!-- category pills -->
-			{#if categories.length > 0}
-				<div class="pills">
-					{#each categories as [cat, count]}
-						<button
-							class="pill"
-							class:active={activeCategory === cat}
-							onclick={() => toggleCategory(cat)}
-						>{cat} <span class="pill-count">{count}</span></button>
-					{/each}
-				</div>
-			{/if}
-
-			<!-- category actions (when one is selected) -->
-			{#if activeCategory}
-				<div class="cat-actions">
-					{#if renamingCategory}
-						<input
-							type="text"
-							class="cat-rename-input"
-							bind:value={renameValue}
-							onkeydown={(e) => { if (e.key === 'Enter') commitRenameCategory(); if (e.key === 'Escape') renamingCategory = false; }}
-						/>
-						<button class="cat-action-btn" onclick={commitRenameCategory} disabled={categorySaving}>
-							{categorySaving ? '…' : 'save'}
-						</button>
-						<button class="cat-action-btn" onclick={() => renamingCategory = false}>cancel</button>
-					{:else if confirmDeleteCategory}
-						<span class="dim">delete "{activeCategory}"? links move to Uncategorized.</span>
-						<button class="cat-action-btn danger" onclick={deleteCategory} disabled={categorySaving}>
-							{categorySaving ? '…' : 'confirm'}
-						</button>
-						<button class="cat-action-btn" onclick={() => confirmDeleteCategory = false}>cancel</button>
-					{:else}
-						<button class="cat-action-btn" onclick={startRenameCategory}>rename</button>
-						<button class="cat-action-btn danger" onclick={() => confirmDeleteCategory = true}>delete</button>
-						<button class="cat-action-btn" onclick={() => exportCategory(activeCategory)}>export html</button>
-						<button class="cat-action-btn" onclick={() => exportJson(activeCategory)}>export json</button>
-					{/if}
-				</div>
-			{/if}
-
-			<!-- tag pills (show top tags, expandable) -->
-			{#if allTags.length > 0}
-				<div class="pills tags-row">
-					{#each allTags.slice(0, 20) as [tag, count]}
-						<button
-							class="pill tag-pill"
-							class:active={activeTags.has(tag)}
-							onclick={() => toggleTag(tag)}
-						>{tag} <span class="pill-count">{count}</span></button>
-					{/each}
-				</div>
-			{/if}
-
-			<!-- sort + meta row -->
-			<div class="meta-row">
-				<div class="sort-controls">
-					<button class="sort-btn" class:active={sortBy === 'date'} onclick={() => sortBy = 'date'}>date</button>
-					<button class="sort-btn" class:active={sortBy === 'alpha'} onclick={() => sortBy = 'alpha'}>a–z</button>
-					<button class="sort-btn" class:active={sortBy === 'category'} onclick={() => sortBy = 'category'}>category</button>
-				</div>
-				{#if activeCategory || activeTags.size > 0 || searchQuery.trim()}
-					<button class="clear-btn" onclick={clearFilters}>clear filters</button>
-				{/if}
-				{#if !activeCategory}
-					<button class="meta-btn" onclick={() => exportCategory(null)}>export all</button>
-				{/if}
-				{#if hasSources}
-					<button class="strip-btn" onclick={stripSources} disabled={stripSaving}>
-						{stripSaving ? '…' : 'strip sources'}
-					</button>
-				{/if}
-			</div>
 
 			<!-- bulk action bar -->
 			{#if selectMode && selected.size > 0}
@@ -649,58 +596,108 @@
 				</div>
 			{/if}
 
-			{#if filtered.length === 0}
+			{#if grouped.length === 0}
 				<p class="status">no matches.</p>
 			{:else}
-				<ul class="list">
-					{#each filtered as link (link.id)}
-						<li>
-							{#if confirmingId === link.id}
-								<div class="entry-row confirm-row">
-									<span class="dim">delete "{link.title}"?</span>
-									<div class="row-actions">
-										<button class="action-btn danger" onclick={() => deleteLink(link.id)} disabled={deleteSaving}>
-											{deleteSaving ? '…' : 'confirm'}
-										</button>
-										<button class="action-btn" onclick={() => confirmingId = null}>cancel</button>
-									</div>
-								</div>
-							{:else}
-								<div class="entry-row">
-									{#if selectMode}
-										<input
-											type="checkbox"
-											class="select-check"
-											checked={selected.has(link.id)}
-											onchange={() => toggleSelect(link.id)}
-										/>
-									{/if}
-									<a class="entry-link" href={link.url} target="_blank" rel="noopener noreferrer">
-										{#if link.source}<span class="source-indicator">{link.source}</span>{/if}
-										<span class="entry-title">{link.title}</span>
-										<span class="entry-domain">{domain(link.url)}</span>
-									</a>
-									<span class="entry-category">{link.category}</span>
-									{#if link.tags.length > 0}
-										<span class="entry-tags">
-											{#each link.tags.slice(0, 3) as tag}
-												<span class="entry-tag">{tag}</span>
-											{/each}
-											{#if link.tags.length > 3}
-												<span class="entry-tag dim">+{link.tags.length - 3}</span>
-											{/if}
-										</span>
-									{/if}
-									<div class="row-actions">
-										<button class="action-btn" onclick={() => startEdit(link)}>edit</button>
-										<button class="action-btn danger" onclick={() => confirmingId = link.id}>×</button>
-									</div>
-								</div>
-							{/if}
-						</li>
-					{/each}
-				</ul>
-				<p class="count">{filtered.length}{filtered.length !== linksState.entries.length ? ` of ${linksState.entries.length}` : ''} links</p>
+				{#each grouped as group (group.category)}
+					<section class="cat-section">
+						<!-- category header -->
+						<div class="cat-header">
+							<button class="cat-toggle" onclick={() => toggleCollapse(group.category)}>
+								<span class="cat-arrow" class:collapsed={collapsedCats.has(group.category)}>›</span>
+								<span class="cat-name">{group.category}</span>
+								<span class="cat-count">{group.links.length}</span>
+							</button>
+							<div class="cat-actions">
+								{#if catActionMode === 'rename' && catActionTarget === group.category}
+									<input
+										type="text"
+										class="cat-rename-input"
+										bind:value={renameValue}
+										onkeydown={(e) => { if (e.key === 'Enter') commitRenameCategory(); if (e.key === 'Escape') catActionMode = 'none'; }}
+									/>
+									<button class="cat-action-btn" onclick={commitRenameCategory} disabled={categorySaving}>
+										{categorySaving ? '…' : 'save'}
+									</button>
+									<button class="cat-action-btn" onclick={() => catActionMode = 'none'}>cancel</button>
+								{:else if catActionMode === 'delete' && catActionTarget === group.category}
+									<span class="dim">move to Uncategorized?</span>
+									<button class="cat-action-btn danger" onclick={() => deleteCategory(group.category)} disabled={categorySaving}>
+										{categorySaving ? '…' : 'confirm'}
+									</button>
+									<button class="cat-action-btn" onclick={() => catActionMode = 'none'}>cancel</button>
+								{:else}
+									<button class="cat-action-btn" onclick={() => startRenameCategory(group.category)}>rename</button>
+									<button class="cat-action-btn danger" onclick={() => { catActionTarget = group.category; catActionMode = 'delete'; }}>delete</button>
+									<button class="cat-action-btn" onclick={() => exportCategory(group.category)}>export</button>
+								{/if}
+							</div>
+						</div>
+
+						<!-- links in this category -->
+						{#if !collapsedCats.has(group.category)}
+							<ul class="list">
+								{#each group.links as link (link.id)}
+									<li>
+										{#if confirmingId === link.id}
+											<div class="entry-row confirm-row">
+												<span class="dim">delete "{link.title}"?</span>
+												<div class="row-actions">
+													<button class="action-btn danger" onclick={() => deleteLink(link.id)} disabled={deleteSaving}>
+														{deleteSaving ? '…' : 'confirm'}
+													</button>
+													<button class="action-btn" onclick={() => confirmingId = null}>cancel</button>
+												</div>
+											</div>
+										{:else}
+											<div class="entry-row">
+												{#if selectMode}
+													<input
+														type="checkbox"
+														class="select-check"
+														checked={selected.has(link.id)}
+														onchange={() => toggleSelect(link.id)}
+													/>
+												{/if}
+												<a class="entry-link" href={link.url} target="_blank" rel="noopener noreferrer">
+													{#if link.source}<span class="source-indicator">{link.source}</span>{/if}
+													<span class="entry-title">{link.title}</span>
+													<span class="entry-domain">{domain(link.url)}</span>
+												</a>
+												{#if link.tags.length > 0}
+													<span class="entry-tags">
+														{#each link.tags.slice(0, 3) as tag}
+															<button class="entry-tag" onclick={() => setTag(tag)}>{tag}</button>
+														{/each}
+														{#if link.tags.length > 3}
+															<span class="entry-tag-overflow">+{link.tags.length - 3}</span>
+														{/if}
+													</span>
+												{/if}
+												<div class="row-actions">
+													<button class="action-btn" onclick={() => startEdit(link)}>edit</button>
+													<button class="action-btn danger" onclick={() => confirmingId = link.id}>×</button>
+												</div>
+											</div>
+										{/if}
+									</li>
+								{/each}
+							</ul>
+						{/if}
+					</section>
+				{/each}
+
+				<div class="footer-row">
+					<p class="count">{filtered.length}{filtered.length !== linksState.entries.length ? ` of ${linksState.entries.length}` : ''} links</p>
+					<div class="footer-actions">
+						<button class="footer-btn" onclick={exportAll}>export all</button>
+						{#if hasSources}
+							<button class="footer-btn" onclick={stripSources} disabled={stripSaving}>
+								{stripSaving ? '…' : 'strip sources'}
+							</button>
+						{/if}
+					</div>
+				</div>
 			{/if}
 		{/if}
 	</div>
@@ -710,7 +707,7 @@
 
 <div class="page">
 	<div class="inner">
-		<div class="page-header">
+		<div class="search-area">
 			<h1 class="heading">links</h1>
 		</div>
 		<p class="status">private — admin access required.</p>
@@ -724,11 +721,6 @@
 	.page {
 		min-height: 100vh;
 		padding-top: 4rem;
-	}
-	.page-header {
-		display: flex; align-items: center; justify-content: space-between;
-		gap: 1rem;
-		margin-bottom: 2.5rem;
 	}
 	.inner {
 		position: relative; z-index: 1;
@@ -744,11 +736,19 @@
 		font-size: 1rem; font-weight: normal;
 		letter-spacing: 0.12em; color: var(--clr-text); margin: 0;
 	}
+	.status { font-family: var(--font-ui); font-size: 0.65rem; letter-spacing: 0.08em; color: var(--clr-text); }
+	.status.error { color: var(--clr-danger); }
+	.dim { font-family: var(--font-ui); font-size: 0.6rem; letter-spacing: 0.06em; color: var(--clr-text); }
+
+	/* ── search area ─────────────────────────────────────────── */
+	.search-area { margin-bottom: 2.5rem; }
+	.search-row { display: flex; align-items: center; gap: 1rem; }
 	.search-bar {
-		display: flex; align-items: center; gap: 0.75rem;
+		display: flex; align-items: center; gap: 0.5rem;
 		flex: 1;
 		border-bottom: 1px solid rgba(var(--ui-rgb), 0.22);
 		padding-bottom: 0.4rem;
+		overflow: hidden;
 	}
 	.search-input {
 		background: none; border: none; outline: none; flex: 1;
@@ -758,8 +758,41 @@
 		caret-color: currentColor;
 	}
 	.search-input::placeholder { color: var(--clr-text); opacity: 0.45; }
+	.tag-chip {
+		display: inline-flex; align-items: center; gap: 0.4rem;
+		background: rgba(0, 0, 0, 0.06);
+		border: 1px solid var(--glass-border);
+		border-radius: 2px; padding: 0.2rem 0.45rem 0.2rem 0.65rem;
+		font-family: var(--font-ui);
+		font-size: 0.62rem; letter-spacing: 0.1em;
+		text-transform: uppercase; color: var(--clr-text); white-space: nowrap;
+	}
+	.chip-clear {
+		background: none; border: none; cursor: pointer;
+		color: var(--clr-text); opacity: 0.5; font-size: 0.85rem;
+		padding: 0; line-height: 1; transition: opacity 0.15s;
+	}
+	.chip-clear:hover { opacity: 1; }
+	.pill {
+		background: none;
+		border: 1px solid var(--glass-border);
+		border-radius: 2px;
+		padding: 0.25rem 0.65rem;
+		font-family: var(--font-ui);
+		font-size: 0.62rem; letter-spacing: 0.1em;
+		text-transform: uppercase; color: var(--clr-text);
+		cursor: pointer; transition: all 0.15s;
+		white-space: nowrap; flex-shrink: 0;
+	}
+	.pill:hover { color: var(--clr-text); }
+	.pill-more {
+		font-family: var(--font-ui);
+		font-size: 0.62rem; letter-spacing: 0.06em;
+		color: var(--clr-text); opacity: 0.5;
+		white-space: nowrap; flex-shrink: 0;
+	}
 
-	.header-actions { display: flex; gap: 0.5rem; }
+	.header-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
 	.header-btn {
 		background: none;
 		border: 1px solid rgba(var(--ui-rgb), 0.28);
@@ -767,87 +800,63 @@
 		font-family: var(--font-ui);
 		font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase;
 		padding: 0.3rem 0.75rem; cursor: pointer; transition: all 0.15s;
+		white-space: nowrap;
 	}
 	.header-btn:hover { border-color: rgba(var(--ui-rgb), 0.45); }
 
-	.status { font-family: var(--font-ui); font-size: 0.65rem; letter-spacing: 0.08em; color: var(--clr-text); }
-	.status.error { color: var(--clr-danger); }
-	.dim { font-family: var(--font-ui); font-size: 0.6rem; letter-spacing: 0.06em; color: var(--clr-text); }
-
-	/* ── pills ────────────────────────────────────────────── */
-	.pills {
-		display: flex; flex-wrap: wrap; gap: 0.35rem;
-		margin-bottom: 0.6rem;
+	/* ── category sections ────────────────────────────────── */
+	.cat-section { margin-bottom: 0.25rem; }
+	.cat-header {
+		display: flex; align-items: center;
+		border-bottom: 1px solid rgba(var(--ui-rgb), 0.22);
+		padding: 0.6rem 0;
 	}
-	.tags-row { margin-bottom: 1rem; }
-	.pill {
-		background: none;
-		border: 1px solid rgba(var(--ui-rgb), 0.20);
-		color: var(--clr-text);
-		font-family: var(--font-ui);
-		font-size: 0.55rem; letter-spacing: 0.06em;
-		padding: 0.2rem 0.5rem; cursor: pointer;
-		transition: all var(--t-ui); opacity: 0.65;
-	}
-	.pill:hover { opacity: 1; border-color: rgba(var(--ui-rgb), 0.40); }
-	.pill.active {
-		opacity: 1;
-		border-color: rgba(var(--ui-rgb), 0.50);
-		background: rgba(var(--ui-rgb), 0.10);
-	}
-	.pill-count { opacity: 0.5; margin-left: 0.15rem; }
-	.tag-pill { font-size: 0.5rem; padding: 0.15rem 0.4rem; }
-
-	/* ── category actions ─────────────────────────────────── */
-	.cat-actions {
+	.cat-toggle {
+		background: none; border: none; cursor: pointer;
 		display: flex; align-items: center; gap: 0.4rem;
-		margin-bottom: 0.6rem;
+		padding: 0; flex: 1; min-width: 0;
+	}
+	.cat-arrow {
+		font-size: 0.7rem; color: var(--clr-text); opacity: 0.4;
+		transition: transform var(--t-ui);
+		display: inline-block;
+	}
+	.cat-arrow.collapsed { transform: rotate(0deg); }
+	.cat-arrow:not(.collapsed) { transform: rotate(90deg); }
+	.cat-name {
+		font-family: var(--font-ui);
+		font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase;
+		color: var(--clr-text);
+	}
+	.cat-count {
+		font-family: var(--font-ui);
+		font-size: 0.52rem; letter-spacing: 0.06em;
+		color: var(--clr-text); opacity: 0.4;
+	}
+
+	.cat-actions {
+		display: flex; align-items: center; gap: 0.35rem;
+		flex-shrink: 0; margin-left: auto;
 	}
 	.cat-action-btn {
 		background: none; border: none; cursor: pointer;
 		font-family: var(--font-ui);
-		font-size: 0.48rem; letter-spacing: 0.08em; text-transform: uppercase;
-		color: var(--clr-text); opacity: 0.5;
-		padding: 0.15rem 0.3rem; transition: opacity var(--t-ui);
+		font-size: 0.46rem; letter-spacing: 0.08em; text-transform: uppercase;
+		color: var(--clr-text); opacity: 0.35;
+		padding: 0.1rem 0.25rem; transition: opacity var(--t-ui);
 	}
-	.cat-action-btn:hover:not(:disabled) { opacity: 1; }
-	.cat-action-btn.danger:hover:not(:disabled) { color: var(--clr-danger); opacity: 1; }
-	.cat-action-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+	.cat-action-btn:hover:not(:disabled) { opacity: 0.85; }
+	.cat-action-btn.danger:hover:not(:disabled) { color: var(--clr-danger); opacity: 0.85; }
+	.cat-action-btn:disabled { opacity: 0.2; cursor: not-allowed; }
 	.cat-rename-input {
 		background: none; border: none;
 		border-bottom: 1px solid rgba(var(--ui-rgb), 0.30);
 		color: var(--clr-text);
 		font-family: var(--font-ui);
 		font-size: 0.6rem; letter-spacing: 0.06em;
-		padding: 0.15rem 0.3rem; width: 10rem; outline: none;
+		padding: 0.1rem 0.3rem; width: 8rem; outline: none;
 	}
 	.cat-rename-input:focus { border-color: rgba(var(--ui-rgb), 0.55); }
-
-	/* ── meta row ─────────────────────────────────────────── */
-	.meta-row {
-		display: flex; align-items: center; gap: 0.75rem;
-		margin-bottom: 1.2rem;
-		flex-wrap: wrap;
-	}
-	.sort-controls { display: flex; gap: 0.3rem; }
-	.sort-btn {
-		background: none; border: none; cursor: pointer;
-		font-family: var(--font-ui);
-		font-size: 0.5rem; letter-spacing: 0.08em; text-transform: uppercase;
-		color: var(--clr-text); opacity: 0.45; padding: 0.15rem 0.3rem;
-		transition: opacity var(--t-ui);
-	}
-	.sort-btn:hover { opacity: 0.8; }
-	.sort-btn.active { opacity: 1; }
-	.clear-btn, .strip-btn, .meta-btn {
-		background: none; border: none; cursor: pointer;
-		font-family: var(--font-ui);
-		font-size: 0.48rem; letter-spacing: 0.08em; text-transform: uppercase;
-		color: var(--clr-text); opacity: 0.45; padding: 0.15rem 0.3rem;
-		transition: opacity var(--t-ui); margin-left: auto;
-	}
-	.clear-btn:hover, .strip-btn:hover, .meta-btn:hover { opacity: 0.8; }
-	.strip-btn { opacity: 0.35; }
 
 	/* ── bulk bar ─────────────────────────────────────────── */
 	.bulk-bar {
@@ -889,8 +898,8 @@
 
 	.entry-row {
 		display: flex; align-items: center; gap: 0.6rem;
-		border-bottom: 1px solid rgba(var(--ui-rgb), 0.16);
-		padding: 0.6rem 0;
+		border-bottom: 1px solid rgba(var(--ui-rgb), 0.10);
+		padding: 0.5rem 0 0.5rem 1rem;
 	}
 	.confirm-row { gap: 1.5rem; }
 
@@ -926,28 +935,24 @@
 		color: var(--clr-text); opacity: 0.4;
 	}
 
-	.entry-category {
-		font-family: var(--font-ui);
-		font-size: 0.48rem; letter-spacing: 0.08em; text-transform: uppercase;
-		color: var(--clr-text); opacity: 0.5;
-		white-space: nowrap; flex-shrink: 0;
-	}
-
-	.entry-tags {
-		display: flex; gap: 0.2rem; flex-shrink: 0;
-	}
+	.entry-tags { display: flex; gap: 0.2rem; flex-shrink: 0; }
 	.entry-tag {
+		background: none; border: 1px solid rgba(var(--ui-rgb), 0.15);
 		font-family: var(--font-ui);
 		font-size: 0.42rem; letter-spacing: 0.04em;
 		color: var(--clr-text); opacity: 0.4;
-		border: 1px solid rgba(var(--ui-rgb), 0.15);
 		padding: 0.05rem 0.25rem;
+		cursor: pointer; transition: opacity var(--t-ui);
+	}
+	.entry-tag:hover { opacity: 0.8; }
+	.entry-tag-overflow {
+		font-family: var(--font-ui);
+		font-size: 0.42rem; color: var(--clr-text); opacity: 0.3;
 	}
 
 	.row-actions {
 		display: flex; gap: 0.5rem; flex-shrink: 0; margin-left: auto;
 	}
-
 	.action-btn {
 		background: none; border: none; cursor: pointer;
 		font-family: var(--font-ui);
@@ -958,10 +963,26 @@
 	.action-btn.danger:hover:not(:disabled) { color: var(--clr-danger); opacity: 1; }
 	.action-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
-	.count {
-		margin-top: 2rem; font-family: var(--font-ui);
-		font-size: 0.62rem; letter-spacing: 0.1em; color: var(--clr-text);
+	/* ── footer ───────────────────────────────────────────── */
+	.footer-row {
+		display: flex; align-items: center; justify-content: space-between;
+		margin-top: 2rem;
 	}
+	.count {
+		font-family: var(--font-ui);
+		font-size: 0.62rem; letter-spacing: 0.1em; color: var(--clr-text);
+		margin: 0;
+	}
+	.footer-actions { display: flex; gap: 0.4rem; }
+	.footer-btn {
+		background: none; border: none; cursor: pointer;
+		font-family: var(--font-ui);
+		font-size: 0.46rem; letter-spacing: 0.08em; text-transform: uppercase;
+		color: var(--clr-text); opacity: 0.35;
+		padding: 0.1rem 0.3rem; transition: opacity var(--t-ui);
+	}
+	.footer-btn:hover:not(:disabled) { opacity: 0.8; }
+	.footer-btn:disabled { opacity: 0.2; cursor: not-allowed; }
 
 	/* ── overlays shared ──────────────────────────────────── */
 	.overlay-backdrop {
@@ -1010,9 +1031,7 @@
 	}
 	.editor-fields input:focus, .editor-fields textarea:focus { border-color: rgba(var(--dark-panel-rgb), 0.38); }
 	.editor-fields textarea { resize: vertical; line-height: 1.6; }
-	.url-display {
-		display: flex; flex-direction: column; gap: 0.3rem;
-	}
+	.url-display { display: flex; flex-direction: column; gap: 0.3rem; }
 	.url-link {
 		font-family: var(--font-ui); font-size: 0.7rem;
 		color: var(--clr-dark-text); opacity: 0.6;
@@ -1036,9 +1055,11 @@
 	@media (max-width: 480px) {
 		.page { padding-top: 4.5rem; }
 		.inner { padding: 1.5rem 1.25rem 4rem; }
+		.search-area { margin-bottom: 1.5rem; }
 		.overlay-header { padding: 1rem 1.25rem; }
 		.editor-body { padding: 1.25rem; }
 		.field-row { grid-template-columns: 1fr; }
-		.entry-category, .entry-tags { display: none; }
+		.entry-tags { display: none; }
+		.cat-actions { display: none; }
 	}
 </style>
