@@ -72,6 +72,7 @@
 		<a href="/" class:active={$page.url.pathname === '/'}>cwcorella</a>
 		<a href="/reading" class:active={$page.url.pathname === '/reading'}>reading</a>
 		{#if adminState.active || archiveState.mode}
+			<a href="/links" class:active={$page.url.pathname === '/links'}>links</a>
 			<a href="/journals" class:active={$page.url.pathname === '/journals'}>journals</a>
 		{/if}
 		<AdminToolbar onLogoutRequest={() => logoutConfirmOpen = true} />

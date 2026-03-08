@@ -12,3 +12,13 @@ export interface Book {
 	doc?: BookDoc;
 	read?: boolean;
 }
+export interface LinkMeta {
+	id: string;
+	url: string;
+	title: string;
+	category: string;
+	tags: string[];
+	added: string;
+	notes?: string;
+	source?: '◇' | '○' | '□';
+}

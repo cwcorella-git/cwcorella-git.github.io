@@ -1,4 +1,4 @@
-import type { Book, JournalMeta } from '$lib/types';
+import type { Book, JournalMeta, LinkMeta } from '$lib/types';
 import allBooksStatic from '$lib/books.json';
 import { commitFiles } from '$lib/admin/github';
 import { draftStore } from '$lib/admin/draft';
@@ -10,7 +10,8 @@ export const ADMIN_SEQUENCE = '```';
 type DomainPayload =
 	| { domain: 'books'; books: Book[]; extraUpdates?: { path: string; content: string }[]; deletions?: string[] }
 	| { domain: 'home'; content: string }
-	| { domain: 'journals-index'; encIndexJson: string; extraUpdates: { path: string; content: string }[]; deletions: string[]; message: string };
+	| { domain: 'journals-index'; encIndexJson: string; extraUpdates: { path: string; content: string }[]; deletions: string[]; message: string }
+	| { domain: 'links'; encIndexJson: string; message: string };
 
 type SyncStatus = 'idle' | 'dirty' | 'saving' | 'error';
 
@@ -34,12 +35,18 @@ async function _commitDomain(payload: DomainPayload, pat: string): Promise<void>
 			[{ path: 'src/lib/content/home.json', content: JSON.stringify({ content: payload.content }, null, '\t') }],
 			'update home content'
 		);
-	} else {
+	} else if (payload.domain === 'journals-index') {
 		await commitFiles(
 			pat,
 			[{ path: 'static/docs/private/journals-index.enc', content: payload.encIndexJson }, ...payload.extraUpdates],
 			payload.message,
 			payload.deletions
+		);
+	} else if (payload.domain === 'links') {
+		await commitFiles(
+			pat,
+			[{ path: 'static/docs/private/links-index.enc', content: payload.encIndexJson }],
+			payload.message
 		);
 	}
 }
@@ -130,6 +137,13 @@ export const writeQueue = {
 			count++;
 		}
 
+		const linksDraft = draftStore.load<Extract<DomainPayload, { domain: 'links' }>>('links');
+		if (linksDraft) {
+			_pending = new Map(_pending).set('links', linksDraft);
+			_syncStatus = 'dirty';
+			count++;
+		}
+
 		if (count > 0 && _debounceTimer === null) {
 			_debounceTimer = setTimeout(() => { writeQueue.flush(); }, 10_000);
 		}
@@ -158,6 +172,16 @@ export const journalIndexState = {
 	get loaded() { return _journalIndexLoaded; },
 	set(entries: JournalMeta[]) { _journalIndex = [...entries]; _journalIndexLoaded = true; },
 	clear() { _journalIndex = []; _journalIndexLoaded = false; },
+};
+
+// ── Links index state ─────────────────────────────────────────────────────────
+let _linksIndex = $state<LinkMeta[]>([]);
+let _linksIndexLoaded = $state(false);
+export const linksState = {
+	get entries() { return _linksIndex; },
+	get loaded() { return _linksIndexLoaded; },
+	set(entries: LinkMeta[]) { _linksIndex = [...entries]; _linksIndexLoaded = true; },
+	clear() { _linksIndex = []; _linksIndexLoaded = false; },
 };
 
 // ── Shared books state ────────────────────────────────────────────────────────
@@ -205,6 +229,7 @@ await writeQueue.flush();
 		sessionStorage.removeItem('cwc-admin-pat');
 		sessionStorage.removeItem('cwc-admin-key');
 		journalIndexState.clear();
+		linksState.clear();
 	},
 
 	restoreFromSession() {
