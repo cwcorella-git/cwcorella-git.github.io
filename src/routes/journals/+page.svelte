@@ -297,7 +297,7 @@
 	);
 </script>
 
-<svelte:head><title>journals — cwcorella</title></svelte:head>
+<svelte:head><title>cwcorella</title></svelte:head>
 <svelte:window onkeydown={handleKeydown} />
 
 {#if adminState.active || archiveState.mode}

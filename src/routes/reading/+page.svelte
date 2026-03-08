@@ -119,7 +119,7 @@
 </script>
 
 <svelte:head>
-	<title>reading — cwcorella</title>
+	<title>cwcorella</title>
 </svelte:head>
 
 <svelte:window onkeydown={handleKeydown} />
