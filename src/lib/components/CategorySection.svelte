@@ -8,30 +8,61 @@
 		links: LinkMeta[];
 	}
 
-	export let category: string;
-	export let links: LinkMeta[];
+	interface Props {
+		category: string;
+		links: LinkMeta[];
+		selectMode?: boolean;
+		selected?: Set<string>;
+		confirmingId?: string | null;
+		deleteSaving?: boolean;
+		onSelect?: (id: string) => void;
+		onEdit?: (link: LinkMeta) => void;
+		onDelete?: (id: string) => void;
+		onCancelDelete?: () => void;
+		onConfirmDelete?: (id: string) => void;
+		onTagClick?: (tag: string) => void;
+	}
 
-	let isExpanded = false;
+	const {
+		category,
+		links,
+		selectMode = false,
+		selected = new Set(),
+		confirmingId = null,
+		deleteSaving = false,
+		onSelect = () => {},
+		onEdit = () => {},
+		onDelete = () => {},
+		onCancelDelete = () => {},
+		onConfirmDelete = () => {},
+		onTagClick = () => {}
+	}: Props = $props();
+
+	let isExpanded = $state(false);
 
 	// Group links by subcategory
-	$derived subcategories = links.reduce<Subcategory[]>((acc, link) => {
-		const subcat = link.subcategory || 'Other';
-		const existing = acc.find(s => s.name === subcat);
-		if (existing) {
-			existing.links.push(link);
-		} else {
-			acc.push({ name: subcat, links: [link] });
-		}
-		return acc;
-	}, []).sort((a, b) => b.links.length - a.links.length);
+	const subcategories = $derived(
+		links.reduce<Subcategory[]>((acc, link) => {
+			const subcat = link.subcategory || 'Other';
+			const existing = acc.find(s => s.name === subcat);
+			if (existing) {
+				existing.links.push(link);
+			} else {
+				acc.push({ name: subcat, links: [link] });
+			}
+			return acc;
+		}, []).sort((a, b) => b.links.length - a.links.length)
+	);
 
-	$derived hasSubcategories = subcategories.length > 1 || (subcategories.length === 1 && subcategories[0].name !== 'Other');
+	const hasSubcategories = $derived(
+		subcategories.length > 1 || (subcategories.length === 1 && subcategories[0].name !== 'Other')
+	);
 </script>
 
 <div class="category-section">
 	<button
 		class="category-header"
-		on:click={() => (isExpanded = !isExpanded)}
+		onclick={() => (isExpanded = !isExpanded)}
 		aria-expanded={isExpanded}
 	>
 		<span class="expand-icon">{isExpanded ? '∨' : '∧'}</span>
@@ -42,13 +73,37 @@
 		<div class="category-content">
 			{#if hasSubcategories}
 				{#each subcategories as subcat (subcat.name)}
-					<SubcategoryGroup {subcat} />
+					<SubcategoryGroup
+						{subcat}
+						{selectMode}
+						{selected}
+						{confirmingId}
+						{deleteSaving}
+						{onSelect}
+						{onEdit}
+						{onDelete}
+						{onCancelDelete}
+						{onConfirmDelete}
+						{onTagClick}
+					/>
 				{/each}
 			{:else}
 				<!-- No subcategories, show links directly -->
 				<div class="links-list">
 					{#each links as link (link.id)}
-						<LinkRow {link} />
+						<LinkRow
+							{link}
+							{selectMode}
+							isSelected={selected.has(link.id)}
+							confirming={confirmingId === link.id}
+							{onSelect}
+							{onEdit}
+							{onDelete}
+							{onCancelDelete}
+							{onConfirmDelete}
+							{onTagClick}
+							isDeleting={deleteSaving}
+						/>
 					{/each}
 				</div>
 			{/if}

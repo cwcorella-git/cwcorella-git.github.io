@@ -7,15 +7,41 @@
 		links: LinkMeta[];
 	}
 
-	export let subcat: Subcategory;
+	interface Props {
+		subcat: Subcategory;
+		selectMode?: boolean;
+		selected?: Set<string>;
+		confirmingId?: string | null;
+		deleteSaving?: boolean;
+		onSelect?: (id: string) => void;
+		onEdit?: (link: LinkMeta) => void;
+		onDelete?: (id: string) => void;
+		onCancelDelete?: () => void;
+		onConfirmDelete?: (id: string) => void;
+		onTagClick?: (tag: string) => void;
+	}
 
-	let isExpanded = false;
+	const {
+		subcat,
+		selectMode = false,
+		selected = new Set(),
+		confirmingId = null,
+		deleteSaving = false,
+		onSelect = () => {},
+		onEdit = () => {},
+		onDelete = () => {},
+		onCancelDelete = () => {},
+		onConfirmDelete = () => {},
+		onTagClick = () => {}
+	}: Props = $props();
+
+	let isExpanded = $state(false);
 </script>
 
 <div class="subcategory-group">
 	<button
 		class="subcategory-header"
-		on:click={() => (isExpanded = !isExpanded)}
+		onclick={() => (isExpanded = !isExpanded)}
 		aria-expanded={isExpanded}
 	>
 		<span class="expand-icon">{isExpanded ? '▼' : '▶'}</span>
@@ -26,7 +52,19 @@
 		<div class="subcategory-content">
 			<div class="links-list">
 				{#each subcat.links as link (link.id)}
-					<LinkRow {link} />
+					<LinkRow
+						{link}
+						{selectMode}
+						isSelected={selected.has(link.id)}
+						confirming={confirmingId === link.id}
+						{onSelect}
+						{onEdit}
+						{onDelete}
+						{onCancelDelete}
+						{onConfirmDelete}
+						{onTagClick}
+						isDeleting={deleteSaving}
+					/>
 				{/each}
 			</div>
 		</div>

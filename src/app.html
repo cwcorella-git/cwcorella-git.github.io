@@ -3,6 +3,91 @@
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<script>
+			// Immediately apply theme to prevent FOUC
+			(function() {
+				const PALETTES = {
+					amber: {
+						uiRgb: '160, 120, 60',
+						darkPanelRgb: '200, 152, 64',
+						bodyBg: '#0c0902',
+						clrDarkText: '#c8b890',
+						glassBgDark: 'rgba(20, 13, 3, 0.88)',
+						glassBorderDark: 'rgba(200, 150, 60, 0.28)',
+						darkGlass: true,
+						glassFixed: 'rgba(22, 14, 3, 0.88)',
+						glassBorderFixed: 'rgba(200, 150, 60, 0.15)',
+						glassNavBgFixed: 'rgba(14, 10, 2, 0.88)',
+						glassHeavyFixed: 'rgba(18, 12, 2, 0.92)',
+						textDay: [200, 184, 144]
+					},
+					sky: {
+						uiRgb: '140, 168, 210',
+						darkPanelRgb: '20, 55, 130',
+						bodyBg: '#c0cede',
+						clrDarkText: '#0c1420',
+						glassBgDark: 'rgba(130, 168, 220, 0.82)',
+						glassBorderDark: 'rgba(130, 168, 220, 0.35)',
+						darkGlass: false,
+						glassDay: [210, 228, 250],
+						textDay: [12, 16, 28]
+					},
+					dusk: {
+						uiRgb: '148, 110, 178',
+						darkPanelRgb: '175, 130, 205',
+						bodyBg: '#0e0a16',
+						clrDarkText: '#c0b4d0',
+						glassBgDark: 'rgba(24, 14, 36, 0.88)',
+						glassBorderDark: 'rgba(165, 110, 210, 0.25)',
+						darkGlass: true,
+						glassFixed: 'rgba(30, 18, 44, 0.88)',
+						glassBorderFixed: 'rgba(165, 110, 180, 0.16)',
+						glassNavBgFixed: 'rgba(18, 11, 28, 0.88)',
+						glassHeavyFixed: 'rgba(26, 16, 40, 0.92)',
+						textDay: [192, 180, 210]
+					},
+					neutral: {
+						uiRgb: '128, 128, 128',
+						darkPanelRgb: '40, 40, 50',
+						bodyBg: '#d8d8d8',
+						clrDarkText: '#0a0a0c',
+						glassBgDark: 'rgba(150, 150, 158, 0.82)',
+						glassBorderDark: 'rgba(80, 80, 90, 0.30)',
+						darkGlass: false,
+						glassDay: [255, 255, 255],
+						textDay: [8, 8, 8]
+					}
+				};
+
+				function applyPalette(name) {
+					const p = PALETTES[name];
+					const r = document.documentElement;
+
+					r.style.setProperty('--ui-rgb', p.uiRgb);
+					r.style.setProperty('--dark-panel-rgb', p.darkPanelRgb);
+					r.style.setProperty('--body-bg', p.bodyBg);
+					r.style.setProperty('--clr-dark-text', p.clrDarkText);
+					r.style.setProperty('--glass-bg-dark', p.glassBgDark);
+					r.style.setProperty('--glass-border-dark', p.glassBorderDark);
+
+					if (p.darkGlass) {
+						r.style.setProperty('--glass-bg', p.glassFixed);
+						r.style.setProperty('--glass-border', p.glassBorderFixed);
+						r.style.setProperty('--glass-nav-bg', p.glassNavBgFixed);
+						r.style.setProperty('--glass-bg-heavy', p.glassHeavyFixed);
+						r.style.setProperty('--clr-text', `rgb(${p.textDay[0]},${p.textDay[1]},${p.textDay[2]})`);
+					} else {
+						const [dr, dg, db] = p.glassDay;
+						r.style.setProperty('--glass-bg-heavy', `rgba(${dr}, ${dg}, ${db}, 0.78)`);
+					}
+				}
+
+				// Restore theme from localStorage or default to neutral
+				const saved = localStorage.getItem('cwc-theme');
+				const theme = (saved && PALETTES[saved]) ? saved : 'neutral';
+				applyPalette(theme);
+			})();
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover" data-sveltekit-preload-code="viewport">

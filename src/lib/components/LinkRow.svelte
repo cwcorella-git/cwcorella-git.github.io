@@ -1,18 +1,33 @@
 <script lang="ts">
 	import type { LinkMeta } from '$lib/types';
 
-	export let link: LinkMeta;
-	export let selectMode = false;
-	export let isSelected = false;
-	export let confirming = false;
+	interface Props {
+		link: LinkMeta;
+		selectMode?: boolean;
+		isSelected?: boolean;
+		confirming?: boolean;
+		onSelect?: (id: string) => void;
+		onEdit?: (link: LinkMeta) => void;
+		onDelete?: (id: string) => void;
+		onCancelDelete?: () => void;
+		onConfirmDelete?: (id: string) => void;
+		onTagClick?: (tag: string) => void;
+		isDeleting?: boolean;
+	}
 
-	export let onSelect: (id: string) => void = () => {};
-	export let onEdit: (link: LinkMeta) => void = () => {};
-	export let onDelete: (id: string) => void = () => {};
-	export let onCancelDelete: () => void = () => {};
-	export let onConfirmDelete: (id: string) => void = () => {};
-	export let onTagClick: (tag: string) => void = () => {};
-	export let isDeleting = false;
+	const {
+		link,
+		selectMode = false,
+		isSelected = false,
+		confirming = false,
+		onSelect = () => {},
+		onEdit = () => {},
+		onDelete = () => {},
+		onCancelDelete = () => {},
+		onConfirmDelete = () => {},
+		onTagClick = () => {},
+		isDeleting = false
+	}: Props = $props();
 
 	function domain(url: string): string {
 		try {

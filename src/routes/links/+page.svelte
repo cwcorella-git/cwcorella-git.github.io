@@ -113,15 +113,6 @@
 
 	let filtered = $derived(linksState.entries.filter(matchesSearch));
 
-	// ── collapsible sections ──────────────────────────────────────────────
-	let collapsedCats = $state<Set<string>>(new Set());
-
-	function toggleCollapse(cat: string) {
-		const next = new Set(collapsedCats);
-		if (next.has(cat)) next.delete(cat); else next.add(cat);
-		collapsedCats = next;
-	}
-
 	// Group filtered links by category, preserving category sort order
 	const grouped = $derived(
 		(() => {
@@ -602,16 +593,11 @@
 				<p class="status">no matches.</p>
 			{:else}
 				{#each grouped as group (group.category)}
-					<section class="cat-section">
-						<!-- category header -->
-						<div class="cat-header">
-							<button class="cat-toggle" onclick={() => toggleCollapse(group.category)}>
-								<span class="cat-arrow" class:collapsed={collapsedCats.has(group.category)}>›</span>
-								<span class="cat-name">{group.category}</span>
-								<span class="cat-count">{group.links.length}</span>
-							</button>
-							<div class="cat-actions">
-								{#if catActionMode === 'rename' && catActionTarget === group.category}
+					<div class="category-section-wrapper">
+						<!-- Category actions overlay -->
+						{#if catActionMode !== 'none' && catActionTarget === group.category}
+							<div class="cat-actions-overlay">
+								{#if catActionMode === 'rename'}
 									<input
 										type="text"
 										class="cat-rename-input"
@@ -622,71 +608,38 @@
 										{categorySaving ? '…' : 'save'}
 									</button>
 									<button class="cat-action-btn" onclick={() => catActionMode = 'none'}>cancel</button>
-								{:else if catActionMode === 'delete' && catActionTarget === group.category}
+								{:else if catActionMode === 'delete'}
 									<span class="dim">move to Uncategorized?</span>
 									<button class="cat-action-btn danger" onclick={() => deleteCategory(group.category)} disabled={categorySaving}>
 										{categorySaving ? '…' : 'confirm'}
 									</button>
 									<button class="cat-action-btn" onclick={() => catActionMode = 'none'}>cancel</button>
-								{:else}
-									<button class="cat-action-btn" onclick={() => startRenameCategory(group.category)}>rename</button>
-									<button class="cat-action-btn danger" onclick={() => { catActionTarget = group.category; catActionMode = 'delete'; }}>delete</button>
-									<button class="cat-action-btn" onclick={() => exportCategory(group.category)}>export</button>
 								{/if}
 							</div>
-						</div>
-
-						<!-- links in this category -->
-						{#if !collapsedCats.has(group.category)}
-							<ul class="list">
-								{#each group.links as link (link.id)}
-									<li>
-										{#if confirmingId === link.id}
-											<div class="entry-row confirm-row">
-												<span class="dim">delete "{link.title}"?</span>
-												<div class="row-actions">
-													<button class="action-btn danger" onclick={() => deleteLink(link.id)} disabled={deleteSaving}>
-														{deleteSaving ? '…' : 'confirm'}
-													</button>
-													<button class="action-btn" onclick={() => confirmingId = null}>cancel</button>
-												</div>
-											</div>
-										{:else}
-											<div class="entry-row">
-												{#if selectMode}
-													<input
-														type="checkbox"
-														class="select-check"
-														checked={selected.has(link.id)}
-														onchange={() => toggleSelect(link.id)}
-													/>
-												{/if}
-												<a class="entry-link" href={link.url} target="_blank" rel="noopener noreferrer">
-													{#if link.source}<span class="source-indicator">{link.source}</span>{/if}
-													<span class="entry-title">{link.title}</span>
-													<span class="entry-domain">{domain(link.url)}</span>
-												</a>
-												{#if link.tags.length > 0}
-													<span class="entry-tags">
-														{#each link.tags.slice(0, 3) as tag}
-															<button class="entry-tag" onclick={() => setTag(tag)}>{tag}</button>
-														{/each}
-														{#if link.tags.length > 3}
-															<span class="entry-tag-overflow">+{link.tags.length - 3}</span>
-														{/if}
-													</span>
-												{/if}
-												<div class="row-actions">
-													<button class="action-btn" onclick={() => startEdit(link)}>edit</button>
-													<button class="action-btn danger" onclick={() => confirmingId = link.id}>×</button>
-												</div>
-											</div>
-										{/if}
-									</li>
-								{/each}
-							</ul>
+						{:else}
+							<div class="cat-actions">
+								<button class="cat-action-btn" onclick={() => startRenameCategory(group.category)}>rename</button>
+								<button class="cat-action-btn danger" onclick={() => { catActionTarget = group.category; catActionMode = 'delete'; }}>delete</button>
+								<button class="cat-action-btn" onclick={() => exportCategory(group.category)}>export</button>
+							</div>
 						{/if}
-					</section>
+
+						<!-- Category with subcategories and links -->
+						<CategorySection
+							category={group.category}
+							links={group.links}
+							{selectMode}
+							selected={selected}
+							confirmingId={confirmingId}
+							deleteSaving={deleteSaving}
+							onSelect={toggleSelect}
+							onEdit={startEdit}
+							onDelete={(id) => confirmingId = id}
+							onCancelDelete={() => confirmingId = null}
+							onConfirmDelete={deleteLink}
+							onTagClick={setTag}
+						/>
+					</div>
 				{/each}
 
 				<div class="footer-row">
@@ -806,39 +759,16 @@
 	}
 	.header-btn:hover { border-color: rgba(var(--ui-rgb), 0.45); }
 
-	/* ── category sections ────────────────────────────────── */
-	.cat-section { margin-bottom: 0.25rem; }
-	.cat-header {
-		display: flex; align-items: center;
-		border-bottom: 1px solid rgba(var(--ui-rgb), 0.22);
-		padding: 0.6rem 0;
+	/* ── category section wrapper ─────────────────────────── */
+	.category-section-wrapper { margin-bottom: 1.5rem; }
+	.cat-actions-overlay {
+		display: flex; align-items: center; gap: 0.5rem;
+		padding: 0.5rem 0; margin-bottom: 0.5rem;
+		flex-wrap: wrap;
 	}
-	.cat-toggle {
-		background: none; border: none; cursor: pointer;
-		display: flex; align-items: center; gap: 0.4rem;
-		padding: 0; flex: 1; min-width: 0;
-	}
-	.cat-arrow {
-		font-size: 0.7rem; color: var(--clr-text); opacity: 0.4;
-		transition: transform var(--t-ui);
-		display: inline-block;
-	}
-	.cat-arrow.collapsed { transform: rotate(0deg); }
-	.cat-arrow:not(.collapsed) { transform: rotate(90deg); }
-	.cat-name {
-		font-family: var(--font-ui);
-		font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase;
-		color: var(--clr-text);
-	}
-	.cat-count {
-		font-family: var(--font-ui);
-		font-size: 0.52rem; letter-spacing: 0.06em;
-		color: var(--clr-text); opacity: 0.4;
-	}
-
 	.cat-actions {
 		display: flex; align-items: center; gap: 0.35rem;
-		flex-shrink: 0; margin-left: auto;
+		flex-shrink: 0; margin-top: 0.5rem;
 	}
 	.cat-action-btn {
 		background: none; border: none; cursor: pointer;
@@ -894,76 +824,6 @@
 		padding: 0.15rem 0.3rem; width: 6rem; outline: none;
 	}
 	.bulk-input:focus { border-color: rgba(var(--ui-rgb), 0.45); }
-
-	/* ── list ─────────────────────────────────────────────── */
-	.list { list-style: none; margin: 0; padding: 0; }
-
-	.entry-row {
-		display: flex; align-items: center; gap: 0.6rem;
-		border-bottom: 1px solid rgba(var(--ui-rgb), 0.10);
-		padding: 0.5rem 0 0.5rem 1rem;
-	}
-	.confirm-row { gap: 1.5rem; }
-
-	.select-check {
-		accent-color: var(--clr-text);
-		width: 0.75rem; height: 0.75rem; flex-shrink: 0;
-		cursor: pointer;
-	}
-
-	.entry-link {
-		flex: 1; min-width: 0;
-		text-decoration: none;
-		display: flex; flex-direction: column; gap: 0.1rem;
-		transition: opacity var(--t-ui);
-	}
-	.entry-link:hover .entry-title { opacity: 1; }
-
-	.source-indicator {
-		font-size: 0.55rem; opacity: 0.4;
-		margin-right: 0.15rem;
-		display: inline;
-	}
-
-	.entry-title {
-		font-family: var(--font-prose);
-		font-size: 0.85rem; color: var(--clr-text); line-height: 1.3;
-		opacity: 0.85;
-		overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-	}
-	.entry-domain {
-		font-family: var(--font-ui);
-		font-size: 0.52rem; letter-spacing: 0.04em;
-		color: var(--clr-text); opacity: 0.4;
-	}
-
-	.entry-tags { display: flex; gap: 0.2rem; flex-shrink: 0; }
-	.entry-tag {
-		background: none; border: 1px solid rgba(var(--ui-rgb), 0.15);
-		font-family: var(--font-ui);
-		font-size: 0.42rem; letter-spacing: 0.04em;
-		color: var(--clr-text); opacity: 0.4;
-		padding: 0.05rem 0.25rem;
-		cursor: pointer; transition: opacity var(--t-ui);
-	}
-	.entry-tag:hover { opacity: 0.8; }
-	.entry-tag-overflow {
-		font-family: var(--font-ui);
-		font-size: 0.42rem; color: var(--clr-text); opacity: 0.3;
-	}
-
-	.row-actions {
-		display: flex; gap: 0.5rem; flex-shrink: 0; margin-left: auto;
-	}
-	.action-btn {
-		background: none; border: none; cursor: pointer;
-		font-family: var(--font-ui);
-		font-size: 0.52rem; letter-spacing: 0.08em; text-transform: uppercase;
-		color: var(--clr-text); opacity: 0.45; padding: 0 0.3rem; transition: all 0.15s;
-	}
-	.action-btn:hover:not(:disabled) { opacity: 1; }
-	.action-btn.danger:hover:not(:disabled) { color: var(--clr-danger); opacity: 1; }
-	.action-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
 	/* ── footer ───────────────────────────────────────────── */
 	.footer-row {
@@ -1061,7 +921,6 @@
 		.overlay-header { padding: 1rem 1.25rem; }
 		.editor-body { padding: 1.25rem; }
 		.field-row { grid-template-columns: 1fr; }
-		.entry-tags { display: none; }
 		.cat-actions { display: none; }
 	}
 </style>
