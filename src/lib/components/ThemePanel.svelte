@@ -36,8 +36,8 @@
 		border: 1px solid var(--glass-border-dark);
 		backdrop-filter: var(--glass-blur);
 		-webkit-backdrop-filter: var(--glass-blur);
-		padding: 0.7rem 0.75rem 0.75rem;
-		min-width: 170px;
+		padding: 0.7rem 0.75rem;
+		width: 190px;
 	}
 
 	.panel-label {

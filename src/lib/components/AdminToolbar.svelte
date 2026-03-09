@@ -11,6 +11,16 @@
 		await writeQueue.flush();
 	}
 
+	function toggleThemePanel() {
+		themePanelOpen = !themePanelOpen;
+		if (themePanelOpen) adminMenuOpen = false;
+	}
+
+	function toggleAdminMenu() {
+		adminMenuOpen = !adminMenuOpen;
+		if (adminMenuOpen) themePanelOpen = false;
+	}
+
 	function handleClickOutside(node: HTMLElement) {
 		function onClick(e: MouseEvent) {
 			if (!node.contains(e.target as Node)) {
@@ -38,7 +48,7 @@
 			<button
 				class="theme-btn"
 				class:active={themePanelOpen}
-				onclick={() => (themePanelOpen = !themePanelOpen)}
+				onclick={toggleThemePanel}
 				aria-expanded={themePanelOpen}
 				aria-label="Theme palette"
 			>◐ <span class="btn-label">theme</span></button>
@@ -52,13 +62,14 @@
 			<button
 				class="admin-menu-btn"
 				class:active={adminMenuOpen}
-				onclick={() => (adminMenuOpen = !adminMenuOpen)}
+				onclick={toggleAdminMenu}
 				aria-expanded={adminMenuOpen}
-				aria-label="Admin"
+				aria-label="Admin settings"
 			>⊙ <span class="btn-label">admin</span></button>
 			{#if adminMenuOpen}
 				<div class="admin-menu-panel">
-					<button class="logout-btn" onclick={() => { adminMenuOpen = false; onLogoutRequest(); }}>logout</button>
+					<p class="settings-label">admin</p>
+					<button class="settings-item" onclick={() => { adminMenuOpen = false; onLogoutRequest(); }}>logout</button>
 				</div>
 			{/if}
 		</div>
@@ -141,13 +152,26 @@
 		right: 0;
 		background: var(--glass-bg-dark);
 		border: 1px solid var(--glass-border-dark);
-		padding: 0.5rem;
+		padding: 0.7rem 0.75rem;
 		border-radius: 2px;
 		z-index: 99;
-		min-width: 100px;
+		min-width: 120px;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
 	}
 
-	.logout-btn {
+	.settings-label {
+		font-family: var(--font-ui);
+		font-size: 0.52rem;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--clr-dark-text);
+		margin: 0;
+		opacity: 0.5;
+	}
+
+	.settings-item {
 		padding: 0.4rem 0.5rem;
 		font-size: 0.56rem;
 		letter-spacing: 0.08em;
@@ -158,9 +182,10 @@
 		cursor: pointer;
 		transition: all 0.15s;
 		opacity: 0.7;
+		margin: 0;
 	}
 
-	.logout-btn:hover {
+	.settings-item:hover {
 		opacity: 1;
 		border-color: rgba(var(--clr-danger), 0.6);
 	}
