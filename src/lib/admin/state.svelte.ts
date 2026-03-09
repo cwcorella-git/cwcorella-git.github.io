@@ -82,14 +82,15 @@ export const writeQueue = {
 
 		const snapshot = new Map(_pending);
 		_pending = new Map();
+		// Clear drafts immediately to prevent stale restore on error/reload
+		for (const domain of snapshot.keys()) {
+			draftStore.clear(domain);
+		}
 
 		const pat = _pat;
 		try {
 			for (const payload of snapshot.values()) {
 				await _commitDomain(payload, pat);
-			}
-			for (const domain of snapshot.keys()) {
-				draftStore.clear(domain);
 			}
 			_syncStatus = _pending.size > 0 ? 'dirty' : 'idle';
 			_syncError = '';
