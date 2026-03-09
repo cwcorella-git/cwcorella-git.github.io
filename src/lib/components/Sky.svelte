@@ -75,6 +75,50 @@
 		return `rgba(${c[0]},${c[1]},${c[2]},${alpha.toFixed(3)})`;
 	}
 
+	// ── atmosphere colors (palette-aware) ─────────────────────────────────────
+	interface AtmosphereColors {
+		sunGolden:  string;
+		sunBright:  string;
+		glowGolden: RGB;
+		glowBright: RGB;
+		rayWarm:    RGB;
+	}
+
+	const ATMOSPHERE: Record<string, AtmosphereColors> = {
+		amber: {
+			sunGolden:  '#E84010',
+			sunBright:  '#FFF5C0',
+			glowGolden: [255, 128, 36] as RGB,
+			glowBright: [255, 230, 170] as RGB,
+			rayWarm:    [255, 190, 90]  as RGB,
+		},
+		sky: {
+			sunGolden:  '#FF7020',
+			sunBright:  '#FFFDE7',
+			glowGolden: [255, 160, 60]  as RGB,
+			glowBright: [255, 245, 200] as RGB,
+			rayWarm:    [255, 210, 140] as RGB,
+		},
+		dusk: {
+			sunGolden:  '#C04070',
+			sunBright:  '#DCCCEA',
+			glowGolden: [200, 88, 138] as RGB,
+			glowBright: [208, 176, 240] as RGB,
+			rayWarm:    [196, 140, 188] as RGB,
+		},
+		neutral: {
+			sunGolden:  '#E8A040',
+			sunBright:  '#F5F2E0',
+			glowGolden: [230, 170, 78]  as RGB,
+			glowBright: [250, 244, 214] as RGB,
+			rayWarm:    [235, 208, 160] as RGB,
+		},
+	};
+
+	function getAtmosphere(): AtmosphereColors {
+		return ATMOSPHERE[themeState.active] ?? ATMOSPHERE.sky;
+	}
+
 	// ── sky keyframes (zenith → mid-upper → lower → horizon) ──────────────────
 	const SKY_KF: Array<{ alt: number; zenith: RGB; mid: RGB; lower: RGB; horizon: RGB }> = [
 		{ alt: -20, zenith: [2,   4,  16] as RGB, mid: [3,   5,  22] as RGB, lower: [4,   7,  34] as RGB, horizon: [5,   8,  42] as RGB },
@@ -112,14 +156,18 @@
 	type Ctx = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 	function drawSky(ctx: Ctx, altDeg: number): void {
 		const { zenith, mid, horizon } = getSkyColors(altDeg);
-		const lower  = lerpRGB(mid, horizon, 0.55);
-		const bright = lerpRGB(horizon, [255, 255, 255] as RGB, 0.12);
+		const lower = lerpRGB(mid, horizon, 0.55);
+		const hf    = horizonY / H;
+
 		const g = ctx.createLinearGradient(0, 0, 0, H);
-		g.addColorStop(0,    css(zenith));
-		g.addColorStop(0.57, css(mid));
-		g.addColorStop(0.76, css(lower));
-		g.addColorStop(0.90, css(horizon));
-		g.addColorStop(1,    css(bright));
+		g.addColorStop(0,                  css(zenith));
+		g.addColorStop(0.55 * hf,          css(mid));
+		g.addColorStop(0.74 * hf,          css(lower));
+		g.addColorStop(0.91 * hf,          css(horizon));
+		g.addColorStop(hf,                 css(horizon, 1.0));
+		g.addColorStop(hf + 0.07,          css(horizon, 0.55));
+		g.addColorStop(hf + 0.17,          css(horizon, 0.12));
+		g.addColorStop(Math.min(1, hf + 0.28), css(horizon, 0));
 		ctx.fillStyle = g;
 		ctx.fillRect(0, 0, W, H);
 	}
@@ -127,12 +175,13 @@
 	// ── draw: circumsolar Mie-scatter brightening ─────────────────────────────
 	function drawCircumsolarGlow(ctx: Ctx, altDeg: number, sxn: number): void {
 		if (altDeg <= -8) return;
+		const atm = getAtmosphere();
 		const sunX   = sxn * W;
 		const sinAlt = Math.max(0, Math.sin(altDeg * Math.PI / 180));
 		const sunY   = horizonY - sinAlt * horizonY * 0.92;
 		const intensity = Math.max(0, 1 - Math.max(0, altDeg - 4) / 42) * 0.30;
 		const warmth = Math.max(0, 1 - altDeg / 22);
-		const cr = 255, cg = Math.round(238 - warmth * 38), cb = Math.round(212 - warmth * 82);
+		const [cr, cg, cb] = lerpRGB(atm.glowBright, atm.glowGolden, warmth);
 		const radius = Math.min(W * 0.58, horizonY * 0.85);
 		const glow   = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, radius);
 		glow.addColorStop(0,    `rgba(${cr},${cg},${cb},${intensity.toFixed(3)})`);
@@ -167,11 +216,13 @@
 	// ── draw: crepuscular rays ────────────────────────────────────────────────
 	function drawCrepuscularRays(ctx: Ctx, altDeg: number, sxn: number): void {
 		if (altDeg < -3 || altDeg > 10) return;
+		const atm = getAtmosphere();
 		const intensity = Math.max(0, 1 - Math.abs(altDeg - 2.5) / 6) * 0.20;
 		if (intensity < 0.01) return;
 
 		const sunX = sxn * W;
 		const sunY = horizonY;
+		const [rr, rg, rb] = atm.rayWarm;
 
 		const rng = makePRNG(0xC0FFEE);
 		ctx.save();
@@ -188,9 +239,9 @@
 			ctx.rotate(angle);
 
 			const grad = ctx.createLinearGradient(0, 0, 0, -len);
-			grad.addColorStop(0,   `rgba(255,210,140,${alpha.toFixed(3)})`);
-			grad.addColorStop(0.4, `rgba(255,200,120,${(alpha * 0.35).toFixed(3)})`);
-			grad.addColorStop(1,   'rgba(255,200,120,0)');
+			grad.addColorStop(0,   `rgba(${rr},${rg},${rb},${alpha.toFixed(3)})`);
+			grad.addColorStop(0.4, `rgba(${rr},${rg},${rb},${(alpha * 0.35).toFixed(3)})`);
+			grad.addColorStop(1,   `rgba(${rr},${rg},${rb},0)`);
 
 			ctx.fillStyle = grad;
 			ctx.fillRect(-width / 2, -len, width, len);
@@ -222,6 +273,7 @@
 	// ── draw: sun ─────────────────────────────────────────────────────────────
 	function drawSun(ctx: Ctx, altDeg: number, sxn: number): void {
 		if (altDeg <= -8) return;
+		const atm = getAtmosphere();
 		const sunX     = sxn * W;
 		const sinAlt   = Math.max(0, Math.sin(altDeg * Math.PI / 180));
 		const sunY     = horizonY - sinAlt * horizonY * 0.92;
@@ -229,7 +281,7 @@
 
 		const glowR     = isGolden ? Math.min(W * 0.35, 260) : 90;
 		const glowAlpha = isGolden ? 0.42 : 0.12;
-		const glowRGB: RGB = isGolden ? [255, 160, 60] : [255, 245, 200];
+		const glowRGB: RGB = isGolden ? atm.glowGolden : atm.glowBright;
 		const glow = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, glowR);
 		glow.addColorStop(0,   css(glowRGB, glowAlpha));
 		glow.addColorStop(0.4, css(glowRGB, glowAlpha * 0.3));
@@ -242,16 +294,17 @@
 
 		ctx.beginPath();
 		ctx.arc(sunX, sunY, isGolden ? 18 : 10, 0, Math.PI * 2);
-		ctx.fillStyle = isGolden ? '#FF7020' : '#FFFDE7';
+		ctx.fillStyle = isGolden ? atm.sunGolden : atm.sunBright;
 		ctx.fill();
 
 		if (isGolden && altDeg > -5) {
 			const intensity = Math.max(0, 1 - Math.max(0, altDeg) / 12);
 			const r  = W * 0.72;
+			const [atmR, atmG, atmB] = atm.rayWarm;
 			const bg = ctx.createRadialGradient(sunX, horizonY, 0, sunX, horizonY, r);
-			bg.addColorStop(0,    `rgba(255,140,0,${(intensity * 0.40).toFixed(3)})`);
-			bg.addColorStop(0.35, `rgba(255,100,0,${(intensity * 0.22).toFixed(3)})`);
-			bg.addColorStop(1,    'rgba(255,80,0,0)');
+			bg.addColorStop(0,    `rgba(${atmR},${Math.round(atmG * 0.8)},${Math.round(atmB * 0.6)},${(intensity * 0.40).toFixed(3)})`);
+			bg.addColorStop(0.35, `rgba(${atmR},${Math.round(atmG * 0.6)},${Math.round(atmB * 0.4)},${(intensity * 0.22).toFixed(3)})`);
+			bg.addColorStop(1,    `rgba(${atmR},${Math.round(atmG * 0.5)},${Math.round(atmB * 0.3)},0)`);
 			ctx.save();
 			ctx.globalCompositeOperation = 'screen';
 			ctx.fillStyle = bg;
@@ -302,14 +355,15 @@
 	// ── draw: horizon atmosphere blend ───────────────────────────────────────
 	function drawHorizonBlend(ctx: Ctx, altDeg: number): void {
 		const { horizon } = getSkyColors(altDeg);
-		const band = Math.max(6, horizonY * 0.022);
-		const g = ctx.createLinearGradient(0, horizonY - band, 0, horizonY + band * 1.8);
-		g.addColorStop(0,   css(horizon, 0));
-		g.addColorStop(0.3, css(horizon, 0.32));
-		g.addColorStop(0.6, css(horizon, 0.18));
-		g.addColorStop(1,   css(horizon, 0));
+		const spread = H * 0.10;
+		const g = ctx.createLinearGradient(0, horizonY - spread * 0.4, 0, horizonY + spread);
+		g.addColorStop(0,    css(horizon, 0));
+		g.addColorStop(0.35, css(horizon, 0.14));
+		g.addColorStop(0.55, css(horizon, 0.18));
+		g.addColorStop(0.75, css(horizon, 0.08));
+		g.addColorStop(1,    css(horizon, 0));
 		ctx.fillStyle = g;
-		ctx.fillRect(0, horizonY - band, W, band * 2.8);
+		ctx.fillRect(0, horizonY - spread * 0.4, W, spread * 1.4);
 	}
 
 	// ── draw: vignette ────────────────────────────────────────────────────────
