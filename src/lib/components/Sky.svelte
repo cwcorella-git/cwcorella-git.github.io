@@ -338,9 +338,16 @@
 		lastThemeAlt   = altDeg;
 		lastPaletteVer = themeState.version;
 
-		if (themeState.palette.darkGlass) return;
+		console.log('[Sky] updateTheme: palette=%s darkGlass=%s paletteChanged=%s',
+			themeState.palette.name || 'unknown', themeState.palette.darkGlass, paletteChanged);
+
+		if (themeState.palette.darkGlass) {
+			console.log('[Sky] darkGlass=true, returning early (fixed colors via CSS)');
+			return;
+		}
 
 		const dl = Math.max(0, Math.min(1, (altDeg + 12) / 18));
+		console.log('[Sky] Setting dynamic CSS vars: dl=%f', dl);
 
 		function ri(d: number, n: number): number { return Math.round(d + (n - d) * (1 - dl)); }
 
@@ -374,6 +381,11 @@
 			const [pr, pg, pb] = lerpRGB(darkPanelDay as RGB, darkPanelNight as RGB, 1 - dl);
 			r.style.setProperty('--dark-panel-rgb', `${pr},${pg},${pb}`);
 		}
+
+		// Debug: log what we actually set
+		console.log('[Sky] CSS vars set: --glass-bg=%s --clr-text=%s',
+			r.style.getPropertyValue('--glass-bg'),
+			r.style.getPropertyValue('--clr-text'));
 	}
 
 	// ── draw all atmospheric layers ────────────────────────────────────────────
