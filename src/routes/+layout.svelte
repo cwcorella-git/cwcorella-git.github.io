@@ -75,7 +75,7 @@
 			<a href="/journals" class:active={$page.url.pathname === '/journals'}>journals</a>
 			<a href="/links" class:active={$page.url.pathname === '/links'}>links</a>
 		{/if}
-		<AdminToolbar onLogoutRequest={() => logoutConfirmOpen = true} />
+		<AdminToolbar onLogoutRequest={() => logoutConfirmOpen = true} alwaysShowTheme />
 	</div>
 </nav>
 

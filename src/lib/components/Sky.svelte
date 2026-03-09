@@ -338,8 +338,8 @@
 		lastThemeAlt   = altDeg;
 		lastPaletteVer = themeState.version;
 
-		console.log('[Sky] updateTheme: palette=%s darkGlass=%s paletteChanged=%s',
-			themeState.palette.name || 'unknown', themeState.palette.darkGlass, paletteChanged);
+		console.log('[Sky] updateTheme: darkGlass=%s paletteChanged=%s',
+			themeState.palette.darkGlass, paletteChanged);
 
 		if (themeState.palette.darkGlass) {
 			console.log('[Sky] darkGlass=true, returning early (fixed colors via CSS)');

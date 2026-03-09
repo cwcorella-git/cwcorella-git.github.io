@@ -2,7 +2,7 @@
 	import { adminState, writeQueue } from '$lib/admin/state.svelte';
 	import ThemePanel from './ThemePanel.svelte';
 
-	let { onLogoutRequest }: { onLogoutRequest: () => void } = $props();
+	let { onLogoutRequest, alwaysShowTheme = false }: { onLogoutRequest: () => void; alwaysShowTheme?: boolean } = $props();
 
 	let adminMenuOpen = $state(false);
 	let themePanelOpen = $state(false);
@@ -33,8 +33,8 @@
 	}
 </script>
 
-{#if adminState.active}
-	<div class="toolbar" use:handleClickOutside>
+<div class="toolbar" use:handleClickOutside>
+	{#if adminState.active}
 		{#if writeQueue.status === 'dirty'}
 			<button class="sync-btn dirty" onclick={handleSync}>● <span class="btn-label">sync</span></button>
 		{:else if writeQueue.status === 'saving'}
@@ -42,22 +42,24 @@
 		{:else if writeQueue.status === 'error'}
 			<button class="sync-btn error" onclick={handleSync} title={writeQueue.error}>⚠ <span class="btn-label">retry</span></button>
 		{/if}
+	{/if}
 
-		<!-- Theme button -->
-		<div class="theme-wrapper">
-			<button
-				class="theme-btn"
-				class:active={themePanelOpen}
-				onclick={toggleThemePanel}
-				aria-expanded={themePanelOpen}
-				aria-label="Theme palette"
-			>◐ <span class="btn-label">theme</span></button>
-			{#if themePanelOpen}
-				<ThemePanel />
-			{/if}
-		</div>
+	<!-- Theme button (always visible) -->
+	<div class="theme-wrapper">
+		<button
+			class="theme-btn"
+			class:active={themePanelOpen}
+			onclick={toggleThemePanel}
+			aria-expanded={themePanelOpen}
+			aria-label="Theme palette"
+		>◐ <span class="btn-label">theme</span></button>
+		{#if themePanelOpen}
+			<ThemePanel />
+		{/if}
+	</div>
 
-		<!-- Admin menu -->
+	{#if adminState.active}
+		<!-- Admin menu (admin only) -->
 		<div class="admin-menu-wrapper">
 			<button
 				class="admin-menu-btn"
@@ -73,8 +75,8 @@
 				</div>
 			{/if}
 		</div>
-	</div>
-{/if}
+	{/if}
+</div>
 
 <style>
 	.toolbar {
