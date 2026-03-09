@@ -4,7 +4,7 @@
 
 	let { onLogoutRequest }: { onLogoutRequest: () => void } = $props();
 
-	let themePanelOpen = $state(false);
+	let adminMenuOpen = $state(false);
 
 	async function handleSync() {
 		await writeQueue.flush();
@@ -12,7 +12,7 @@
 
 	function handleClickOutside(node: HTMLElement) {
 		function onClick(e: MouseEvent) {
-			if (!node.contains(e.target as Node)) themePanelOpen = false;
+			if (!node.contains(e.target as Node)) adminMenuOpen = false;
 		}
 		document.addEventListener('click', onClick, true);
 		return { destroy() { document.removeEventListener('click', onClick, true); } };
@@ -21,8 +21,6 @@
 
 {#if adminState.active}
 	<div class="toolbar">
-		<span class="label">⊙ admin</span>
-
 		{#if writeQueue.status === 'dirty'}
 			<button class="sync-btn dirty" onclick={handleSync}>● <span class="btn-label">sync</span></button>
 		{:else if writeQueue.status === 'saving'}
@@ -31,21 +29,23 @@
 			<button class="sync-btn error" onclick={handleSync} title={writeQueue.error}>⚠ <span class="btn-label">retry</span></button>
 		{/if}
 
-		<!-- Theme palette picker -->
-		<div class="theme-wrapper" use:handleClickOutside>
+		<!-- Admin menu -->
+		<div class="admin-menu-wrapper" use:handleClickOutside>
 			<button
-				class="theme-btn"
-				class:active={themePanelOpen}
-				onclick={() => (themePanelOpen = !themePanelOpen)}
-				aria-expanded={themePanelOpen}
-				aria-label="Toggle theme palette"
-			>⊹ <span class="btn-label">theme</span></button>
-			{#if themePanelOpen}
-				<ThemePanel />
+				class="admin-menu-btn"
+				class:active={adminMenuOpen}
+				onclick={() => (adminMenuOpen = !adminMenuOpen)}
+				aria-expanded={adminMenuOpen}
+				aria-label="Admin menu"
+			>⊙</button>
+			{#if adminMenuOpen}
+				<div class="admin-menu-panel">
+					<span class="menu-label">admin</span>
+					<ThemePanel />
+					<button class="menu-item logout" onclick={() => { adminMenuOpen = false; onLogoutRequest(); }}>logout</button>
+				</div>
 			{/if}
 		</div>
-
-		<button onclick={onLogoutRequest} aria-label="Logout">× <span class="btn-label">logout</span></button>
 	</div>
 {/if}
 
@@ -56,16 +56,6 @@
 		align-items: center;
 		gap: 0.6rem;
 		flex-shrink: 0;
-	}
-
-	.label {
-		font-family: var(--font-ui);
-		font-size: 0.6rem;
-		letter-spacing: 0.1em;
-		color: var(--clr-text);
-		opacity: 0.8;
-		margin-right: 0.2rem;
-		white-space: nowrap;
 	}
 
 	button {
@@ -97,26 +87,71 @@
 	}
 	.sync-btn.error:hover { border-color: rgba(190, 80, 60, 0.7); }
 
-	/* Theme button wrapper — positions the dropdown panel */
-	.theme-wrapper {
+	/* Admin menu dropdown */
+	.admin-menu-wrapper {
 		position: relative;
 		display: inline-flex;
 		align-items: center;
 	}
 
-	button.active {
+	.admin-menu-btn {
+		padding: 0.25rem 0.45rem;
+		font-size: 0.7rem;
+	}
+
+	.admin-menu-btn.active {
 		opacity: 1;
 		background: rgba(var(--ui-rgb), 0.10);
 	}
 
-	.theme-btn.active {
+	.admin-menu-panel {
+		position: absolute;
+		top: 100%;
+		right: 0;
+		margin-top: 0.4rem;
+		background: var(--glass-bg-dark);
+		border: 1px solid var(--glass-border-dark);
+		padding: 0.6rem;
+		border-radius: 3px;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		min-width: 150px;
+		z-index: 100;
+	}
+
+	.menu-label {
+		font-family: var(--font-ui);
+		font-size: 0.55rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--clr-dark-text);
+		opacity: 0.6;
+		padding-bottom: 0.3rem;
+		border-bottom: 1px solid rgba(var(--dark-panel-rgb), 0.15);
+	}
+
+	.menu-item {
+		padding: 0.25rem 0.4rem;
+		font-size: 0.55rem;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--clr-dark-text);
+		border: none;
+		opacity: 0.7;
+		gap: 0;
+	}
+
+	.menu-item:hover {
 		opacity: 1;
-		background: rgba(var(--ui-rgb), 0.10);
+	}
+
+	.menu-item.logout {
+		color: var(--clr-danger);
 	}
 
 	/* Icon-only at narrow widths */
 	@media (max-width: 580px) {
-		.label { display: none; }
 		.btn-label { display: none; }
 		button { padding: 0.25rem 0.5rem; }
 		.toolbar { gap: 0.35rem; }
