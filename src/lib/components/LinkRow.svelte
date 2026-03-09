@@ -56,11 +56,11 @@
 				onchange={() => onSelect(link.id)}
 			/>
 		{/if}
-		<button class="entry-title-btn" onclick={() => onEdit(link)}>
+		<a href={link.url} target="_blank" rel="noopener noreferrer" class="entry-title-btn">
 			{#if link.source}<span class="source-indicator">{link.source}</span>{/if}
 			<span class="entry-title">{link.title}</span>
 			<span class="entry-meta">{domain(link.url)}</span>
-		</button>
+		</a>
 		{#if link.tags.length > 0}
 			<span class="entry-tags">
 				{#each link.tags.slice(0, 3) as tag}
@@ -72,7 +72,8 @@
 			</span>
 		{/if}
 		<div class="row-actions">
-			<button class="action-btn danger" onclick={() => onDelete(link.id)}>×</button>
+			<button class="action-btn" onclick={() => onEdit(link)} aria-label="Edit link">edit</button>
+			<button class="action-btn danger" onclick={() => onDelete(link.id)} aria-label="Delete link">×</button>
 		</div>
 	{/if}
 </div>
@@ -99,9 +100,12 @@
 	}
 
 	.entry-title-btn {
-		flex: 1;
+		flex: 0 1 auto;
+		min-width: 150px;
+		max-width: 45%;
 		background: none;
 		border: none;
+		text-decoration: none;
 		cursor: pointer;
 		text-align: left;
 		padding: 0.4rem 0;
@@ -110,6 +114,11 @@
 		flex-direction: row;
 		align-items: baseline;
 		gap: 0.5rem;
+		color: inherit;
+	}
+
+	.entry-title-btn:hover {
+		color: var(--clr-text);
 	}
 
 	.entry-title-btn:hover .entry-title {
