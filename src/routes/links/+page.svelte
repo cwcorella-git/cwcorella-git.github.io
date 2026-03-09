@@ -898,8 +898,6 @@
 	.editor-footer button:hover:not(:disabled) { color: var(--clr-dark-text); border-color: rgba(var(--dark-panel-rgb), 0.40); }
 	.editor-footer button:disabled { opacity: 0.5; cursor: not-allowed; }
 	.save-btn { background: rgba(var(--dark-panel-rgb),0.08) !important; border-color: rgba(var(--dark-panel-rgb),0.25) !important; }
-	.editor-footer button.danger { color: var(--clr-danger); border-color: rgba(var(--clr-danger), 0.4); }
-	.editor-footer button.danger:hover:not(:disabled) { color: var(--clr-danger); border-color: var(--clr-danger); }
 
 	/* ── category edit modal (minimal style) ──────────────────────────── */
 	.cat-edit-modal {

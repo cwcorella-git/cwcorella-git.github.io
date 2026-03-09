@@ -205,14 +205,6 @@
 		cursor: not-allowed;
 	}
 
-	.cat-action.danger {
-		color: var(--clr-danger);
-	}
-
-	.cat-action.danger:hover:not(:disabled) {
-		color: var(--clr-danger);
-	}
-
 	.category-content {
 		padding-left: 1.5rem;
 		padding-top: 0;
