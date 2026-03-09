@@ -246,6 +246,9 @@
 		backdrop-filter: var(--glass-blur);
 		-webkit-backdrop-filter: var(--glass-blur);
 		border: 1px solid var(--glass-border);
+		will-change: background, border-color;
+		transform: translateZ(0);
+		backface-visibility: hidden;
 	}
 
 	.search-row {
