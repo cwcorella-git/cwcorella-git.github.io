@@ -127,7 +127,7 @@
 
 <style>
 	.category-section {
-		margin-bottom: 2.5rem;
+		margin-bottom: 1rem;
 	}
 
 	.category-header {
