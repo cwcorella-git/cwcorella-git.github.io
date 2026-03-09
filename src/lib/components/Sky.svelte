@@ -338,15 +338,6 @@
 		lastThemeAlt   = altDeg;
 		lastPaletteVer = themeState.version;
 
-		// When switching between darkGlass=true and darkGlass=false, clear visible canvas
-		// (offscreen will be cleared by next renderToOffscreen call)
-		const darkGlassChanged = lastDarkGlass !== themeState.palette.darkGlass;
-		if (darkGlassChanged) {
-			lastDarkGlass = themeState.palette.darkGlass;
-			const vCtx = visibleEl?.getContext('2d');
-			if (vCtx) vCtx.clearRect(0, 0, W, H);
-		}
-
 		if (themeState.palette.darkGlass) return;
 
 		const dl = Math.max(0, Math.min(1, (altDeg + 12) / 18));
@@ -435,6 +426,24 @@
 		const now = new Date();
 		const altDeg = sunAltitudeDeg(now);
 		const sxn    = sunXNorm(now, 39.53);
+
+		// IMPORTANT: Check for palette change BEFORE rendering
+		const paletteChanged = themeState.version !== lastPaletteVer;
+		const darkGlassChanged = lastDarkGlass !== themeState.palette.darkGlass;
+
+		if (paletteChanged || darkGlassChanged) {
+			console.log('[Sky] Palette/theme changed, clearing before render. darkGlass:', themeState.palette.darkGlass, 'was:', lastDarkGlass);
+			if (visibleEl) {
+				const vCtx = visibleEl.getContext('2d');
+				if (vCtx) vCtx.clearRect(0, 0, W, H);
+			}
+			if (offscreen) {
+				const oCtx = offscreen.getContext('2d');
+				if (oCtx) oCtx.clearRect(0, 0, W, H);
+			}
+			lastDarkGlass = themeState.palette.darkGlass;
+			lastPaletteVer = themeState.version;
+		}
 
 		renderToOffscreen(altDeg, sxn);
 		updateTheme(altDeg);
