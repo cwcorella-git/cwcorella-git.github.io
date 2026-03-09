@@ -966,6 +966,45 @@
 	.cat-edit-btn:hover:not(:disabled) { color: var(--clr-dark-text); border-color: rgba(var(--dark-panel-rgb), 0.40); }
 	.cat-edit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+	/* ── delete confirmation modal ────────────────────────── */
+	.seal-modal {
+		position: fixed; top: 50%; left: 50%;
+		transform: translate(-50%, -50%);
+		z-index: 400;
+		background: var(--glass-bg-dark);
+		backdrop-filter: var(--glass-blur-heavy);
+		-webkit-backdrop-filter: var(--glass-blur-heavy);
+		border: 1px solid var(--glass-border-dark);
+		padding: 1.5rem;
+		width: min(420px, 90vw);
+		display: flex; flex-direction: column; gap: 1rem;
+	}
+	.seal-modal-title {
+		font-family: var(--font-ui);
+		font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase;
+		color: var(--clr-dark-text); margin: 0;
+	}
+	.seal-modal-body {
+		font-family: var(--font-ui);
+		font-size: 0.6rem; line-height: 1.6; letter-spacing: 0.03em;
+		color: var(--clr-dark-text); opacity: 0.8; margin: 0;
+	}
+	.seal-modal-actions {
+		display: flex; gap: 0.5rem; justify-content: flex-end;
+		padding-top: 0.8rem;
+		border-top: 1px solid rgba(var(--dark-panel-rgb), 0.12);
+	}
+	.seal-modal-actions button {
+		background: none; border: 1px solid rgba(var(--dark-panel-rgb), 0.20);
+		color: var(--clr-dark-text); font-family: var(--font-ui);
+		font-size: 0.6rem; letter-spacing: 0.08em;
+		padding: 0.35rem 0.8rem; cursor: pointer; transition: all 0.15s;
+	}
+	.seal-modal-actions button:hover:not(:disabled) { border-color: rgba(var(--dark-panel-rgb), 0.40); }
+	.seal-modal-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
+	.seal-confirm-btn.danger { color: var(--clr-danger); }
+	.seal-confirm-btn.danger:hover:not(:disabled) { color: var(--clr-danger); border-color: var(--clr-danger-muted); }
+
 	@media (max-width: 480px) {
 		.page { padding-top: 4.5rem; }
 		.inner { padding: 1.5rem 1.25rem 4rem; }
