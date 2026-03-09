@@ -481,14 +481,14 @@
 
 <!-- ── category delete confirmation ──────────────────────────────────── -->
 {#if catActionMode === 'delete' && catActionTarget}
-	<div class="overlay-backdrop" role="presentation" onclick={() => catActionMode = 'edit'}></div>
+	<div class="overlay-backdrop" role="presentation" onclick={() => catActionMode = 'none'}></div>
 	<div class="seal-modal" role="dialog" aria-modal="true" aria-label="Delete confirmation">
 		<p class="seal-modal-title">Delete "{catActionTarget}"?</p>
 		<p class="seal-modal-body">
 			Links in this category will be moved to Uncategorized. This cannot be undone.
 		</p>
 		<div class="seal-modal-actions">
-			<button onclick={() => catActionMode = 'edit'}>cancel</button>
+			<button onclick={() => catActionMode = 'none'}>cancel</button>
 			<button class="seal-confirm-btn danger" onclick={() => { deleteCategory(catActionTarget!); catActionMode = 'none'; }}>
 				{categorySaving ? '…' : 'delete'}
 			</button>
