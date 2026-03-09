@@ -338,20 +338,13 @@
 		lastThemeAlt   = altDeg;
 		lastPaletteVer = themeState.version;
 
-		// When switching between darkGlass=true and darkGlass=false, clear canvas
-		// Must happen BEFORE the darkGlass return, so it runs on all palette changes
+		// When switching between darkGlass=true and darkGlass=false, clear visible canvas
+		// (offscreen will be cleared by next renderToOffscreen call)
 		const darkGlassChanged = lastDarkGlass !== themeState.palette.darkGlass;
 		if (darkGlassChanged) {
 			lastDarkGlass = themeState.palette.darkGlass;
-			console.log('[Sky] darkGlass changed to', themeState.palette.darkGlass, '— clearing canvas');
-			if (visibleEl) {
-				const vCtx = visibleEl.getContext('2d');
-				if (vCtx) vCtx.clearRect(0, 0, W, H);
-			}
-			if (offscreen) {
-				const oCtx = offscreen.getContext('2d');
-				if (oCtx) oCtx.clearRect(0, 0, W, H);
-			}
+			const vCtx = visibleEl?.getContext('2d');
+			if (vCtx) vCtx.clearRect(0, 0, W, H);
 		}
 
 		if (themeState.palette.darkGlass) return;
@@ -392,58 +385,43 @@
 		}
 	}
 
+	// ── draw all atmospheric layers ────────────────────────────────────────────
+	function drawAllLayers(ctx: Ctx, altDeg: number, sxn: number): void {
+		ctx.clearRect(0, 0, W, H);
+		drawSky(ctx, altDeg);
+		drawMoon(ctx, altDeg, sxn);
+		drawCircumsolarGlow(ctx, altDeg, sxn);
+		drawSun(ctx, altDeg, sxn);
+		drawCrepuscularRays(ctx, altDeg, sxn);
+		drawBeltOfVenus(ctx, altDeg);
+		drawPurpleLight(ctx, altDeg, sxn);
+		drawHorizonBlend(ctx, altDeg);
+		drawVignette(ctx);
+	}
+
 	// ── render to OffscreenCanvas ──────────────────────────────────────────────
 	function renderToOffscreen(altDeg: number, sxn: number): void {
-		if (!visibleEl) {
-			console.warn('[Sky] visibleEl not bound');
-			return;
-		}
-
-		let ctx: Ctx | null = null;
+		if (!visibleEl) return;
 
 		// Try OffscreenCanvas first (atomic buffering)
 		if (offscreen) {
-			ctx = offscreen.getContext('2d');
+			const ctx = offscreen.getContext('2d');
 			if (ctx) {
-				ctx.clearRect(0, 0, W, H);
-				drawSky(ctx, altDeg);
-				drawMoon(ctx, altDeg, sxn);
-				drawCircumsolarGlow(ctx, altDeg, sxn);
-				drawSun(ctx, altDeg, sxn);
-				drawCrepuscularRays(ctx, altDeg, sxn);
-				drawBeltOfVenus(ctx, altDeg);
-				drawPurpleLight(ctx, altDeg, sxn);
-				drawHorizonBlend(ctx, altDeg);
-				drawVignette(ctx);
+				drawAllLayers(ctx, altDeg, sxn);
 
 				// Blit to visible canvas
 				const vCtx = visibleEl.getContext('2d');
 				if (vCtx) {
 					vCtx.clearRect(0, 0, W, H);
 					vCtx.drawImage(offscreen, 0, 0);
-					console.log('[Sky] Rendered via OffscreenCanvas');
 					return;
 				}
 			}
 		}
 
 		// Fallback: render directly to visible canvas
-		console.log('[Sky] Falling back to direct canvas rendering');
 		const vCtx = visibleEl.getContext('2d');
-		if (!vCtx) {
-			console.warn('[Sky] Failed to get any canvas context');
-			return;
-		}
-		vCtx.clearRect(0, 0, W, H);
-		drawSky(vCtx, altDeg);
-		drawMoon(vCtx, altDeg, sxn);
-		drawCircumsolarGlow(vCtx, altDeg, sxn);
-		drawSun(vCtx, altDeg, sxn);
-		drawCrepuscularRays(vCtx, altDeg, sxn);
-		drawBeltOfVenus(vCtx, altDeg);
-		drawPurpleLight(vCtx, altDeg, sxn);
-		drawHorizonBlend(vCtx, altDeg);
-		drawVignette(vCtx);
+		if (vCtx) drawAllLayers(vCtx, altDeg, sxn);
 	}
 
 	// ── main loop ──────────────────────────────────────────────────────────────
@@ -454,8 +432,9 @@
 		animFrame = requestAnimationFrame(draw);
 		if (++frameCount % SKIP !== 0) return;
 
-		const altDeg = sunAltitudeDeg(new Date());
-		const sxn    = sunXNorm(new Date(), 39.53);
+		const now = new Date();
+		const altDeg = sunAltitudeDeg(now);
+		const sxn    = sunXNorm(now, 39.53);
 
 		renderToOffscreen(altDeg, sxn);
 		updateTheme(altDeg);
@@ -486,10 +465,7 @@
 	}
 
 	onMount(() => {
-		if (!visibleEl) {
-			console.warn('[Sky] visibleEl not bound at onMount');
-			return;
-		}
+		if (!visibleEl) return;
 		dpr = window.devicePixelRatio || 1;
 		W = Math.round(window.innerWidth * dpr);
 		H = Math.round(window.innerHeight * dpr);
@@ -498,12 +474,11 @@
 		visibleEl.width  = W;
 		visibleEl.height = H;
 		offscreen = new OffscreenCanvas(W, H);
-		console.log('[Sky] Initialized: W=%d H=%d dpr=%f', W, H, dpr);
 
 		// Initial render
-		const altDeg = sunAltitudeDeg(new Date());
-		const sxn    = sunXNorm(new Date(), 39.53);
-		console.log('[Sky] Initial render: altDeg=%f', altDeg);
+		const now = new Date();
+		const altDeg = sunAltitudeDeg(now);
+		const sxn    = sunXNorm(now, 39.53);
 		renderToOffscreen(altDeg, sxn);
 		updateTheme(altDeg);
 
