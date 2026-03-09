@@ -653,24 +653,26 @@
 				<p class="status">no matches.</p>
 			{:else}
 				{#each grouped as group (group.category)}
-					<CategorySection
-						category={group.category}
-						links={group.links}
-						{selectMode}
-						selected={selected}
-						confirmingId={confirmingId}
-						deleteSaving={deleteSaving}
-						onSelect={toggleSelect}
-						onEdit={startEdit}
-						onDelete={(id) => confirmingId = id}
-						onCancelDelete={() => confirmingId = null}
-						onConfirmDelete={deleteLink}
-						onTagClick={setTag}
-						onCatRename={startRenameCategory}
-						onCatDelete={(cat) => { catActionTarget = cat; catActionMode = 'delete'; }}
-						onCatExport={exportCategory}
-					/>
-				{/each}
+				<CategorySection
+					category={group.category}
+					links={group.links}
+					{selectMode}
+					selected={selected}
+					confirmingId={confirmingId}
+					deleteSaving={deleteSaving}
+					isExpanded={shouldCategoryBeExpanded(group.category)}
+					onToggleExpansion={() => toggleCategoryExpansion(group.category)}
+					onSelect={toggleSelect}
+					onEdit={startEdit}
+					onDelete={(id) => confirmingId = id}
+					onCancelDelete={() => confirmingId = null}
+					onConfirmDelete={deleteLink}
+					onTagClick={setTag}
+					onCatRename={startRenameCategory}
+					onCatDelete={(cat) => { catActionTarget = cat; catActionMode = 'delete'; }}
+					onCatExport={exportCategory}
+				/>
+			{/each}
 
 				<div class="footer-row">
 					<p class="count">{filtered.length}{filtered.length !== linksState.entries.length ? ` of ${linksState.entries.length}` : ''} links</p>
