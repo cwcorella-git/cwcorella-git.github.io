@@ -377,29 +377,56 @@
 
 	// ── render to OffscreenCanvas ──────────────────────────────────────────────
 	function renderToOffscreen(altDeg: number, sxn: number): void {
-		if (!offscreen) return;
-		const ctx = offscreen.getContext('2d');
-		if (!ctx) return;
+		if (!visibleEl) {
+			console.warn('[Sky] visibleEl not bound');
+			return;
+		}
 
-		ctx.clearRect(0, 0, W, H);
-		drawSky(ctx, altDeg);
-		drawMoon(ctx, altDeg, sxn);
-		drawCircumsolarGlow(ctx, altDeg, sxn);
-		drawSun(ctx, altDeg, sxn);
-		drawCrepuscularRays(ctx, altDeg, sxn);
-		drawBeltOfVenus(ctx, altDeg);
-		drawPurpleLight(ctx, altDeg, sxn);
-		drawHorizonBlend(ctx, altDeg);
-		drawVignette(ctx);
+		let ctx: Ctx | null = null;
 
-		// Single atomic blit to visible canvas
-		if (visibleEl) {
-			const vCtx = visibleEl.getContext('2d');
-			if (vCtx) {
-				vCtx.clearRect(0, 0, W, H);
-				vCtx.drawImage(offscreen, 0, 0);
+		// Try OffscreenCanvas first (atomic buffering)
+		if (offscreen) {
+			ctx = offscreen.getContext('2d');
+			if (ctx) {
+				ctx.clearRect(0, 0, W, H);
+				drawSky(ctx, altDeg);
+				drawMoon(ctx, altDeg, sxn);
+				drawCircumsolarGlow(ctx, altDeg, sxn);
+				drawSun(ctx, altDeg, sxn);
+				drawCrepuscularRays(ctx, altDeg, sxn);
+				drawBeltOfVenus(ctx, altDeg);
+				drawPurpleLight(ctx, altDeg, sxn);
+				drawHorizonBlend(ctx, altDeg);
+				drawVignette(ctx);
+
+				// Blit to visible canvas
+				const vCtx = visibleEl.getContext('2d');
+				if (vCtx) {
+					vCtx.clearRect(0, 0, W, H);
+					vCtx.drawImage(offscreen, 0, 0);
+					console.log('[Sky] Rendered via OffscreenCanvas');
+					return;
+				}
 			}
 		}
+
+		// Fallback: render directly to visible canvas
+		console.log('[Sky] Falling back to direct canvas rendering');
+		const vCtx = visibleEl.getContext('2d');
+		if (!vCtx) {
+			console.warn('[Sky] Failed to get any canvas context');
+			return;
+		}
+		vCtx.clearRect(0, 0, W, H);
+		drawSky(vCtx, altDeg);
+		drawMoon(vCtx, altDeg, sxn);
+		drawCircumsolarGlow(vCtx, altDeg, sxn);
+		drawSun(vCtx, altDeg, sxn);
+		drawCrepuscularRays(vCtx, altDeg, sxn);
+		drawBeltOfVenus(vCtx, altDeg);
+		drawPurpleLight(vCtx, altDeg, sxn);
+		drawHorizonBlend(vCtx, altDeg);
+		drawVignette(vCtx);
 	}
 
 	// ── main loop ──────────────────────────────────────────────────────────────
@@ -442,7 +469,10 @@
 	}
 
 	onMount(() => {
-		if (!visibleEl) return;
+		if (!visibleEl) {
+			console.warn('[Sky] visibleEl not bound at onMount');
+			return;
+		}
 		dpr = window.devicePixelRatio || 1;
 		W = Math.round(window.innerWidth * dpr);
 		H = Math.round(window.innerHeight * dpr);
@@ -451,10 +481,12 @@
 		visibleEl.width  = W;
 		visibleEl.height = H;
 		offscreen = new OffscreenCanvas(W, H);
+		console.log('[Sky] Initialized: W=%d H=%d dpr=%f', W, H, dpr);
 
 		// Initial render
 		const altDeg = sunAltitudeDeg(new Date());
 		const sxn    = sunXNorm(new Date(), 39.53);
+		console.log('[Sky] Initial render: altDeg=%f', altDeg);
 		renderToOffscreen(altDeg, sxn);
 		updateTheme(altDeg);
 
