@@ -457,9 +457,7 @@
 			<button class="cat-edit-btn" onclick={() => { exportCategory(catActionTarget!); catActionMode = 'none'; }} disabled={categorySaving}>
 				export
 			</button>
-			<button class="cat-edit-btn danger" onclick={() => { catActionMode = 'delete'; }} disabled={categorySaving}>
-				delete
-			</button>
+			<button class="cat-edit-btn danger" onclick={() => { catActionMode = 'delete'; }} disabled={categorySaving} aria-label="Delete category">×</button>
 		</div>
 	</div>
 {/if}
