@@ -57,7 +57,7 @@
 						<div class="palette-grid">
 							<button
 								class="palette-btn"
-								class:active={themeState.palette === 'amber'}
+								class:active={themeState.active === 'amber'}
 								onclick={() => selectPalette('amber')}
 								title="Amber"
 							>
@@ -65,7 +65,7 @@
 							</button>
 							<button
 								class="palette-btn"
-								class:active={themeState.palette === 'sky'}
+								class:active={themeState.active === 'sky'}
 								onclick={() => selectPalette('sky')}
 								title="Sky"
 							>
@@ -73,7 +73,7 @@
 							</button>
 							<button
 								class="palette-btn"
-								class:active={themeState.palette === 'dusk'}
+								class:active={themeState.active === 'dusk'}
 								onclick={() => selectPalette('dusk')}
 								title="Dusk"
 							>
@@ -81,7 +81,7 @@
 							</button>
 							<button
 								class="palette-btn"
-								class:active={themeState.palette === 'neutral'}
+								class:active={themeState.active === 'neutral'}
 								onclick={() => selectPalette('neutral')}
 								title="Neutral"
 							>
