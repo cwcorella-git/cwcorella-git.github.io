@@ -66,19 +66,20 @@
 </script>
 
 <div class="category-section">
-	<button
-		class="category-header"
-		class:expanded={isExpanded}
-		onclick={() => (isExpanded = !isExpanded)}
-		aria-expanded={isExpanded}
-	>
-		<span class="cat-name">{category}</span>
-		<span class="cat-count">({links.length})</span>
-	</button>
-	<div class="cat-actions">
-		<button class="cat-btn" onclick={() => onCatRename(category)} title="Rename">rename</button>
-		<button class="cat-btn danger" onclick={() => onCatDelete(category)} title="Delete">delete</button>
-		<button class="cat-btn" onclick={() => onCatExport(category)} title="Export">export</button>
+	<div class="category-header">
+		<button
+			class="header-left"
+			onclick={() => (isExpanded = !isExpanded)}
+			aria-expanded={isExpanded}
+		>
+			<span class="cat-title">{category}</span>
+			<span class="cat-count">({links.length})</span>
+		</button>
+		<div class="header-right">
+			<button class="cat-action" onclick={() => onCatRename(category)}>rename</button>
+			<button class="cat-action danger" onclick={() => onCatDelete(category)}>delete</button>
+			<button class="cat-action" onclick={() => onCatExport(category)}>export</button>
+		</div>
 	</div>
 
 	{#if isExpanded}
@@ -100,24 +101,25 @@
 					/>
 				{/each}
 			{:else}
-				<!-- No subcategories, show links directly -->
-				<div class="links-list">
+				<ul class="links-list">
 					{#each links as link (link.id)}
-						<LinkRow
-							{link}
-							{selectMode}
-							isSelected={selected.has(link.id)}
-							confirming={confirmingId === link.id}
-							{onSelect}
-							{onEdit}
-							{onDelete}
-							{onCancelDelete}
-							{onConfirmDelete}
-							{onTagClick}
-							isDeleting={deleteSaving}
-						/>
+						<li>
+							<LinkRow
+								{link}
+								{selectMode}
+								isSelected={selected.has(link.id)}
+								confirming={confirmingId === link.id}
+								{onSelect}
+								{onEdit}
+								{onDelete}
+								{onCancelDelete}
+								{onConfirmDelete}
+								{onTagClick}
+								isDeleting={deleteSaving}
+							/>
+						</li>
 					{/each}
-				</div>
+				</ul>
 			{/if}
 		</div>
 	{/if}
@@ -125,94 +127,96 @@
 
 <style>
 	.category-section {
-		margin-bottom: 2rem;
-		padding-left: 0.75rem;
-		border-left: 3px solid transparent;
-		transition: border-color var(--t-ui);
-	}
-
-	.category-section :global(.expanded) {
-		border-left-color: rgba(var(--ui-rgb), 0.35);
+		margin-bottom: 2.5rem;
 	}
 
 	.category-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.5rem 0;
+		width: 100%;
+		gap: 1.5rem;
+	}
+
+	.header-left {
 		background: none;
 		border: none;
 		cursor: pointer;
 		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.65rem 0;
-		margin-bottom: 0.5rem;
+		align-items: baseline;
+		gap: 0.6rem;
 		flex: 1;
-		color: var(--clr-text);
+		min-width: 0;
+		padding: 0;
 		text-align: left;
-		transition: all var(--t-ui);
-		font-weight: 600;
+		transition: opacity var(--t-ui);
 	}
 
-	.category-header:hover {
-		opacity: 0.85;
+	.header-left:hover {
+		opacity: 0.75;
 	}
 
-	.cat-name {
-		font-family: var(--font-ui);
-		font-size: 0.68rem;
-		letter-spacing: 0.11em;
-		text-transform: uppercase;
+	.cat-title {
+		font-family: var(--font-prose);
+		font-size: 1rem;
+		line-height: 1.3;
 		color: var(--clr-text);
-		font-weight: 600;
+		letter-spacing: 0.02em;
 	}
 
 	.cat-count {
 		font-family: var(--font-ui);
-		font-size: 0.56rem;
-		letter-spacing: 0.05em;
+		font-size: 0.75rem;
 		color: var(--clr-text);
-		opacity: 0.45;
+		opacity: 0.5;
 		flex-shrink: 0;
+		letter-spacing: 0.04em;
 	}
 
-	.cat-actions {
+	.header-right {
 		display: flex;
 		align-items: center;
-		gap: 0.35rem;
+		gap: 0.8rem;
 		flex-shrink: 0;
-		margin-top: 0.25rem;
 	}
 
-	.cat-btn {
+	.cat-action {
 		background: none;
 		border: none;
 		cursor: pointer;
 		font-family: var(--font-ui);
-		font-size: 0.48rem;
-		letter-spacing: 0.06em;
+		font-size: 0.56rem;
+		letter-spacing: 0.08em;
 		text-transform: uppercase;
 		color: var(--clr-text);
-		opacity: 0.35;
-		padding: 0.1rem 0.25rem;
+		opacity: 0.45;
+		padding: 0.05rem 0;
 		transition: opacity var(--t-ui);
 	}
 
-	.cat-btn:hover:not(:disabled) {
+	.cat-action:hover:not(:disabled) {
 		opacity: 0.85;
 	}
 
-	.cat-btn:disabled {
+	.cat-action:disabled {
 		opacity: 0.15;
 		cursor: not-allowed;
 	}
 
-	.cat-btn.danger {
+	.cat-action.danger {
 		color: var(--clr-danger);
 	}
 
 	.category-content {
-		padding: 0;
+		padding-left: 1.5rem;
+		padding-top: 0.5rem;
 	}
 
 	.links-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
 		display: flex;
 		flex-direction: column;
 	}
