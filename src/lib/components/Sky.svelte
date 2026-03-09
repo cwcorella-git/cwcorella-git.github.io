@@ -339,9 +339,11 @@
 		lastPaletteVer = themeState.version;
 
 		// When switching between darkGlass=true and darkGlass=false, clear canvas
+		// Must happen BEFORE the darkGlass return, so it runs on all palette changes
 		const darkGlassChanged = lastDarkGlass !== themeState.palette.darkGlass;
 		if (darkGlassChanged) {
 			lastDarkGlass = themeState.palette.darkGlass;
+			console.log('[Sky] darkGlass changed to', themeState.palette.darkGlass, '— clearing canvas');
 			if (visibleEl) {
 				const vCtx = visibleEl.getContext('2d');
 				if (vCtx) vCtx.clearRect(0, 0, W, H);
