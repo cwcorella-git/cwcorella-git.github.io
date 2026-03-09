@@ -439,7 +439,7 @@
 		const altDeg = sunAltitudeDeg(now);
 		const sxn    = sunXNorm(now, 39.53);
 
-		// IMPORTANT: Check for palette change BEFORE rendering
+		// IMPORTANT: Check for palette change BEFORE rendering (but don't update cached values yet)
 		const paletteChanged = themeState.version !== lastPaletteVer;
 		const darkGlassChanged = lastDarkGlass !== themeState.palette.darkGlass;
 
@@ -453,8 +453,8 @@
 				const oCtx = offscreen.getContext('2d');
 				if (oCtx) oCtx.clearRect(0, 0, W, H);
 			}
-			lastDarkGlass = themeState.palette.darkGlass;
-			lastPaletteVer = themeState.version;
+			// NOTE: Don't update cached values here - let updateTheme() do it
+			// so it can detect the change and set CSS vars properly
 		}
 
 		renderToOffscreen(altDeg, sxn);
