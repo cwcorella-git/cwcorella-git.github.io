@@ -13,6 +13,7 @@
 		selected?: Set<string>;
 		confirmingId?: string | null;
 		deleteSaving?: boolean;
+		isFiltering?: boolean;
 		onSelect?: (id: string) => void;
 		onEdit?: (link: LinkMeta) => void;
 		onDelete?: (id: string) => void;
@@ -27,6 +28,7 @@
 		selected = new Set(),
 		confirmingId = null,
 		deleteSaving = false,
+		isFiltering = false,
 		onSelect = () => {},
 		onEdit = () => {},
 		onDelete = () => {},
@@ -35,13 +37,16 @@
 		onTagClick = () => {}
 	}: Props = $props();
 
-	let isExpanded = $state(false);
+	let manuallyExpanded = $state(false);
+
+	// Auto-expand during filtering, otherwise use manual state
+	const isExpanded = $derived(isFiltering || manuallyExpanded);
 </script>
 
 <div class="subcategory-group">
 	<button
 		class="subcat-header"
-		onclick={() => (isExpanded = !isExpanded)}
+		onclick={() => (manuallyExpanded = !manuallyExpanded)}
 		aria-expanded={isExpanded}
 	>
 		<div class="subcat-row">

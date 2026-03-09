@@ -661,6 +661,7 @@
 					confirmingId={confirmingId}
 					deleteSaving={deleteSaving}
 					isExpanded={shouldCategoryBeExpanded(group.category)}
+					isFiltering={isFiltering}
 					onToggleExpansion={() => toggleCategoryExpansion(group.category)}
 					onSelect={toggleSelect}
 					onEdit={startEdit}

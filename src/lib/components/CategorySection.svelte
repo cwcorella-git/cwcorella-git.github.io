@@ -16,6 +16,7 @@
 		confirmingId?: string | null;
 		deleteSaving?: boolean;
 		isExpanded?: boolean;
+		isFiltering?: boolean;
 		onToggleExpansion?: () => void;
 		onSelect?: (id: string) => void;
 		onEdit?: (link: LinkMeta) => void;
@@ -36,6 +37,7 @@
 		confirmingId = null,
 		deleteSaving = false,
 		isExpanded = false,
+		isFiltering = false,
 		onToggleExpansion = () => {},
 		onSelect = () => {},
 		onEdit = () => {},
@@ -96,6 +98,7 @@
 								{selected}
 								{confirmingId}
 								{deleteSaving}
+								{isFiltering}
 								{onSelect}
 								{onEdit}
 								{onDelete}
