@@ -454,10 +454,6 @@
 			<button class="cat-edit-btn" onclick={commitRenameCategory} disabled={categorySaving}>
 				{categorySaving ? '…' : 'confirm'}
 			</button>
-			<button class="cat-edit-btn" onclick={() => { exportCategory(catActionTarget!); catActionMode = 'none'; }} disabled={categorySaving}>
-				export
-			</button>
-			<button class="cat-edit-btn danger" onclick={() => { catActionMode = 'delete'; }} disabled={categorySaving} aria-label="Delete category">×</button>
 		</div>
 	</div>
 {/if}
@@ -939,8 +935,6 @@
 	}
 	.cat-edit-btn:hover:not(:disabled) { color: var(--clr-dark-text); border-color: rgba(var(--dark-panel-rgb), 0.40); }
 	.cat-edit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-	.cat-edit-btn.danger { color: var(--clr-danger); border-color: rgba(var(--clr-danger), 0.4); }
-	.cat-edit-btn.danger:hover:not(:disabled) { color: var(--clr-danger); border-color: var(--clr-danger); }
 
 	@media (max-width: 480px) {
 		.page { padding-top: 4.5rem; }
