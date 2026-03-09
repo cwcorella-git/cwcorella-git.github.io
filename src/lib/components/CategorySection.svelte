@@ -66,21 +66,19 @@
 </script>
 
 <div class="category-section">
-	<div class="category-header">
-		<button
-			class="expand-btn"
-			onclick={() => (isExpanded = !isExpanded)}
-			aria-expanded={isExpanded}
-		>
-			<span class="expand-icon">{isExpanded ? '∨' : '∧'}</span>
-			<span class="cat-name">{category}</span>
-			<span class="cat-count">({links.length})</span>
-		</button>
-		<div class="cat-actions">
-			<button class="cat-btn" onclick={() => onCatRename(category)} title="Rename">rename</button>
-			<button class="cat-btn danger" onclick={() => onCatDelete(category)} title="Delete">delete</button>
-			<button class="cat-btn" onclick={() => onCatExport(category)} title="Export">export</button>
-		</div>
+	<button
+		class="category-header"
+		class:expanded={isExpanded}
+		onclick={() => (isExpanded = !isExpanded)}
+		aria-expanded={isExpanded}
+	>
+		<span class="cat-name">{category}</span>
+		<span class="cat-count">({links.length})</span>
+	</button>
+	<div class="cat-actions">
+		<button class="cat-btn" onclick={() => onCatRename(category)} title="Rename">rename</button>
+		<button class="cat-btn danger" onclick={() => onCatDelete(category)} title="Delete">delete</button>
+		<button class="cat-btn" onclick={() => onCatExport(category)} title="Export">export</button>
 	</div>
 
 	{#if isExpanded}
@@ -128,60 +126,48 @@
 <style>
 	.category-section {
 		margin-bottom: 2rem;
+		padding-left: 0.75rem;
+		border-left: 3px solid transparent;
+		transition: border-color var(--t-ui);
+	}
+
+	.category-section :global(.expanded) {
+		border-left-color: rgba(var(--ui-rgb), 0.35);
 	}
 
 	.category-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		border-bottom: 1px solid rgba(var(--ui-rgb), 0.22);
-		padding: 0.75rem 0;
-		margin-bottom: 0.5rem;
-	}
-
-	.expand-btn {
 		background: none;
 		border: none;
 		cursor: pointer;
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		padding: 0;
+		padding: 0.65rem 0;
+		margin-bottom: 0.5rem;
 		flex: 1;
-		min-width: 0;
 		color: var(--clr-text);
 		text-align: left;
-		transition: none;
+		transition: all var(--t-ui);
+		font-weight: 600;
 	}
 
-	.expand-icon {
-		display: inline-block;
-		width: 0.6rem;
-		text-align: center;
-		font-size: 0.6rem;
-		color: var(--clr-text);
-		opacity: 0.4;
-		transition: opacity var(--t-ui);
-		flex-shrink: 0;
-	}
-
-	.expand-btn:hover .expand-icon {
-		opacity: 0.7;
+	.category-header:hover {
+		opacity: 0.85;
 	}
 
 	.cat-name {
 		font-family: var(--font-ui);
-		font-size: 0.65rem;
-		letter-spacing: 0.12em;
+		font-size: 0.68rem;
+		letter-spacing: 0.11em;
 		text-transform: uppercase;
 		color: var(--clr-text);
-		font-weight: normal;
+		font-weight: 600;
 	}
 
 	.cat-count {
 		font-family: var(--font-ui);
-		font-size: 0.55rem;
-		letter-spacing: 0.06em;
+		font-size: 0.56rem;
+		letter-spacing: 0.05em;
 		color: var(--clr-text);
 		opacity: 0.45;
 		flex-shrink: 0;
@@ -192,6 +178,7 @@
 		align-items: center;
 		gap: 0.35rem;
 		flex-shrink: 0;
+		margin-top: 0.25rem;
 	}
 
 	.cat-btn {
