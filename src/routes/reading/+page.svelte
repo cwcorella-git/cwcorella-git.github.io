@@ -218,13 +218,6 @@
 								aria-label="Edit {book.title}"
 							>edit</button>
 						{/if}
-						<button
-							class="cat-label"
-							class:active-cat={activeTag === book.category}
-							onclick={() => setTag(book.category)}
-						>
-							{book.category}
-						</button>
 					</div>
 				</li>
 			{/each}
@@ -358,9 +351,6 @@
 	li.done .meta {
 		color: var(--clr-text);
 	}
-	li.done .cat-label {
-		color: var(--clr-text);
-	}
 
 	.row-wrap {
 		display: flex; align-items: center;
@@ -425,17 +415,6 @@
 	}
 	.edit-pencil:hover { color: var(--clr-text); }
 
-	.cat-label {
-		background: none; border: none; cursor: pointer;
-		font-family: var(--font-ui);
-		font-size: 0.52rem; letter-spacing: 0.08em;
-		text-transform: uppercase; color: var(--clr-text);
-		padding: 0 0 0 1rem; white-space: nowrap;
-		flex-shrink: 0; text-align: right; transition: color 0.15s;
-	}
-	.cat-label:hover { color: var(--clr-text); }
-	.cat-label.active-cat { color: var(--clr-text); }
-
 	.count {
 		margin-top: 2rem;
 		font-family: var(--font-ui);
@@ -486,12 +465,6 @@
 		.inner { padding: 1.5rem 1.25rem 4rem; }
 		.read-toggle, .edit-pencil {
 			padding: 0.5rem 0.4rem;
-			min-height: 44px;
-			display: inline-flex;
-			align-items: center;
-		}
-		.cat-label {
-			padding-left: 0.6rem;
 			min-height: 44px;
 			display: inline-flex;
 			align-items: center;
