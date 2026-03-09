@@ -856,7 +856,7 @@
 	}
 	.overlay-header {
 		display: flex; align-items: center; justify-content: space-between;
-		padding: 1.2rem 2rem;
+		padding: 1rem 1.5rem;
 		border-bottom: 1px solid rgba(var(--dark-panel-rgb), 0.15);
 		flex-shrink: 0;
 	}
@@ -868,22 +868,28 @@
 	}
 	.close-btn {
 		background: none; border: none; color: var(--clr-dark-text);
-		font-size: 1.4rem; cursor: pointer; padding: 0; line-height: 1; transition: color 0.15s;
+		font-size: 1.4rem; cursor: pointer; padding: 0; line-height: 1; transition: opacity 0.15s;
+		opacity: 0.6;
 	}
-	.close-btn:hover { color: var(--clr-dark-text); }
+	.close-btn:hover { opacity: 1; }
 
 	/* ── editor ───────────────────────────────────────────── */
 	.editor {
-		position: fixed; inset: 0; z-index: 300;
+		position: fixed; top: 50%; left: 50%;
+		transform: translate(-50%, -50%);
+		z-index: 300;
 		background: var(--glass-bg-dark);
 		backdrop-filter: var(--glass-blur-heavy);
 		-webkit-backdrop-filter: var(--glass-blur-heavy);
+		border: 1px solid var(--glass-border-dark);
+		max-height: 90vh;
+		width: min(520px, 90vw);
 		display: flex; flex-direction: column; overflow: hidden;
 	}
-	.editor-body { flex: 1; overflow-y: auto; padding: 1.8rem 2rem; display: flex; flex-direction: column; gap: 1rem; }
-	.editor-fields { display: flex; flex-direction: column; gap: 0.9rem; max-width: 860px; }
-	.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
-	.field { display: flex; flex-direction: column; gap: 0.3rem; }
+	.editor-body { flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem; }
+	.editor-fields { display: flex; flex-direction: column; gap: 0.7rem; }
+	.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+	.field { display: flex; flex-direction: column; gap: 0.25rem; }
 	.field-label { font-family: var(--font-ui); font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--clr-dark-text); }
 	.editor-fields input[type="text"],
 	.editor-fields textarea {
@@ -904,8 +910,8 @@
 	}
 	.url-link:hover { opacity: 0.9; }
 	.editor-footer {
-		display: flex; gap: 0.5rem; justify-content: flex-end; padding-top: 0.8rem;
-		border-top: 1px solid rgba(var(--dark-panel-rgb), 0.12); max-width: 860px;
+		display: flex; gap: 0.5rem; justify-content: flex-end; padding-top: 0.7rem;
+		border-top: 1px solid rgba(var(--dark-panel-rgb), 0.12);
 	}
 	.editor-footer button {
 		background: none; border: 1px solid rgba(var(--dark-panel-rgb), 0.20);
