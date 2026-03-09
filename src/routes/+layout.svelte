@@ -55,7 +55,7 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<Sky />
+<!-- <Sky /> -->
 <AdminDrawer bind:this={drawerRef} />
 <Toasts />
 
