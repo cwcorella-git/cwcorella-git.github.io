@@ -443,30 +443,23 @@
 <!-- ── category edit modal ────────────────────────────────────────────── -->
 {#if catActionMode === 'edit' && catActionTarget}
 	<div class="overlay-backdrop" role="presentation" onclick={() => catActionMode = 'none'}></div>
-	<div class="editor" role="dialog" aria-modal="true">
-		<div class="overlay-header">
-			<span class="overlay-label">edit category</span>
+	<div class="cat-edit-modal" role="dialog" aria-modal="true">
+		<div class="cat-edit-header">
+			<span class="cat-edit-title">Rename "{catActionTarget}"</span>
 			<button class="close-btn" onclick={() => catActionMode = 'none'} aria-label="Close">×</button>
 		</div>
-		<div class="editor-body">
-			<div class="editor-fields">
-				<label class="field">
-					<span class="field-label">rename category</span>
-					<input type="text" bind:value={renameValue} />
-				</label>
-			</div>
-			<div class="editor-footer">
-				<button onclick={() => catActionMode = 'none'} disabled={categorySaving}>cancel</button>
-				<button class="save-btn" onclick={commitRenameCategory} disabled={categorySaving}>
-					{categorySaving ? 'saving…' : 'rename'}
-				</button>
-				<button onclick={() => { exportCategory(catActionTarget!); catActionMode = 'none'; }} disabled={categorySaving}>
-					export
-				</button>
-				<button class="danger" onclick={() => { catActionMode = 'delete'; }} disabled={categorySaving}>
-					delete
-				</button>
-			</div>
+		<input type="text" class="cat-edit-input" bind:value={renameValue} />
+		<div class="cat-edit-actions">
+			<button class="cat-edit-btn" onclick={() => catActionMode = 'none'} disabled={categorySaving}>cancel</button>
+			<button class="cat-edit-btn" onclick={commitRenameCategory} disabled={categorySaving}>
+				{categorySaving ? '…' : 'rename'}
+			</button>
+			<button class="cat-edit-btn" onclick={() => { exportCategory(catActionTarget!); catActionMode = 'none'; }} disabled={categorySaving}>
+				export
+			</button>
+			<button class="cat-edit-btn danger" onclick={() => { catActionMode = 'delete'; }} disabled={categorySaving}>
+				delete
+			</button>
 		</div>
 	</div>
 {/if}
@@ -907,6 +900,51 @@
 	.save-btn { background: rgba(var(--dark-panel-rgb),0.08) !important; border-color: rgba(var(--dark-panel-rgb),0.25) !important; }
 	.editor-footer button.danger { color: var(--clr-danger); border-color: rgba(var(--clr-danger), 0.4); }
 	.editor-footer button.danger:hover:not(:disabled) { color: var(--clr-danger); border-color: var(--clr-danger); }
+
+	/* ── category edit modal (minimal style) ──────────────────────────── */
+	.cat-edit-modal {
+		position: fixed; top: 50%; left: 50%;
+		transform: translate(-50%, -50%);
+		z-index: 400;
+		background: var(--glass-bg-dark);
+		backdrop-filter: var(--glass-blur-heavy);
+		-webkit-backdrop-filter: var(--glass-blur-heavy);
+		border: 1px solid var(--glass-border-dark);
+		padding: 1.5rem;
+		width: min(380px, 90vw);
+		display: flex; flex-direction: column; gap: 1rem;
+	}
+	.cat-edit-header {
+		display: flex; align-items: center; justify-content: space-between;
+	}
+	.cat-edit-title {
+		font-family: var(--font-ui);
+		font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase;
+		color: var(--clr-dark-text);
+	}
+	.cat-edit-input {
+		background: rgba(var(--dark-panel-rgb), 0.06);
+		border: 1px solid rgba(var(--dark-panel-rgb), 0.18);
+		color: var(--clr-dark-text);
+		font-family: var(--font-ui);
+		font-size: 0.85rem; padding: 0.45rem 0.6rem; outline: none;
+		transition: border-color 0.15s; width: 100%;
+	}
+	.cat-edit-input:focus { border-color: rgba(var(--dark-panel-rgb), 0.38); }
+	.cat-edit-actions {
+		display: flex; gap: 0.5rem; justify-content: flex-end;
+		padding-top: 0.5rem;
+	}
+	.cat-edit-btn {
+		background: none; border: 1px solid rgba(var(--dark-panel-rgb), 0.20);
+		color: var(--clr-dark-text); font-family: var(--font-ui);
+		font-size: 0.6rem; letter-spacing: 0.08em;
+		padding: 0.35rem 0.8rem; cursor: pointer; transition: all 0.15s;
+	}
+	.cat-edit-btn:hover:not(:disabled) { color: var(--clr-dark-text); border-color: rgba(var(--dark-panel-rgb), 0.40); }
+	.cat-edit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+	.cat-edit-btn.danger { color: var(--clr-danger); border-color: rgba(var(--clr-danger), 0.4); }
+	.cat-edit-btn.danger:hover:not(:disabled) { color: var(--clr-danger); border-color: var(--clr-danger); }
 
 	@media (max-width: 480px) {
 		.page { padding-top: 4.5rem; }
