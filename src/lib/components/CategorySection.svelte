@@ -76,8 +76,7 @@
 			<span class="cat-count">({links.length})</span>
 		</button>
 		<div class="header-right">
-			<button class="cat-action" onclick={() => onCatRename(category)}>rename</button>
-			<button class="cat-action" onclick={() => onCatExport(category)}>export</button>
+			<button class="cat-action" onclick={() => onCatRename(category)}>edit</button>
 			<button class="cat-action danger" onclick={() => onCatDelete(category)}>×</button>
 		</div>
 	</div>
@@ -131,7 +130,7 @@
 
 <style>
 	.category-section {
-		margin-bottom: 1rem;
+		margin-bottom: 0;
 	}
 
 	.category-header {
@@ -215,7 +214,7 @@
 
 	.category-content {
 		padding-left: 1.5rem;
-		padding-top: 0.5rem;
+		padding-top: 0;
 	}
 
 	.links-list {
