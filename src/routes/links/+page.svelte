@@ -100,6 +100,27 @@
 	function clearTag() { activeTag = ''; }
 	function clearAll() { activeTag = ''; searchQuery = ''; }
 
+	// ── category expansion state ──────────────────────────────────────────
+	let manuallyExpandedCategories = $state<Set<string>>(new Set());
+
+	function toggleCategoryExpansion(category: string) {
+		const next = new Set(manuallyExpandedCategories);
+		if (next.has(category)) next.delete(category);
+		else next.add(category);
+		manuallyExpandedCategories = next;
+	}
+
+	// Check if actively filtering (searching or filtering by tag)
+	const isFiltering = $derived(!!searchQuery.trim() || !!activeTag);
+
+	// Determine if a category should be expanded
+	function shouldCategoryBeExpanded(category: string): boolean {
+		// If filtering, auto-expand any category with matches
+		if (isFiltering) return true;
+		// Otherwise, use manual expansion state
+		return manuallyExpandedCategories.has(category);
+	}
+
 	function matchesSearch(l: LinkMeta): boolean {
 		if (activeTag) return l.tags.includes(activeTag);
 		const q = searchQuery.trim().toLowerCase();

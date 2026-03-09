@@ -15,6 +15,8 @@
 		selected?: Set<string>;
 		confirmingId?: string | null;
 		deleteSaving?: boolean;
+		isExpanded?: boolean;
+		onToggleExpansion?: () => void;
 		onSelect?: (id: string) => void;
 		onEdit?: (link: LinkMeta) => void;
 		onDelete?: (id: string) => void;
@@ -33,6 +35,8 @@
 		selected = new Set(),
 		confirmingId = null,
 		deleteSaving = false,
+		isExpanded = false,
+		onToggleExpansion = () => {},
 		onSelect = () => {},
 		onEdit = () => {},
 		onDelete = () => {},
@@ -43,8 +47,6 @@
 		onCatDelete = () => {},
 		onCatExport = () => {}
 	}: Props = $props();
-
-	let isExpanded = $state(false);
 
 	// Group links by subcategory
 	const subcategories = $derived(
@@ -69,7 +71,7 @@
 	<div class="category-header">
 		<button
 			class="header-left"
-			onclick={() => (isExpanded = !isExpanded)}
+			onclick={onToggleExpansion}
 			aria-expanded={isExpanded}
 		>
 			<span class="cat-title">{category}</span>
