@@ -709,8 +709,6 @@
 	.page {
 		min-height: 100vh;
 		padding-top: 4rem;
-		contain: layout style paint;
-		will-change: scroll-position;
 	}
 	.inner {
 		position: relative; z-index: 1;
@@ -721,8 +719,6 @@
 		-webkit-backdrop-filter: var(--glass-blur);
 		border: 1px solid var(--glass-border);
 		will-change: background, border-color;
-		transform: translateZ(0);
-		backface-visibility: hidden;
 	}
 	.heading {
 		font-family: var(--font-prose);

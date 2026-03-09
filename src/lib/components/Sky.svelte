@@ -3,11 +3,10 @@
 	import { themeState } from '$lib/admin/theme.svelte';
 
 	// ── constants ─────────────────────────────────────────────────────────────
-	// horizonY is a virtual atmospheric anchor used for sun/moon positioning
-	// and horizon glow — no physical ground plane is drawn.
 	const HORIZON_FRAC = 0.68;
+	const SKIP = 2;  // ~30fps always
 
-	let canvas = $state<HTMLCanvasElement | undefined>();
+	let visibleEl = $state<HTMLCanvasElement | undefined>();
 
 	// ── seeded PRNG (mulberry32) ───────────────────────────────────────────────
 	function makePRNG(seed: number): () => number {
@@ -107,9 +106,11 @@
 
 	let W = 0, H = 0, horizonY = 0;
 	let dpr = 1;
+	let offscreen: OffscreenCanvas | null = null;
 
 	// ── draw: sky (full-canvas bleed) ─────────────────────────────────────────
-	function drawSky(ctx: CanvasRenderingContext2D, altDeg: number): void {
+	type Ctx = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+	function drawSky(ctx: Ctx, altDeg: number): void {
 		const { zenith, mid, horizon } = getSkyColors(altDeg);
 		const lower  = lerpRGB(mid, horizon, 0.55);
 		const bright = lerpRGB(horizon, [255, 255, 255] as RGB, 0.12);
@@ -124,7 +125,7 @@
 	}
 
 	// ── draw: circumsolar Mie-scatter brightening ─────────────────────────────
-	function drawCircumsolarGlow(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
+	function drawCircumsolarGlow(ctx: Ctx, altDeg: number, sxn: number): void {
 		if (altDeg <= -8) return;
 		const sunX   = sxn * W;
 		const sinAlt = Math.max(0, Math.sin(altDeg * Math.PI / 180));
@@ -145,7 +146,7 @@
 	}
 
 	// ── draw: purple light / afterglow ────────────────────────────────────────
-	function drawPurpleLight(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
+	function drawPurpleLight(ctx: Ctx, altDeg: number, sxn: number): void {
 		if (altDeg < -10 || altDeg > -1) return;
 		const t         = (altDeg + 10) / 9;
 		const intensity = Math.sin(t * Math.PI) * 0.45;
@@ -164,7 +165,7 @@
 	}
 
 	// ── draw: crepuscular rays ────────────────────────────────────────────────
-	function drawCrepuscularRays(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
+	function drawCrepuscularRays(ctx: Ctx, altDeg: number, sxn: number): void {
 		if (altDeg < -3 || altDeg > 10) return;
 		const intensity = Math.max(0, 1 - Math.abs(altDeg - 2.5) / 6) * 0.20;
 		if (intensity < 0.01) return;
@@ -199,7 +200,7 @@
 	}
 
 	// ── draw: Belt of Venus ────────────────────────────────────────────────────
-	function drawBeltOfVenus(ctx: CanvasRenderingContext2D, altDeg: number): void {
+	function drawBeltOfVenus(ctx: Ctx, altDeg: number): void {
 		if (altDeg >= -1 || altDeg < -6) return;
 		const frac = Math.abs(altDeg + 1) / 5;
 
@@ -219,7 +220,7 @@
 	}
 
 	// ── draw: sun ─────────────────────────────────────────────────────────────
-	function drawSun(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
+	function drawSun(ctx: Ctx, altDeg: number, sxn: number): void {
 		if (altDeg <= -8) return;
 		const sunX     = sxn * W;
 		const sinAlt   = Math.max(0, Math.sin(altDeg * Math.PI / 180));
@@ -260,7 +261,7 @@
 	}
 
 	// ── draw: moon ────────────────────────────────────────────────────────────
-	function drawMoon(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
+	function drawMoon(ctx: Ctx, altDeg: number, sxn: number): void {
 		const moonAlpha = Math.max(0, Math.min(1, (-altDeg - 6) / 8));
 		if (moonAlpha <= 0) return;
 
@@ -299,7 +300,7 @@
 	}
 
 	// ── draw: horizon atmosphere blend ───────────────────────────────────────
-	function drawHorizonBlend(ctx: CanvasRenderingContext2D, altDeg: number): void {
+	function drawHorizonBlend(ctx: Ctx, altDeg: number): void {
 		const { horizon } = getSkyColors(altDeg);
 		const band = Math.max(6, horizonY * 0.022);
 		const g = ctx.createLinearGradient(0, horizonY - band, 0, horizonY + band * 1.8);
@@ -312,7 +313,7 @@
 	}
 
 	// ── draw: vignette ────────────────────────────────────────────────────────
-	function drawVignette(ctx: CanvasRenderingContext2D): void {
+	function drawVignette(ctx: Ctx): void {
 		const cx    = W / 2;
 		const cy    = H / 2;
 		const inner = Math.min(W, H) * 0.28;
@@ -328,6 +329,7 @@
 	// ── day/night theme ────────────────────────────────────────────────────────
 	let lastThemeAlt   = 9999;
 	let lastPaletteVer = -1;
+	let firstFrame     = true;
 
 	function updateTheme(altDeg: number): void {
 		const paletteChanged = themeState.version !== lastPaletteVer;
@@ -373,11 +375,12 @@
 		}
 	}
 
-	// ── main loop ─────────────────────────────────────────────────────────────
-	let animFrame  = 0;
-	let frameCount = 0;
+	// ── render to OffscreenCanvas ──────────────────────────────────────────────
+	function renderToOffscreen(altDeg: number, sxn: number): void {
+		if (!offscreen) return;
+		const ctx = offscreen.getContext('2d');
+		if (!ctx) return;
 
-	function renderFrame(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
 		ctx.clearRect(0, 0, W, H);
 		drawSky(ctx, altDeg);
 		drawMoon(ctx, altDeg, sxn);
@@ -388,60 +391,75 @@
 		drawPurpleLight(ctx, altDeg, sxn);
 		drawHorizonBlend(ctx, altDeg);
 		drawVignette(ctx);
+
+		// Single atomic blit to visible canvas
+		if (visibleEl) {
+			const vCtx = visibleEl.getContext('2d');
+			if (vCtx) {
+				vCtx.clearRect(0, 0, W, H);
+				vCtx.drawImage(offscreen, 0, 0);
+			}
+		}
 	}
 
+	// ── main loop ──────────────────────────────────────────────────────────────
+	let animFrame  = 0;
+	let frameCount = 0;
+
 	function draw(): void {
-		if (!canvas) return;
-		const ctx = canvas.getContext('2d');
-		if (!ctx) return;
-
-		frameCount++;
-		const now     = new Date();
-		const altDeg  = sunAltitudeDeg(now);
-		const sxn     = sunXNorm(now, 39.53);
-		const isNight = altDeg < -8;
-
-		// Day: ~4fps (every 15 frames). Night: ~30fps (every 2 frames).
-		const skip = isNight ? 2 : 15;
-		if (frameCount % skip !== 0) {
-			animFrame = requestAnimationFrame(draw);
-			return;
-		}
-
-		updateTheme(altDeg);
-		renderFrame(ctx, altDeg, sxn);
-		document.documentElement.classList.add('sky-ready');
 		animFrame = requestAnimationFrame(draw);
+		if (++frameCount % SKIP !== 0) return;
+
+		const altDeg = sunAltitudeDeg(new Date());
+		const sxn    = sunXNorm(new Date(), 39.53);
+
+		renderToOffscreen(altDeg, sxn);
+		updateTheme(altDeg);
+
+		if (firstFrame) {
+			document.documentElement.classList.add('sky-ready');
+			firstFrame = false;
+		}
 	}
 
 	function resize(): void {
-		if (!canvas) return;
+		if (!visibleEl) return;
 		dpr = window.devicePixelRatio || 1;
 		const newW = Math.round(window.innerWidth * dpr);
 		const newH = Math.round(window.innerHeight * dpr);
 		if (newW === W && newH === H) return;
-		W = canvas.width  = newW;
-		H = canvas.height = newH;
+
+		W = visibleEl.width  = newW;
+		H = visibleEl.height = newH;
 		horizonY = H * HORIZON_FRAC;
-		// Redraw synchronously — setting canvas.width clears the buffer instantly,
-		// and the RAF throttle (up to 15 frames) would cause a visible flash otherwise.
-		const ctx = canvas.getContext('2d');
-		if (!ctx) return;
-		const now    = new Date();
-		const altDeg = sunAltitudeDeg(now);
-		const sxn    = sunXNorm(now, 39.53);
+		offscreen = new OffscreenCanvas(W, H);
+
+		// Immediate render on resize
+		const altDeg = sunAltitudeDeg(new Date());
+		const sxn    = sunXNorm(new Date(), 39.53);
+		renderToOffscreen(altDeg, sxn);
 		updateTheme(altDeg);
-		renderFrame(ctx, altDeg, sxn);
 	}
 
 	onMount(() => {
+		if (!visibleEl) return;
 		dpr = window.devicePixelRatio || 1;
-		W = canvas!.width  = Math.round(window.innerWidth * dpr);
-		H = canvas!.height = Math.round(window.innerHeight * dpr);
+		W = Math.round(window.innerWidth * dpr);
+		H = Math.round(window.innerHeight * dpr);
 		horizonY = H * HORIZON_FRAC;
 
-		animFrame = requestAnimationFrame(draw);
+		visibleEl.width  = W;
+		visibleEl.height = H;
+		offscreen = new OffscreenCanvas(W, H);
+
+		// Initial render
+		const altDeg = sunAltitudeDeg(new Date());
+		const sxn    = sunXNorm(new Date(), 39.53);
+		renderToOffscreen(altDeg, sxn);
+		updateTheme(altDeg);
+
 		window.addEventListener('resize', resize);
+		animFrame = requestAnimationFrame(draw);
 
 		return () => {
 			cancelAnimationFrame(animFrame);
@@ -450,7 +468,7 @@
 	});
 </script>
 
-<canvas bind:this={canvas} class="sky-bg" aria-hidden="true"></canvas>
+<canvas bind:this={visibleEl} class="sky-bg" aria-hidden="true"></canvas>
 
 <style>
 	.sky-bg {
@@ -461,5 +479,7 @@
 		z-index: 0;
 		pointer-events: none;
 		display: block;
+		will-change: transform;
+		transform: translateZ(0);
 	}
 </style>
