@@ -40,36 +40,34 @@
 
 <div class="subcategory-group">
 	<button
-		class="subcategory-header"
+		class="subcat-header"
 		onclick={() => (isExpanded = !isExpanded)}
 		aria-expanded={isExpanded}
 	>
-		<span class="subcat-name">{subcat.name}</span>
-		<span class="subcat-count">({subcat.links.length})</span>
+		<span class="subcat-title">{subcat.name}</span>
+		<span class="subcat-meta">({subcat.links.length})</span>
 	</button>
 
 	{#if isExpanded}
-		<div class="subcategory-content">
-			<ul class="links-list">
-				{#each subcat.links as link (link.id)}
-					<li>
-						<LinkRow
-							{link}
-							{selectMode}
-							isSelected={selected.has(link.id)}
-							confirming={confirmingId === link.id}
-							{onSelect}
-							{onEdit}
-							{onDelete}
-							{onCancelDelete}
-							{onConfirmDelete}
-							{onTagClick}
-							isDeleting={deleteSaving}
-						/>
-					</li>
-				{/each}
-			</ul>
-		</div>
+		<ul class="links-list">
+			{#each subcat.links as link (link.id)}
+				<li>
+					<LinkRow
+						{link}
+						{selectMode}
+						isSelected={selected.has(link.id)}
+						confirming={confirmingId === link.id}
+						{onSelect}
+						{onEdit}
+						{onDelete}
+						{onCancelDelete}
+						{onConfirmDelete}
+						{onTagClick}
+						isDeleting={deleteSaving}
+					/>
+				</li>
+			{/each}
+		</ul>
 	{/if}
 </div>
 
@@ -77,49 +75,42 @@
 	.subcategory-group {
 		margin-bottom: 0;
 		padding-left: 1.5rem;
-		padding-right: 0.5rem;
-		background: rgba(var(--ui-rgb), 0.04);
-		border-radius: 3px;
 	}
 
-	.subcategory-header {
+	.subcat-header {
 		display: flex;
-		align-items: center;
-		gap: 0.4rem;
+		flex-direction: column;
+		gap: 0.15rem;
 		width: 100%;
-		padding: 0.45rem 0.5rem;
+		padding: 0.85rem 0;
 		border: none;
+		border-bottom: 1px solid rgba(var(--ui-rgb), 0.16);
 		background: transparent;
 		color: var(--clr-text);
 		cursor: pointer;
-		transition: all var(--t-ui);
+		transition: opacity var(--t-ui);
 		text-align: left;
 	}
 
-	.subcategory-header:hover {
-		opacity: 0.8;
+	.subcat-header:hover {
+		opacity: 0.9;
 	}
 
-	.subcat-name {
-		font-family: var(--font-ui);
-		font-size: 0.58rem;
-		letter-spacing: 0.09em;
-		text-transform: uppercase;
+	.subcat-title {
+		font-family: var(--font-prose);
+		font-size: 0.95rem;
+		line-height: 1.4;
 		color: var(--clr-text);
-		font-weight: 500;
+		letter-spacing: 0.02em;
+		font-weight: normal;
 	}
 
-	.subcat-count {
+	.subcat-meta {
 		font-family: var(--font-ui);
-		font-size: 0.5rem;
-		letter-spacing: 0.04em;
+		font-size: 0.62rem;
+		letter-spacing: 0.06em;
 		color: var(--clr-text);
 		opacity: 0.4;
-		flex-shrink: 0;
-	}
-
-	.subcategory-content {
-		padding: 0;
 	}
 
 	.links-list {
