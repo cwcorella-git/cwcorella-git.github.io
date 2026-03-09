@@ -351,8 +351,10 @@
 		r.style.setProperty('--glass-border', `rgba(${gr},${gg},${gb},${(0.40*dl + 0.15*(1-dl)).toFixed(2)})`);
 		r.style.setProperty('--glass-nav-bg', `rgba(${gr},${gg},${gb},${(0.30*dl + 0.52*(1-dl)).toFixed(2)})`);
 
+		// Use cubic smoothstep for text: avoids muddy gray at dusk by staying at extremes longer
+		const s = dl < 0.5 ? 2 * dl * dl : 1 - 2 * (1 - dl) * (1 - dl);
 		r.style.setProperty('--clr-text',
-			`rgb(${ri(textDay[0],textNight[0])},${ri(textDay[1],textNight[1])},${ri(textDay[2],textNight[2])})`
+			`rgb(${Math.round(textDay[0] + (textNight[0] - textDay[0]) * (1 - s))},${Math.round(textDay[1] + (textNight[1] - textDay[1]) * (1 - s))},${Math.round(textDay[2] + (textNight[2] - textDay[2]) * (1 - s))})`
 		);
 
 		// Overlays + panels also track sky so they match the page at all times of day
