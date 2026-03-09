@@ -104,11 +104,12 @@
 		border: none;
 		cursor: pointer;
 		text-align: left;
-		padding: 0.85rem 0;
+		padding: 0.7rem 0;
 		transition: color 0.15s;
 		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
+		flex-direction: row;
+		align-items: baseline;
+		gap: 0.5rem;
 	}
 
 	.entry-title-btn:hover .entry-title {
@@ -124,7 +125,7 @@
 
 	.entry-title {
 		font-family: var(--font-prose);
-		font-size: 0.85rem;
+		font-size: 0.8rem;
 		color: var(--clr-text);
 		line-height: 1.4;
 		overflow: hidden;
@@ -134,10 +135,12 @@
 
 	.entry-meta {
 		font-family: var(--font-ui);
-		font-size: 0.62rem;
+		font-size: 0.58rem;
 		letter-spacing: 0.06em;
 		color: var(--clr-text);
 		opacity: 0.4;
+		white-space: nowrap;
+		flex-shrink: 0;
 	}
 
 	.entry-tags {

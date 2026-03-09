@@ -44,8 +44,10 @@
 		onclick={() => (isExpanded = !isExpanded)}
 		aria-expanded={isExpanded}
 	>
-		<span class="subcat-title">{subcat.name}</span>
-		<span class="subcat-meta">({subcat.links.length})</span>
+		<div class="subcat-row">
+			<span class="subcat-title">{subcat.name}</span>
+			<span class="subcat-count">({subcat.links.length})</span>
+		</div>
 	</button>
 
 	{#if isExpanded}
@@ -79,10 +81,9 @@
 
 	.subcat-header {
 		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
+		align-items: center;
 		width: 100%;
-		padding: 0.85rem 0;
+		padding: 0.7rem 0;
 		border: none;
 		border-bottom: 1px solid rgba(var(--ui-rgb), 0.16);
 		background: transparent;
@@ -96,21 +97,29 @@
 		opacity: 0.9;
 	}
 
+	.subcat-row {
+		display: flex;
+		align-items: baseline;
+		gap: 0.4rem;
+	}
+
 	.subcat-title {
 		font-family: var(--font-prose);
-		font-size: 0.95rem;
+		font-size: 0.92rem;
 		line-height: 1.4;
 		color: var(--clr-text);
 		letter-spacing: 0.02em;
 		font-weight: normal;
 	}
 
-	.subcat-meta {
+	.subcat-count {
 		font-family: var(--font-ui);
-		font-size: 0.62rem;
+		font-size: 0.6rem;
 		letter-spacing: 0.06em;
 		color: var(--clr-text);
 		opacity: 0.4;
+		white-space: nowrap;
+		flex-shrink: 0;
 	}
 
 	.links-list {
