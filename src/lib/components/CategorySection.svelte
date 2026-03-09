@@ -161,7 +161,7 @@
 
 	.cat-title {
 		font-family: var(--font-prose);
-		font-size: 0.95rem;
+		font-size: 1.1rem;
 		line-height: 1.4;
 		color: var(--clr-text);
 		letter-spacing: 0.02em;

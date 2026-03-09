@@ -124,7 +124,7 @@
 
 	.entry-title {
 		font-family: var(--font-prose);
-		font-size: 0.95rem;
+		font-size: 0.85rem;
 		color: var(--clr-text);
 		line-height: 1.4;
 		overflow: hidden;
