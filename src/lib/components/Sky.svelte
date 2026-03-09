@@ -86,11 +86,11 @@
 
 	const ATMOSPHERE: Record<string, AtmosphereColors> = {
 		amber: {
-			sunGolden:  '#E84010',
-			sunBright:  '#FFF5C0',
-			glowGolden: [255, 128, 36] as RGB,
-			glowBright: [255, 230, 170] as RGB,
-			rayWarm:    [255, 190, 90]  as RGB,
+			sunGolden:  '#FFB800',  // very warm golden-orange
+			sunBright:  '#FFDB70',  // warm golden (glow still visible)
+			glowGolden: [255, 160, 40] as RGB,
+			glowBright: [255, 210, 140] as RGB,
+			rayWarm:    [255, 210, 100] as RGB,
 		},
 		sky: {
 			sunGolden:  '#FF7020',
@@ -100,11 +100,11 @@
 			rayWarm:    [255, 210, 140] as RGB,
 		},
 		dusk: {
-			sunGolden:  '#C04070',
-			sunBright:  '#DCCCEA',
-			glowGolden: [200, 88, 138] as RGB,
-			glowBright: [208, 176, 240] as RGB,
-			rayWarm:    [196, 140, 188] as RGB,
+			sunGolden:  '#C85080',  // cool reddish-purple
+			sunBright:  '#DDB0CC',  // lighter purple (glow still visible)
+			glowGolden: [200, 100, 150] as RGB,
+			glowBright: [220, 170, 200] as RGB,
+			rayWarm:    [200, 120, 180] as RGB,
 		},
 		neutral: {
 			sunGolden:  '#E8A040',
@@ -179,7 +179,12 @@
 		const sunX   = sxn * W;
 		const sinAlt = Math.max(0, Math.sin(altDeg * Math.PI / 180));
 		const sunY   = horizonY - sinAlt * horizonY * 0.92;
-		const intensity = Math.max(0, 1 - Math.max(0, altDeg - 4) / 42) * 0.30;
+		// Boost intensity for dark-glass palettes so sun color is visible all day
+		// For dark-glass (amber/dusk), use persistent high intensity; for light-glass (sky/neutral), use natural falloff
+		const baseIntensity = themeState.palette.darkGlass ? 0.85 : 0.30;
+		const intensity = themeState.palette.darkGlass
+			? baseIntensity  // Fixed high intensity for amber/dusk
+			: Math.max(0, 1 - Math.max(0, altDeg - 4) / 42) * baseIntensity;  // Natural falloff for sky/neutral
 		const warmth = Math.max(0, 1 - altDeg / 22);
 		const [cr, cg, cb] = lerpRGB(atm.glowBright, atm.glowGolden, warmth);
 		const radius = Math.min(W * 0.58, horizonY * 0.85);
@@ -442,46 +447,12 @@
 			r.style.getPropertyValue('--clr-text'));
 	}
 
-	// ── draw all atmospheric layers ────────────────────────────────────────────
-	function drawAllLayers(ctx: Ctx, altDeg: number, sxn: number): void {
-		ctx.clearRect(0, 0, W, H);
-		drawSky(ctx, altDeg);
-		drawMoon(ctx, altDeg, sxn);
-		drawCircumsolarGlow(ctx, altDeg, sxn);
-		drawSun(ctx, altDeg, sxn);
-		drawCrepuscularRays(ctx, altDeg, sxn);
-		drawBeltOfVenus(ctx, altDeg);
-		drawPurpleLight(ctx, altDeg, sxn);
-		drawHorizonBlend(ctx, altDeg);
-		drawVignette(ctx);
+	// ── CSS vars only — no canvas rendering ────────────────────────────────────
+	function updateCSSVarsOnly(altDeg: number): void {
+		updateTheme(altDeg);
 	}
 
-	// ── render to OffscreenCanvas ──────────────────────────────────────────────
-	function renderToOffscreen(altDeg: number, sxn: number): void {
-		if (!visibleEl) return;
-
-		// Try OffscreenCanvas first (atomic buffering)
-		if (offscreen) {
-			const ctx = offscreen.getContext('2d');
-			if (ctx) {
-				drawAllLayers(ctx, altDeg, sxn);
-
-				// Blit to visible canvas
-				const vCtx = visibleEl.getContext('2d');
-				if (vCtx) {
-					vCtx.clearRect(0, 0, W, H);
-					vCtx.drawImage(offscreen, 0, 0);
-					return;
-				}
-			}
-		}
-
-		// Fallback: render directly to visible canvas
-		const vCtx = visibleEl.getContext('2d');
-		if (vCtx) drawAllLayers(vCtx, altDeg, sxn);
-	}
-
-	// ── main loop ──────────────────────────────────────────────────────────────
+	// ── main loop (CSS vars only) ──────────────────────────────────────────────
 	let animFrame  = 0;
 	let frameCount = 0;
 
@@ -491,28 +462,9 @@
 
 		const now = new Date();
 		const altDeg = sunAltitudeDeg(now);
-		const sxn    = sunXNorm(now, 39.53);
 
-		// IMPORTANT: Check for palette change BEFORE rendering (but don't update cached values yet)
-		const paletteChanged = themeState.version !== lastPaletteVer;
-		const darkGlassChanged = lastDarkGlass !== themeState.palette.darkGlass;
-
-		if (paletteChanged || darkGlassChanged) {
-			console.log('[Sky] Palette/theme changed, clearing before render. darkGlass:', themeState.palette.darkGlass, 'was:', lastDarkGlass);
-			if (visibleEl) {
-				const vCtx = visibleEl.getContext('2d');
-				if (vCtx) vCtx.clearRect(0, 0, W, H);
-			}
-			if (offscreen) {
-				const oCtx = offscreen.getContext('2d');
-				if (oCtx) oCtx.clearRect(0, 0, W, H);
-			}
-			// NOTE: Don't update cached values here - let updateTheme() do it
-			// so it can detect the change and set CSS vars properly
-		}
-
-		renderToOffscreen(altDeg, sxn);
-		updateTheme(altDeg);
+		// Update CSS vars based on sun altitude (time of day)
+		updateCSSVarsOnly(altDeg);
 
 		if (firstFrame) {
 			document.documentElement.classList.add('sky-ready');
@@ -521,41 +473,16 @@
 	}
 
 	function resize(): void {
-		if (!visibleEl) return;
-		dpr = window.devicePixelRatio || 1;
-		const newW = Math.round(window.innerWidth * dpr);
-		const newH = Math.round(window.innerHeight * dpr);
-		if (newW === W && newH === H) return;
-
-		W = visibleEl.width  = newW;
-		H = visibleEl.height = newH;
-		horizonY = H * HORIZON_FRAC;
-		offscreen = new OffscreenCanvas(W, H);
-
-		// Immediate render on resize
+		// CSS vars don't depend on canvas size, so resize is minimal
 		const altDeg = sunAltitudeDeg(new Date());
-		const sxn    = sunXNorm(new Date(), 39.53);
-		renderToOffscreen(altDeg, sxn);
-		updateTheme(altDeg);
+		updateCSSVarsOnly(altDeg);
 	}
 
 	onMount(() => {
-		if (!visibleEl) return;
-		dpr = window.devicePixelRatio || 1;
-		W = Math.round(window.innerWidth * dpr);
-		H = Math.round(window.innerHeight * dpr);
-		horizonY = H * HORIZON_FRAC;
-
-		visibleEl.width  = W;
-		visibleEl.height = H;
-		offscreen = new OffscreenCanvas(W, H);
-
-		// Initial render
+		// Initialize CSS vars immediately
 		const now = new Date();
 		const altDeg = sunAltitudeDeg(now);
-		const sxn    = sunXNorm(now, 39.53);
-		renderToOffscreen(altDeg, sxn);
-		updateTheme(altDeg);
+		updateCSSVarsOnly(altDeg);
 
 		window.addEventListener('resize', resize);
 		animFrame = requestAnimationFrame(draw);
@@ -580,5 +507,6 @@
 		display: block;
 		will-change: transform;
 		transform: translateZ(0);
+		background: transparent;
 	}
 </style>
