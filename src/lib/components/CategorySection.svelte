@@ -85,21 +85,25 @@
 	{#if isExpanded}
 		<div class="category-content">
 			{#if hasSubcategories}
-				{#each subcategories as subcat (subcat.name)}
-					<SubcategoryGroup
-						{subcat}
-						{selectMode}
-						{selected}
-						{confirmingId}
-						{deleteSaving}
-						{onSelect}
-						{onEdit}
-						{onDelete}
-						{onCancelDelete}
-						{onConfirmDelete}
-						{onTagClick}
-					/>
-				{/each}
+				<ul class="links-list">
+					{#each subcategories as subcat (subcat.name)}
+						<li class="subcat-item">
+							<SubcategoryGroup
+								{subcat}
+								{selectMode}
+								{selected}
+								{confirmingId}
+								{deleteSaving}
+								{onSelect}
+								{onEdit}
+								{onDelete}
+								{onCancelDelete}
+								{onConfirmDelete}
+								{onTagClick}
+							/>
+						</li>
+					{/each}
+				</ul>
 			{:else}
 				<ul class="links-list">
 					{#each links as link (link.id)}
@@ -219,5 +223,13 @@
 		padding: 0;
 		display: flex;
 		flex-direction: column;
+	}
+
+	.links-list li {
+		list-style: none;
+	}
+
+	.subcat-item {
+		list-style: none;
 	}
 </style>

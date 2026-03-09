@@ -56,11 +56,11 @@
 				onchange={() => onSelect(link.id)}
 			/>
 		{/if}
-		<a class="entry-link" href={link.url} target="_blank" rel="noopener noreferrer">
+		<button class="entry-title-btn" onclick={() => onEdit(link)}>
 			{#if link.source}<span class="source-indicator">{link.source}</span>{/if}
 			<span class="entry-title">{link.title}</span>
-			<span class="entry-domain">{domain(link.url)}</span>
-		</a>
+			<span class="entry-meta">{domain(link.url)}</span>
+		</button>
 		{#if link.tags.length > 0}
 			<span class="entry-tags">
 				{#each link.tags.slice(0, 3) as tag}
@@ -72,7 +72,6 @@
 			</span>
 		{/if}
 		<div class="row-actions">
-			<button class="action-btn" onclick={() => onEdit(link)}>edit</button>
 			<button class="action-btn danger" onclick={() => onDelete(link.id)}>×</button>
 		</div>
 	{/if}
@@ -82,13 +81,13 @@
 	.entry-row {
 		display: flex;
 		align-items: center;
-		gap: 0.6rem;
-		border-bottom: 1px solid rgba(var(--ui-rgb), 0.10);
-		padding: 0.5rem 0 0.5rem 1rem;
+		gap: 1rem;
+		border-bottom: 1px solid rgba(var(--ui-rgb), 0.16);
 	}
 
 	.entry-row.confirm-row {
 		gap: 1.5rem;
+		padding: 0.85rem 0;
 	}
 
 	.select-check {
@@ -99,18 +98,21 @@
 		cursor: pointer;
 	}
 
-	.entry-link {
+	.entry-title-btn {
 		flex: 1;
-		min-width: 0;
-		text-decoration: none;
+		background: none;
+		border: none;
+		cursor: pointer;
+		text-align: left;
+		padding: 0.85rem 0;
+		transition: color 0.15s;
 		display: flex;
 		flex-direction: column;
-		gap: 0.1rem;
-		transition: opacity var(--t-ui);
+		gap: 0.15rem;
 	}
 
-	.entry-link:hover .entry-title {
-		opacity: 1;
+	.entry-title-btn:hover .entry-title {
+		color: var(--clr-text);
 	}
 
 	.source-indicator {
@@ -122,19 +124,18 @@
 
 	.entry-title {
 		font-family: var(--font-prose);
-		font-size: 0.85rem;
+		font-size: 0.95rem;
 		color: var(--clr-text);
-		line-height: 1.3;
-		opacity: 0.85;
+		line-height: 1.4;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
 
-	.entry-domain {
+	.entry-meta {
 		font-family: var(--font-ui);
-		font-size: 0.52rem;
-		letter-spacing: 0.04em;
+		font-size: 0.62rem;
+		letter-spacing: 0.06em;
 		color: var(--clr-text);
 		opacity: 0.4;
 	}
@@ -178,24 +179,19 @@
 
 	.action-btn {
 		background: none;
-		border: 1px solid rgba(var(--ui-rgb), 0.20);
-		font-family: var(--font-ui);
-		font-size: 0.5rem;
-		letter-spacing: 0.05em;
-		color: var(--clr-text);
-		opacity: 0.45;
-		padding: 0.1rem 0.3rem;
+		border: none;
 		cursor: pointer;
-		transition: opacity var(--t-ui);
+		font-family: var(--font-ui);
+		font-size: 0.52rem;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--clr-text);
+		padding: 0 0.3rem;
+		transition: color 0.15s;
 	}
 
 	.action-btn:hover:not(:disabled) {
-		opacity: 0.9;
-	}
-
-	.action-btn:disabled {
-		opacity: 0.2;
-		cursor: not-allowed;
+		color: var(--clr-text);
 	}
 
 	.action-btn.danger {
@@ -203,11 +199,18 @@
 	}
 
 	.action-btn.danger:hover:not(:disabled) {
-		opacity: 0.9;
+		color: var(--clr-danger);
+	}
+
+	.action-btn:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
 	}
 
 	.dim {
-		font-size: 0.7rem;
-		opacity: 0.65;
+		font-family: var(--font-ui);
+		font-size: 0.6rem;
+		letter-spacing: 0.06em;
+		color: var(--clr-text);
 	}
 </style>

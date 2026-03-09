@@ -50,23 +50,25 @@
 
 	{#if isExpanded}
 		<div class="subcategory-content">
-			<div class="links-list">
+			<ul class="links-list">
 				{#each subcat.links as link (link.id)}
-					<LinkRow
-						{link}
-						{selectMode}
-						isSelected={selected.has(link.id)}
-						confirming={confirmingId === link.id}
-						{onSelect}
-						{onEdit}
-						{onDelete}
-						{onCancelDelete}
-						{onConfirmDelete}
-						{onTagClick}
-						isDeleting={deleteSaving}
-					/>
+					<li>
+						<LinkRow
+							{link}
+							{selectMode}
+							isSelected={selected.has(link.id)}
+							confirming={confirmingId === link.id}
+							{onSelect}
+							{onEdit}
+							{onDelete}
+							{onCancelDelete}
+							{onConfirmDelete}
+							{onTagClick}
+							isDeleting={deleteSaving}
+						/>
+					</li>
 				{/each}
-			</div>
+			</ul>
 		</div>
 	{/if}
 </div>
@@ -123,5 +125,12 @@
 	.links-list {
 		display: flex;
 		flex-direction: column;
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+
+	.links-list li {
+		list-style: none;
 	}
 </style>
