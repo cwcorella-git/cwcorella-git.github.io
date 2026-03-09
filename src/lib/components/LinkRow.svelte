@@ -56,7 +56,7 @@
 				onchange={() => onSelect(link.id)}
 			/>
 		{/if}
-		<a href={link.url} target="_blank" rel="noopener noreferrer" class="entry-title-btn" onclick={(e) => { e.preventDefault(); window.open(link.url, '_blank'); }}>
+		<a href={link.url} class="entry-title-btn" onclick={(e) => { e.preventDefault(); window.open(link.url, '_blank'); }}>
 			{#if link.source}<span class="source-indicator">{link.source}</span>{/if}
 			<span class="entry-title">{link.title}</span>
 			<span class="entry-meta">{domain(link.url)}</span>
