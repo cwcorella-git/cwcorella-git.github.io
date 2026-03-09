@@ -143,7 +143,8 @@
 		border: 1px solid var(--glass-border-dark);
 		padding: 0.5rem;
 		border-radius: 2px;
-		z-index: 100;
+		z-index: 99;
+		min-width: 100px;
 	}
 
 	.logout-btn {

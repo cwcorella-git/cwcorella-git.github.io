@@ -29,9 +29,9 @@
 <style>
 	.panel {
 		position: absolute;
-		top: calc(100% + 6px);
-		right: 0;
-		z-index: 200;
+		top: calc(100% + 0.6rem);
+		left: 0;
+		z-index: 100;
 		background: var(--glass-bg-dark);
 		border: 1px solid var(--glass-border-dark);
 		backdrop-filter: var(--glass-blur);
