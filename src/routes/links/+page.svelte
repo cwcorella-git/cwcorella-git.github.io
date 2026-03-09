@@ -302,14 +302,18 @@
 
 	// ── category operations ──────────────────────────────────────────────
 	let catActionTarget = $state<string | null>(null);
-	let catActionMode = $state<'none' | 'rename' | 'delete'>('none');
+	let catActionMode = $state<'none' | 'edit' | 'delete'>('none');
 	let renameValue = $state('');
 	let categorySaving = $state(false);
 
-	function startRenameCategory(cat: string) {
+	function startEditCategory(cat: string) {
 		catActionTarget = cat;
 		renameValue = cat;
-		catActionMode = 'rename';
+		catActionMode = 'edit';
+	}
+
+	function startRenameCategory(cat: string) {
+		startEditCategory(cat);
 	}
 
 	async function commitRenameCategory() {
@@ -435,6 +439,54 @@
 <svelte:window onkeydown={handleKeydown} />
 
 {#if adminState.active}
+
+<!-- ── category edit modal ────────────────────────────────────────────── -->
+{#if catActionMode === 'edit' && catActionTarget}
+	<div class="overlay-backdrop" role="presentation" onclick={() => catActionMode = 'none'}></div>
+	<div class="editor" role="dialog" aria-modal="true">
+		<div class="overlay-header">
+			<span class="overlay-label">edit category</span>
+			<button class="close-btn" onclick={() => catActionMode = 'none'} aria-label="Close">×</button>
+		</div>
+		<div class="editor-body">
+			<div class="editor-fields">
+				<label class="field">
+					<span class="field-label">rename category</span>
+					<input type="text" bind:value={renameValue} />
+				</label>
+			</div>
+			<div class="editor-footer">
+				<button onclick={() => catActionMode = 'none'} disabled={categorySaving}>cancel</button>
+				<button class="save-btn" onclick={commitRenameCategory} disabled={categorySaving}>
+					{categorySaving ? 'saving…' : 'rename'}
+				</button>
+				<button onclick={() => { exportCategory(catActionTarget!); catActionMode = 'none'; }} disabled={categorySaving}>
+					export
+				</button>
+				<button class="danger" onclick={() => { catActionMode = 'delete'; }} disabled={categorySaving}>
+					delete
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- ── category delete confirmation ──────────────────────────────────── -->
+{#if catActionMode === 'delete' && catActionTarget}
+	<div class="overlay-backdrop" role="presentation" onclick={() => catActionMode = 'edit'}></div>
+	<div class="seal-modal" role="dialog" aria-modal="true" aria-label="Delete confirmation">
+		<p class="seal-modal-title">Delete "{catActionTarget}"?</p>
+		<p class="seal-modal-body">
+			Links in this category will be moved to Uncategorized. This cannot be undone.
+		</p>
+		<div class="seal-modal-actions">
+			<button onclick={() => catActionMode = 'edit'}>cancel</button>
+			<button class="seal-confirm-btn danger" onclick={() => { deleteCategory(catActionTarget!); catActionMode = 'none'; }}>
+				{categorySaving ? '…' : 'delete'}
+			</button>
+		</div>
+	</div>
+{/if}
 
 <!-- ── edit overlay ───────────────────────────────────────────────────── -->
 {#if editingLink}
@@ -853,6 +905,8 @@
 	.editor-footer button:hover:not(:disabled) { color: var(--clr-dark-text); border-color: rgba(var(--dark-panel-rgb), 0.40); }
 	.editor-footer button:disabled { opacity: 0.5; cursor: not-allowed; }
 	.save-btn { background: rgba(var(--dark-panel-rgb),0.08) !important; border-color: rgba(var(--dark-panel-rgb),0.25) !important; }
+	.editor-footer button.danger { color: var(--clr-danger); border-color: rgba(var(--clr-danger), 0.4); }
+	.editor-footer button.danger:hover:not(:disabled) { color: var(--clr-danger); border-color: var(--clr-danger); }
 
 	@media (max-width: 480px) {
 		.page { padding-top: 4.5rem; }
