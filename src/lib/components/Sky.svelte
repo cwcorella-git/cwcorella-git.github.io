@@ -330,12 +330,27 @@
 	let lastThemeAlt   = 9999;
 	let lastPaletteVer = -1;
 	let firstFrame     = true;
+	let lastDarkGlass  = false;
 
 	function updateTheme(altDeg: number): void {
 		const paletteChanged = themeState.version !== lastPaletteVer;
 		if (!paletteChanged && Math.abs(altDeg - lastThemeAlt) < 0.4) return;
 		lastThemeAlt   = altDeg;
 		lastPaletteVer = themeState.version;
+
+		// When switching between darkGlass=true and darkGlass=false, clear canvas
+		const darkGlassChanged = lastDarkGlass !== themeState.palette.darkGlass;
+		if (darkGlassChanged) {
+			lastDarkGlass = themeState.palette.darkGlass;
+			if (visibleEl) {
+				const vCtx = visibleEl.getContext('2d');
+				if (vCtx) vCtx.clearRect(0, 0, W, H);
+			}
+			if (offscreen) {
+				const oCtx = offscreen.getContext('2d');
+				if (oCtx) oCtx.clearRect(0, 0, W, H);
+			}
+		}
 
 		if (themeState.palette.darkGlass) return;
 
