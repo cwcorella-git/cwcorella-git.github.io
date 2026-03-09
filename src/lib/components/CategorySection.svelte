@@ -77,7 +77,8 @@
 		</button>
 		<div class="header-right">
 			<button class="cat-action" onclick={() => onCatRename(category)}>edit</button>
-			<button class="cat-action danger" onclick={() => onCatDelete(category)}>×</button>
+			<button class="cat-action" onclick={() => onCatExport(category)}>export</button>
+			<button class="cat-action" onclick={() => onCatDelete(category)}>×</button>
 		</div>
 	</div>
 

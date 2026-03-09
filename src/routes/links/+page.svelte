@@ -452,7 +452,7 @@
 		<div class="cat-edit-actions">
 			<button class="cat-edit-btn" onclick={() => catActionMode = 'none'} disabled={categorySaving}>cancel</button>
 			<button class="cat-edit-btn" onclick={commitRenameCategory} disabled={categorySaving}>
-				{categorySaving ? '…' : 'rename'}
+				{categorySaving ? '…' : 'confirm'}
 			</button>
 			<button class="cat-edit-btn" onclick={() => { exportCategory(catActionTarget!); catActionMode = 'none'; }} disabled={categorySaving}>
 				export
