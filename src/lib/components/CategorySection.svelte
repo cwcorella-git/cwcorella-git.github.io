@@ -146,8 +146,9 @@
 		border: none;
 		cursor: pointer;
 		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
+		flex-direction: row;
+		align-items: baseline;
+		gap: 0.4rem;
 		flex: 1;
 		min-width: 0;
 		padding: 0.85rem 0;
@@ -169,10 +170,12 @@
 
 	.cat-count {
 		font-family: var(--font-ui);
-		font-size: 0.62rem;
+		font-size: 0.6rem;
 		letter-spacing: 0.06em;
 		color: var(--clr-text);
 		opacity: 0.4;
+		white-space: nowrap;
+		flex-shrink: 0;
 	}
 
 	.header-right {

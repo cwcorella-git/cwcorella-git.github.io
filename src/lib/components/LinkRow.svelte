@@ -81,8 +81,8 @@
 	.entry-row {
 		display: flex;
 		align-items: center;
-		gap: 1rem;
-		border-bottom: 1px solid rgba(var(--ui-rgb), 0.16);
+		gap: 0.8rem;
+		padding-left: 2rem;
 	}
 
 	.entry-row.confirm-row {
@@ -104,7 +104,7 @@
 		border: none;
 		cursor: pointer;
 		text-align: left;
-		padding: 0.7rem 0;
+		padding: 0.4rem 0;
 		transition: color 0.15s;
 		display: flex;
 		flex-direction: row;
@@ -125,7 +125,7 @@
 
 	.entry-title {
 		font-family: var(--font-prose);
-		font-size: 0.8rem;
+		font-size: 0.75rem;
 		color: var(--clr-text);
 		line-height: 1.4;
 		overflow: hidden;
