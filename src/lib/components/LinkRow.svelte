@@ -100,9 +100,7 @@
 	}
 
 	.entry-title-btn {
-		flex: 0 1 auto;
-		min-width: 150px;
-		max-width: 45%;
+		flex: 1 1 80px;
 		background: none;
 		border: none;
 		text-decoration: none;
@@ -115,6 +113,7 @@
 		align-items: baseline;
 		gap: 0.5rem;
 		color: inherit;
+		min-width: 0;
 	}
 
 	.entry-title-btn:hover {
@@ -140,6 +139,8 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+		flex: 1 1 60px;
+		min-width: 0;
 	}
 
 	.entry-meta {
@@ -149,7 +150,8 @@
 		color: var(--clr-text);
 		opacity: 0.4;
 		white-space: nowrap;
-		flex-shrink: 0;
+		flex: 0 0 auto;
+		min-width: 100px;
 	}
 
 	.entry-tags {
