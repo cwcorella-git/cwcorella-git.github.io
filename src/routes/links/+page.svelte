@@ -709,6 +709,8 @@
 	.page {
 		min-height: 100vh;
 		padding-top: 4rem;
+		contain: layout style paint;
+		will-change: scroll-position;
 	}
 	.inner {
 		position: relative; z-index: 1;

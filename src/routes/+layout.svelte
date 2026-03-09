@@ -188,6 +188,8 @@
 		color: var(--clr-text);
 		font-family: var(--font-prose);
 		-webkit-font-smoothing: antialiased;
+		scroll-behavior: auto;
+		overflow-anchor: auto;
 	}
 	:global(a) { color: inherit; }
 	/* All page content sits above the sky canvas */

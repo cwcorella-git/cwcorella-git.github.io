@@ -523,6 +523,8 @@
 	.page {
 		min-height: 100vh;
 		padding-top: 4rem;
+		contain: layout style paint;
+		will-change: scroll-position;
 	}
 	.page-header {
 		display: flex; align-items: center; justify-content: space-between;
