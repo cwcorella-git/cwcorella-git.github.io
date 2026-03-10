@@ -119,45 +119,44 @@ export const PALETTES: Record<PaletteName, Palette> = {
 	},
 	emerald: {
 		label: 'emerald',
-		uiRgb:        '100, 160, 120',     // teal accent for light-context chrome
-		darkPanelRgb: '80, 160, 120',      // teal tint for overlay chrome
-		bodyBg:       '#0a1410',            // very dark forest green-black
-		clrDarkText:  '#88c0a0',            // bright sage/teal text
-		glassBgDark:     'rgba(12, 24, 18, 0.88)',    // deep forest green glass
-		glassBorderDark: 'rgba(100, 180, 140, 0.28)', // bright teal border
-		// Dark-glass: permanent emerald/forest mood
-		darkGlass:        true,
-		glassFixed:       'rgba(16, 28, 20, 0.88)',    // forest green panels
-		glassBorderFixed: 'rgba(100, 180, 140, 0.15)', // subtle teal border
-		glassNavBgFixed:  'rgba(12, 22, 16, 0.88)',    // darker nav
-		glassHeavyFixed:  'rgba(14, 26, 18, 0.92)',    // fullscreen overlays
-		glassDay:   [16, 28, 20],  // kept for compat; not used in dark-glass mode
-		glassNight: [10, 18, 14],
-		textDay:    [136, 192, 160],  // #88c0a0 — bright sage always
-		textNight:  [136, 192, 160],
-		swatchBg:     '#0a1410',
-		swatchBorder: '#60b080',
+		uiRgb:        '110, 150, 130',     // cool green-teal light-context chrome
+		darkPanelRgb: '40, 100, 80',       // teal tint for overlay chrome
+		bodyBg:       '#d0dcd4',            // soft cool gray-green canvas fallback (like sky/neutral)
+		clrDarkText:  '#1a3830',            // dark green-gray on light panels
+		glassBgDark:     'rgba(110, 160, 140, 0.82)', // initial fallback; Sky.svelte overrides per-frame
+		glassBorderDark: 'rgba(80, 140, 120, 0.35)',  // initial fallback; Sky.svelte overrides per-frame
+		// Light-glass: adapts with time of day — cool greens
+		darkGlass: false,
+		glassDay:   [220, 240, 230],   // pale cool green at noon
+		glassNight: [30,  60,  50],    // deep cool green at night
+		textDay:    [16,  40,  32],    // cool dark green on pale panels
+		textNight:  [220, 240, 230],   // pale green on dark panels
+		// Chrome inside panels: cool teal at day, pale green at night
+		darkPanelDay:   [40,  100, 80],
+		darkPanelNight: [180, 220, 200],
+		swatchBg:     '#d0dcd4',
+		swatchBorder: '#60a080',
 	},
 	crimson: {
 		label: 'crimson',
-		uiRgb:        '150, 80, 90',       // mauve-red accent for light-context chrome
-		darkPanelRgb: '140, 60, 80',       // deep red-mauve tint for overlay chrome
-		bodyBg:       '#1a0a0c',            // very dark burgundy-black
-		clrDarkText:  '#d08080',            // muted dusty rose text
-		glassBgDark:     'rgba(28, 12, 14, 0.88)',    // deep burgundy glass
-		glassBorderDark: 'rgba(180, 100, 100, 0.28)', // dusty rose border
-		// Dark-glass: permanent crimson/wine mood
+		uiRgb:        '180, 100, 80',      // warm red-orange accent for light-context chrome
+		darkPanelRgb: '160, 80, 60',       // strong warm red tint for overlay chrome
+		bodyBg:       '#140808',            // extremely dark burgundy (from amber warmth)
+		clrDarkText:  '#e8a090',            // warm golden-rose text (stronger than before)
+		glassBgDark:     'rgba(32, 12, 10, 0.88)',    // deep dark red glass (from dusk darkness)
+		glassBorderDark: 'rgba(200, 100, 80, 0.30)', // strong warm red border
+		// Dark-glass: permanent bold crimson/wine mood
 		darkGlass:        true,
-		glassFixed:       'rgba(32, 14, 18, 0.88)',    // deep burgundy panels
-		glassBorderFixed: 'rgba(180, 100, 100, 0.15)', // subtle rose border
-		glassNavBgFixed:  'rgba(24, 10, 14, 0.88)',    // darker nav
-		glassHeavyFixed:  'rgba(28, 12, 16, 0.92)',    // fullscreen overlays
-		glassDay:   [32, 14, 18],  // kept for compat; not used in dark-glass mode
-		glassNight: [20,  8, 12],
-		textDay:    [208, 128, 128],  // #d08080 — dusty rose always
-		textNight:  [208, 128, 128],
-		swatchBg:     '#1a0a0c',
-		swatchBorder: '#c05070',
+		glassFixed:       'rgba(36, 14, 10, 0.88)',    // deep red-brown panels
+		glassBorderFixed: 'rgba(200, 100, 80, 0.18)', // warm red border
+		glassNavBgFixed:  'rgba(28, 10, 8, 0.88)',     // darker nav
+		glassHeavyFixed:  'rgba(32, 12, 10, 0.92)',    // fullscreen overlays
+		glassDay:   [36, 14, 10],  // kept for compat; not used in dark-glass mode
+		glassNight: [22,  8,  6],
+		textDay:    [232, 160, 144],  // #e8a090 — warm golden-rose always
+		textNight:  [232, 160, 144],
+		swatchBg:     '#140808',
+		swatchBorder: '#d06050',
 	},
 };
 
