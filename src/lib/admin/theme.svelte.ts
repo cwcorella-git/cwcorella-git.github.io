@@ -4,7 +4,7 @@
 // reads glassDay/glassNight/textDay/textNight to interpolate --clr-text and
 // the three --glass-* vars per-frame as the sun moves.
 
-export type PaletteName = 'amber' | 'sky' | 'dusk' | 'neutral';
+export type PaletteName = 'amber' | 'sky' | 'dusk' | 'neutral' | 'sepia' | 'slate';
 
 export interface Palette {
 	label: string;
@@ -116,6 +116,47 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		darkPanelNight: [220, 220, 228],
 		swatchBg:     '#d8d8d8',
 		swatchBorder: '#a0a8b0',
+	},
+	sepia: {
+		label: 'sepia',
+		uiRgb:        '140, 100, 60',
+		darkPanelRgb: '140, 100, 60',     // warm brown tint for overlays
+		bodyBg:       '#1a1410',           // very dark brown
+		clrDarkText:  '#c4a884',           // warm tan text
+		glassBgDark:     'rgba(24, 16, 10, 0.88)',    // deep brown glass
+		glassBorderDark: 'rgba(160, 120, 80, 0.25)', // warm brown border
+		// Dark-glass: permanent vintage sepia tone
+		darkGlass:        true,
+		glassFixed:       'rgba(28, 18, 12, 0.88)',    // warm brown panels
+		glassBorderFixed: 'rgba(160, 120, 80, 0.15)', // subtle warm border
+		glassNavBgFixed:  'rgba(20, 14, 8, 0.88)',     // darker nav
+		glassHeavyFixed:  'rgba(24, 16, 10, 0.92)',    // fullscreen overlays
+		glassDay:   [28,  18,  12],  // kept for compat; not used in dark-glass mode
+		glassNight: [16,  10,  6 ],
+		textDay:    [196, 168, 132],  // #c4a884 — warm tan always
+		textNight:  [196, 168, 132],
+		swatchBg:     '#1a1410',
+		swatchBorder: '#b8845c',
+	},
+	slate: {
+		label: 'slate',
+		uiRgb:        '110, 140, 170',     // cool slate-blue light-context chrome
+		darkPanelRgb: '50, 70, 100',       // cool dark blue — chrome on light slate panel
+		bodyBg:       '#c8d0d8',            // soft cool gray-blue canvas fallback
+		clrDarkText:  '#2a3850',            // cool dark blue-gray on light panels
+		glassBgDark:     'rgba(140, 160, 190, 0.82)', // initial fallback; Sky.svelte overrides per-frame
+		glassBorderDark: 'rgba(110, 140, 170, 0.35)', // initial fallback; Sky.svelte overrides per-frame
+		// Light-glass: adapts with time of day — cool and elegant
+		darkGlass: false,
+		glassDay:   [220, 230, 240],   // pale cool-gray at noon
+		glassNight: [30,  40,  60],    // deep cool-gray at night
+		textDay:    [20,  28,  40],    // cool dark blue-gray on pale panels
+		textNight:  [220, 230, 240],   // pale gray on dark panels
+		// Chrome inside panels: cool dark blue at day, pale cool gray at night
+		darkPanelDay:   [50,  70,  100],
+		darkPanelNight: [200, 210, 230],
+		swatchBg:     '#c8d0d8',
+		swatchBorder: '#7a92b8',
 	},
 };
 
