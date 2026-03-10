@@ -195,17 +195,7 @@
 		position: relative;
 		z-index: 1;
 	}
-	/* Smooth day→night transitions on glass panels and text */
-	/* Gated on .sky-ready so they don't fire on first load */
-	:global(.sky-ready .inner), :global(.sky-ready .content-panel) {
-		transition: background var(--t-theme), border-color var(--t-theme);
-	}
-	:global(.sky-ready body) {
-		transition: color var(--t-theme);
-	}
-	:global(.sky-ready) nav {
-		transition: background var(--t-theme), border-color var(--t-theme);
-	}
+	/* Theme changes are instant (no transitions) */
 
 	nav {
 		position: fixed;
