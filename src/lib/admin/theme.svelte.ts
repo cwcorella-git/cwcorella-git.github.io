@@ -4,7 +4,7 @@
 // reads glassDay/glassNight/textDay/textNight to interpolate --clr-text and
 // the three --glass-* vars per-frame as the sun moves.
 
-export type PaletteName = 'amber' | 'sky' | 'dusk' | 'neutral' | 'emerald' | 'crimson';
+export type PaletteName = 'amber' | 'sky' | 'dusk' | 'neutral' | 'sage' | 'rust';
 
 export interface Palette {
 	label: string;
@@ -117,46 +117,46 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		swatchBg:     '#d8d8d8',
 		swatchBorder: '#a0a8b0',
 	},
-	emerald: {
-		label: 'emerald',
-		uiRgb:        '110, 150, 130',     // cool green-teal light-context chrome
-		darkPanelRgb: '40, 100, 80',       // teal tint for overlay chrome
-		bodyBg:       '#d0dcd4',            // soft cool gray-green canvas fallback (like sky/neutral)
-		clrDarkText:  '#1a3830',            // dark green-gray on light panels
-		glassBgDark:     'rgba(110, 160, 140, 0.82)', // initial fallback; Sky.svelte overrides per-frame
-		glassBorderDark: 'rgba(80, 140, 120, 0.35)',  // initial fallback; Sky.svelte overrides per-frame
-		// Light-glass: adapts with time of day — cool greens
+	sage: {
+		label: 'sage',
+		uiRgb:        '100, 130, 110',     // muted green-gray light-context chrome
+		darkPanelRgb: '60, 110, 90',       // sage tint for overlay chrome
+		bodyBg:       '#c4cfc4',            // soft muted gray-green canvas fallback (like sky/neutral, but darker)
+		clrDarkText:  '#2a3a2a',            // dark muted green-gray on light panels
+		glassBgDark:     'rgba(100, 140, 120, 0.82)', // initial fallback; Sky.svelte overrides per-frame
+		glassBorderDark: 'rgba(80, 120, 100, 0.35)',  // initial fallback; Sky.svelte overrides per-frame
+		// Light-glass: adapts with time of day — muted cool greens
 		darkGlass: false,
-		glassDay:   [220, 240, 230],   // pale cool green at noon
-		glassNight: [30,  60,  50],    // deep cool green at night
-		textDay:    [16,  40,  32],    // cool dark green on pale panels
-		textNight:  [220, 240, 230],   // pale green on dark panels
-		// Chrome inside panels: cool teal at day, pale green at night
-		darkPanelDay:   [40,  100, 80],
-		darkPanelNight: [180, 220, 200],
-		swatchBg:     '#d0dcd4',
-		swatchBorder: '#60a080',
+		glassDay:   [210, 230, 220],   // pale muted green at noon
+		glassNight: [40,  70,  60],    // deeper muted green at night
+		textDay:    [24,  48,  36],    // cool dark green on pale panels
+		textNight:  [210, 230, 220],   // pale muted green on dark panels
+		// Chrome inside panels: sage green at day, pale green at night
+		darkPanelDay:   [60,  110, 90],
+		darkPanelNight: [170, 210, 190],
+		swatchBg:     '#c4cfc4',
+		swatchBorder: '#6a9a7a',
 	},
-	crimson: {
-		label: 'crimson',
-		uiRgb:        '180, 100, 80',      // warm red-orange accent for light-context chrome
-		darkPanelRgb: '160, 80, 60',       // strong warm red tint for overlay chrome
-		bodyBg:       '#140808',            // extremely dark burgundy (from amber warmth)
-		clrDarkText:  '#e8a090',            // warm golden-rose text (stronger than before)
-		glassBgDark:     'rgba(32, 12, 10, 0.88)',    // deep dark red glass (from dusk darkness)
-		glassBorderDark: 'rgba(200, 100, 80, 0.30)', // strong warm red border
-		// Dark-glass: permanent bold crimson/wine mood
+	rust: {
+		label: 'rust',
+		uiRgb:        '170, 100, 70',      // warm orange-red accent for light-context chrome
+		darkPanelRgb: '150, 80, 50',       // warm rust tint for overlay chrome
+		bodyBg:       '#1a0e0a',            // very dark warm brown-red (rust-like)
+		clrDarkText:  '#d8a080',            // warm rust-orange text
+		glassBgDark:     'rgba(36, 16, 10, 0.88)',    // deep warm rust glass
+		glassBorderDark: 'rgba(180, 110, 70, 0.30)', // warm rust-orange border
+		// Dark-glass: permanent bold rust/oxide mood
 		darkGlass:        true,
-		glassFixed:       'rgba(36, 14, 10, 0.88)',    // deep red-brown panels
-		glassBorderFixed: 'rgba(200, 100, 80, 0.18)', // warm red border
-		glassNavBgFixed:  'rgba(28, 10, 8, 0.88)',     // darker nav
-		glassHeavyFixed:  'rgba(32, 12, 10, 0.92)',    // fullscreen overlays
-		glassDay:   [36, 14, 10],  // kept for compat; not used in dark-glass mode
-		glassNight: [22,  8,  6],
-		textDay:    [232, 160, 144],  // #e8a090 — warm golden-rose always
-		textNight:  [232, 160, 144],
-		swatchBg:     '#140808',
-		swatchBorder: '#d06050',
+		glassFixed:       'rgba(40, 18, 12, 0.88)',    // deep rust-brown panels
+		glassBorderFixed: 'rgba(180, 110, 70, 0.18)', // warm rust border
+		glassNavBgFixed:  'rgba(32, 14, 10, 0.88)',    // darker nav
+		glassHeavyFixed:  'rgba(36, 16, 12, 0.92)',    // fullscreen overlays
+		glassDay:   [40, 18, 12],  // kept for compat; not used in dark-glass mode
+		glassNight: [24, 10, 6],
+		textDay:    [216, 160, 128],  // #d8a080 — warm rust-orange always
+		textNight:  [216, 160, 128],
+		swatchBg:     '#1a0e0a',
+		swatchBorder: '#c87050',
 	},
 };
 
