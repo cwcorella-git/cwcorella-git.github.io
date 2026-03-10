@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { themeState, PALETTES, type PaletteName } from '$lib/admin/theme.svelte';
 
-	const ORDER: PaletteName[] = ['amber', 'sky', 'dusk', 'neutral', 'sepia', 'slate'];
+	const ORDER: PaletteName[] = ['amber', 'sky', 'dusk', 'neutral', 'emerald', 'crimson'];
 </script>
 
 <div class="panel" role="dialog" aria-label="Theme palette picker">
