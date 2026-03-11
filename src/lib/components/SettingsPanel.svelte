@@ -34,6 +34,13 @@
 	let keySaving = $state(false);
 	let keyError = $state('');
 
+	function switchKeyMode(mode: KeyMode) {
+		if (mode === keyMode) return;
+		keyMode = mode;
+		keyValue = '';  // clear — a passphrase is not a raw key and vice versa
+		keyError = '';
+	}
+
 	async function saveKey() {
 		const newKey = keyValue.trim();
 		if (!newKey) { keyError = 'Content key is required.'; return; }
@@ -81,12 +88,12 @@
 			<button
 				class="mode-btn"
 				class:active={keyMode === 'passphrase'}
-				onclick={() => keyMode = 'passphrase'}
+				onclick={() => switchKeyMode('passphrase')}
 			>passphrase</button>
 			<button
 				class="mode-btn"
 				class:active={keyMode === 'rawkey'}
-				onclick={() => keyMode = 'rawkey'}
+				onclick={() => switchKeyMode('rawkey')}
 			>raw key</button>
 		</div>
 		<div class="field-row">

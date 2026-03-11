@@ -1,13 +1,15 @@
 <script lang="ts">
-	import { adminState } from '$lib/admin/state.svelte';
+	import { adminState, type KeyMode } from '$lib/admin/state.svelte';
 	import { validatePAT } from '$lib/admin/github';
+	import { importRawKey } from '$lib/admin/crypto';
 	import { toast } from '$lib/admin/toast.svelte';
 	import { isUnlockDay } from '$lib/admin/tlock';
 
 	let open = $state(false);
 	let pat = $state('');
 	let contentKey = $state('');
-	let patError = $state('');
+	let keyMode = $state<KeyMode>('passphrase');
+	let formError = $state('');
 	let loading = $state(false);
 
 	export function trigger() {
@@ -19,18 +21,31 @@
 		open = true;
 		pat = '';
 		contentKey = '';
-		patError = '';
+		keyMode = 'passphrase';
+		formError = '';
+	}
+
+	function switchMode(mode: KeyMode) {
+		if (mode === keyMode) return;
+		keyMode = mode;
+		contentKey = '';  // clear field — a passphrase is not a raw key and vice versa
+		formError = '';
 	}
 
 	async function submit(e: SubmitEvent) {
 		e.preventDefault();
-		if (!pat.trim()) { patError = 'GitHub PAT is required.'; return; }
+		formError = '';
+		if (!pat.trim()) { formError = 'GitHub PAT is required.'; return; }
+		if (!contentKey.trim()) { formError = 'Content key is required.'; return; }
+		if (keyMode === 'rawkey') {
+			const ck = await importRawKey(contentKey.trim());
+			if (!ck) { formError = 'Invalid raw key — must be 64 hex chars or 44-char base64 (256 bits).'; return; }
+		}
 		loading = true;
-		patError = '';
 		try {
 			const valid = await validatePAT(pat.trim());
-			if (!valid) { patError = 'Invalid PAT — check token and permissions.'; return; }
-			await adminState.activate(pat.trim(), contentKey.trim());
+			if (!valid) { formError = 'Invalid PAT — check token and permissions.'; return; }
+			await adminState.activate(pat.trim(), contentKey.trim(), keyMode);
 			open = false;
 		} catch {
 			toast.error('Network error — could not validate PAT.');
@@ -86,18 +101,24 @@
 					disabled={loading}
 				/>
 			</label>
-			<label>
-				<span>Content key</span>
+			<div class="key-field">
+				<div class="key-header">
+					<span>Content key</span>
+					<div class="mode-toggle">
+						<button type="button" class="mode-btn" class:active={keyMode === 'passphrase'} onclick={() => switchMode('passphrase')} disabled={loading}>passphrase</button>
+						<button type="button" class="mode-btn" class:active={keyMode === 'rawkey'} onclick={() => switchMode('rawkey')} disabled={loading}>raw key</button>
+					</div>
+				</div>
 				<input
 					type="password"
 					autocomplete="off"
 					bind:value={contentKey}
-					placeholder="passphrase for encrypted docs"
+					placeholder={keyMode === 'rawkey' ? '64 hex or 44-char base64' : 'passphrase for encrypted docs'}
 					disabled={loading}
 				/>
-			</label>
-			{#if patError}
-				<p class="error">{patError}</p>
+			</div>
+			{#if formError}
+				<p class="error">{formError}</p>
 			{/if}
 			<button type="submit" class="submit-btn" disabled={loading}>
 				{loading ? 'verifying…' : 'unlock'}
@@ -180,7 +201,8 @@
 		color: var(--clr-dark-text);
 	}
 
-	label input {
+	label input,
+	.key-field input {
 		background: rgba(var(--dark-panel-rgb), 0.04);
 		border: 1px solid rgba(var(--dark-panel-rgb), 0.15);
 		outline: none;
@@ -189,8 +211,57 @@
 		font-size: 0.75rem;
 		padding: 0.5rem 0.65rem;
 		transition: border-color 0.15s;
+		width: 100%;
+		box-sizing: border-box;
 	}
-	label input:focus { border-color: rgba(var(--dark-panel-rgb), 0.32); }
+	label input:focus,
+	.key-field input:focus { border-color: rgba(var(--dark-panel-rgb), 0.32); }
+
+	.key-field {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+
+	.key-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+	}
+
+	.key-header span {
+		font-family: var(--font-ui);
+		font-size: 0.6rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--clr-dark-text);
+	}
+
+	.mode-toggle {
+		display: flex;
+	}
+
+	.mode-btn {
+		background: none;
+		border: 1px solid rgba(var(--dark-panel-rgb), 0.15);
+		color: var(--clr-dark-text);
+		font-family: var(--font-ui);
+		font-size: 0.5rem;
+		letter-spacing: 0.07em;
+		padding: 0.2rem 0.45rem;
+		cursor: pointer;
+		opacity: 0.4;
+		transition: all 0.1s;
+	}
+	.mode-btn + .mode-btn { border-left: none; }
+	.mode-btn:hover:not(:disabled) { opacity: 0.75; }
+	.mode-btn.active {
+		opacity: 1;
+		background: rgba(var(--dark-panel-rgb), 0.10);
+		border-color: rgba(var(--dark-panel-rgb), 0.28);
+	}
+	.mode-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
 	.error {
 		font-family: var(--font-ui);
