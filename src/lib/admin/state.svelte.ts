@@ -235,8 +235,8 @@ export const adminState = {
 		_keyMode = mode;
 		_active = true;
 		_cryptoKey = mode === 'rawkey' ? await importRawKey(key) : null;
-		sessionStorage.setItem('cwc-admin-key', key);
-		sessionStorage.setItem('cwc-admin-keymode', mode);
+		localStorage.setItem('cwc-admin-key', key);
+		localStorage.setItem('cwc-admin-keymode', mode);
 	},
 
 	async logout() {
@@ -246,17 +246,17 @@ export const adminState = {
 		_contentKey = '';
 		_keyMode = 'passphrase';
 		_cryptoKey = null;
-		sessionStorage.removeItem('cwc-admin-pat');
-		sessionStorage.removeItem('cwc-admin-key');
-		sessionStorage.removeItem('cwc-admin-keymode');
+		localStorage.removeItem('cwc-admin-pat');
+		localStorage.removeItem('cwc-admin-key');
+		localStorage.removeItem('cwc-admin-keymode');
 		journalIndexState.clear();
 		linksState.clear();
 	},
 
 	async restoreFromSession() {
-		const pat = sessionStorage.getItem('cwc-admin-pat');
-		const key = sessionStorage.getItem('cwc-admin-key');
-		const mode = (sessionStorage.getItem('cwc-admin-keymode') ?? 'passphrase') as KeyMode;
+		const pat = localStorage.getItem('cwc-admin-pat');
+		const key = localStorage.getItem('cwc-admin-key');
+		const mode = (localStorage.getItem('cwc-admin-keymode') ?? 'passphrase') as KeyMode;
 		if (key) {
 			_contentKey = key;
 			_keyMode = mode;
@@ -271,7 +271,7 @@ export const adminState = {
 	/** Update PAT mid-session (no re-auth needed). */
 	updatePAT(newPat: string) {
 		_pat = newPat.trim();
-		sessionStorage.setItem('cwc-admin-pat', _pat);
+		localStorage.setItem('cwc-admin-pat', _pat);
 	},
 
 	/** Update content key mid-session. */
@@ -279,8 +279,8 @@ export const adminState = {
 		_contentKey = newKey.trim();
 		_keyMode = mode;
 		_cryptoKey = mode === 'rawkey' ? await importRawKey(_contentKey) : null;
-		sessionStorage.setItem('cwc-admin-key', _contentKey);
-		sessionStorage.setItem('cwc-admin-keymode', mode);
+		localStorage.setItem('cwc-admin-key', _contentKey);
+		localStorage.setItem('cwc-admin-keymode', mode);
 	},
 
 	/** Encrypt content using the current key/mode. */
