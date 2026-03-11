@@ -1,12 +1,10 @@
 <script lang="ts">
 	import { adminState, type KeyMode } from '$lib/admin/state.svelte';
-	import { validatePAT } from '$lib/admin/github';
 	import { importRawKey } from '$lib/admin/crypto';
 	import { toast } from '$lib/admin/toast.svelte';
 	import { isUnlockDay } from '$lib/admin/tlock';
 
 	let open = $state(false);
-	let pat = $state('');
 	let contentKey = $state('');
 	let keyMode = $state<KeyMode>('passphrase');
 	let formError = $state('');
@@ -19,7 +17,6 @@
 			return;
 		}
 		open = true;
-		pat = '';
 		contentKey = '';
 		keyMode = 'passphrase';
 		formError = '';
@@ -28,14 +25,13 @@
 	function switchMode(mode: KeyMode) {
 		if (mode === keyMode) return;
 		keyMode = mode;
-		contentKey = '';  // clear field — a passphrase is not a raw key and vice versa
+		contentKey = '';
 		formError = '';
 	}
 
 	async function submit(e: SubmitEvent) {
 		e.preventDefault();
 		formError = '';
-		if (!pat.trim()) { formError = 'GitHub PAT is required.'; return; }
 		if (!contentKey.trim()) { formError = 'Content key is required.'; return; }
 		if (keyMode === 'rawkey') {
 			const ck = await importRawKey(contentKey.trim());
@@ -43,12 +39,10 @@
 		}
 		loading = true;
 		try {
-			const valid = await validatePAT(pat.trim());
-			if (!valid) { formError = 'Invalid PAT — check token and permissions.'; return; }
-			await adminState.activate(pat.trim(), contentKey.trim(), keyMode);
+			await adminState.activate(contentKey.trim(), keyMode);
 			open = false;
 		} catch {
-			toast.error('Network error — could not validate PAT.');
+			toast.error('Failed to activate — check your content key.');
 		} finally {
 			loading = false;
 		}
@@ -91,16 +85,6 @@
 			<button class="close-btn" onclick={close} aria-label="Close">×</button>
 		</div>
 		<form onsubmit={submit}>
-			<label>
-				<span>GitHub PAT</span>
-				<input
-					type="password"
-					autocomplete="current-password"
-					bind:value={pat}
-					placeholder="ghp_..."
-					disabled={loading}
-				/>
-			</label>
 			<div class="key-field">
 				<div class="key-header">
 					<span>Content key</span>
@@ -187,21 +171,6 @@
 		gap: 1rem;
 	}
 
-	label {
-		display: flex;
-		flex-direction: column;
-		gap: 0.35rem;
-	}
-
-	label span {
-		font-family: var(--font-ui);
-		font-size: 0.6rem;
-		letter-spacing: 0.1em;
-		text-transform: uppercase;
-		color: var(--clr-dark-text);
-	}
-
-	label input,
 	.key-field input {
 		background: rgba(var(--dark-panel-rgb), 0.04);
 		border: 1px solid rgba(var(--dark-panel-rgb), 0.15);
@@ -214,7 +183,6 @@
 		width: 100%;
 		box-sizing: border-box;
 	}
-	label input:focus,
 	.key-field input:focus { border-color: rgba(var(--dark-panel-rgb), 0.32); }
 
 	.key-field {

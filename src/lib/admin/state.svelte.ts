@@ -83,6 +83,11 @@ export const writeQueue = {
 
 	async flush(): Promise<void> {
 		if (_flushing || _pending.size === 0) return;
+		if (!_pat) {
+			_syncStatus = 'error';
+			_syncError = 'GitHub PAT not set — add it in admin settings (⊙).';
+			return;
+		}
 		_flushing = true;
 		_syncStatus = 'saving';
 		if (_debounceTimer !== null) { clearTimeout(_debounceTimer); _debounceTimer = null; }
@@ -224,13 +229,12 @@ export const adminState = {
 	get contentKey() { return _contentKey; },
 	get keyMode()    { return _keyMode; },
 
-	async activate(pat: string, key: string, mode: KeyMode = 'passphrase') {
-		_pat = pat;
+	/** Activate admin mode with a content key. PAT is set separately via updatePAT(). */
+	async activate(key: string, mode: KeyMode = 'passphrase') {
 		_contentKey = key;
 		_keyMode = mode;
 		_active = true;
 		_cryptoKey = mode === 'rawkey' ? await importRawKey(key) : null;
-		sessionStorage.setItem('cwc-admin-pat', pat);
 		sessionStorage.setItem('cwc-admin-key', key);
 		sessionStorage.setItem('cwc-admin-keymode', mode);
 	},
@@ -253,12 +257,14 @@ export const adminState = {
 		const pat = sessionStorage.getItem('cwc-admin-pat');
 		const key = sessionStorage.getItem('cwc-admin-key');
 		const mode = (sessionStorage.getItem('cwc-admin-keymode') ?? 'passphrase') as KeyMode;
-		if (pat && key) {
-			_pat = pat;
+		if (key) {
 			_contentKey = key;
 			_keyMode = mode;
-			_cryptoKey = mode === 'rawkey' ? await importRawKey(key) : null;
 			_active = true;
+			_cryptoKey = mode === 'rawkey' ? await importRawKey(key) : null;
+		}
+		if (pat) {
+			_pat = pat;
 		}
 	},
 
