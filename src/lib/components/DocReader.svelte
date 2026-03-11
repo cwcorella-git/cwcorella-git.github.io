@@ -3,7 +3,6 @@
 	import type { TocEntry } from '$lib/admin/markdown';
 	import type { EncryptedDoc } from '$lib/admin/crypto';
 	import { adminState } from '$lib/admin/state.svelte';
-	import { decryptDoc } from '$lib/admin/crypto';
 	import { renderMarkdown, extractToc } from '$lib/admin/markdown';
 	import { toast } from '$lib/admin/toast.svelte';
 
@@ -34,7 +33,7 @@
 				const enc: EncryptedDoc = await res.json();
 				let md: string;
 				try {
-					md = await decryptDoc(enc, adminState.contentKey);
+					md = await adminState.decryptContent(enc);
 				} catch {
 					toast.error('Incorrect content key.');
 					viewState = 'error';

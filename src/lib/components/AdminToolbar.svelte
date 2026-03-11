@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { adminState, writeQueue } from '$lib/admin/state.svelte';
 	import ThemePanel from './ThemePanel.svelte';
+	import SettingsPanel from './SettingsPanel.svelte';
 
 	let { onLogoutRequest, alwaysShowTheme = false }: { onLogoutRequest: () => void; alwaysShowTheme?: boolean } = $props();
 
@@ -59,7 +60,7 @@
 	</div>
 
 	{#if adminState.active}
-		<!-- Admin menu (admin only) -->
+		<!-- Admin settings (admin only) -->
 		<div class="admin-menu-wrapper">
 			<button
 				class="admin-menu-btn"
@@ -69,10 +70,7 @@
 				aria-label="Admin settings"
 			>⊙ <span class="btn-label">admin</span></button>
 			{#if adminMenuOpen}
-				<div class="admin-menu-panel">
-					<p class="settings-label">admin</p>
-					<button class="settings-item" onclick={() => { adminMenuOpen = false; onLogoutRequest(); }}>logout</button>
-				</div>
+				<SettingsPanel onLogoutRequest={() => { adminMenuOpen = false; onLogoutRequest(); }} />
 			{/if}
 		</div>
 	{/if}
@@ -148,49 +146,6 @@
 		background: rgba(var(--ui-rgb), 0.10);
 	}
 
-	.admin-menu-panel {
-		position: absolute;
-		top: calc(100% + 0.6rem);
-		right: 0;
-		background: var(--glass-bg-dark);
-		border: 1px solid var(--glass-border-dark);
-		padding: 0.7rem 0.75rem;
-		border-radius: 2px;
-		z-index: 99;
-		min-width: 120px;
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.settings-label {
-		font-family: var(--font-ui);
-		font-size: 0.52rem;
-		letter-spacing: 0.14em;
-		text-transform: uppercase;
-		color: var(--clr-dark-text);
-		margin: 0;
-		opacity: 0.5;
-	}
-
-	.settings-item {
-		padding: 0.4rem 0.5rem;
-		font-size: 0.56rem;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--clr-danger);
-		border: 1px solid rgba(var(--clr-danger), 0.3);
-		background: none;
-		cursor: pointer;
-		transition: all 0.15s;
-		opacity: 0.7;
-		margin: 0;
-	}
-
-	.settings-item:hover {
-		opacity: 1;
-		border-color: rgba(var(--clr-danger), 0.6);
-	}
 
 	/* Icon-only at narrow widths */
 	@media (max-width: 580px) {

@@ -2,7 +2,6 @@
 	import { untrack } from 'svelte';
 	import type { Book, BookDoc, BookLink } from '$lib/types';
 	import { adminState, booksState, writeQueue } from '$lib/admin/state.svelte';
-	import { encryptDoc } from '$lib/admin/crypto';
 	import { toast } from '$lib/admin/toast.svelte';
 	import allBooksStatic from '$lib/books.json';
 	import YearPicker from '$lib/components/YearPicker.svelte';
@@ -70,7 +69,7 @@
 
 			if (docContent.trim()) {
 				if (docVisibility === 'admin') {
-					const encrypted = await encryptDoc(docContent.trim(), adminState.contentKey);
+					const encrypted = await adminState.encryptContent(docContent.trim());
 					extraUpdates.push({ path: `static/docs/private/${slug}.enc`, content: JSON.stringify(encrypted) });
 				} else {
 					extraUpdates.push({ path: `static/docs/public/${slug}.md`, content: docContent.trim() });

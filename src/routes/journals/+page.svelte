@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { adminState, writeQueue, journalCache, journalIndexState } from '$lib/admin/state.svelte';
 	import { archiveState } from '$lib/admin/archive.svelte';
-	import { encryptDoc, decryptDoc } from '$lib/admin/crypto';
 	import { sealContent, sealContentKey } from '$lib/admin/tlock';
 	import { renderMarkdown } from '$lib/admin/markdown';
 	import { toast } from '$lib/admin/toast.svelte';
@@ -36,7 +35,7 @@
 				? 'Index not found — run scripts/encrypt-journals.mjs first.'
 				: `HTTP ${res.status}`);
 			const enc = await res.json();
-			const json = await decryptDoc(enc, adminState.contentKey);
+			const json = await adminState.decryptContent(enc);
 			journalIndexState.set(JSON.parse(json));
 		} catch (e: unknown) {
 			indexError = e instanceof Error && e.name === 'OperationError'
@@ -46,7 +45,7 @@
 	}
 
 	async function saveIndex(newIndex: JournalMeta[], message: string, extraUpdates: { path: string; content: string }[] = [], deletions: string[] = []) {
-		const encIndex = await encryptDoc(JSON.stringify(newIndex), adminState.contentKey);
+		const encIndex = await adminState.encryptContent(JSON.stringify(newIndex));
 		writeQueue.push({
 			domain: 'journals-index',
 			encIndexJson: JSON.stringify(encIndex),
@@ -89,7 +88,7 @@
 			}
 			const res = await fetch(`/docs/private/journals/${entry.slug}.enc`);
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
-			const markdown = await decryptDoc(await res.json(), adminState.contentKey);
+			const markdown = await adminState.decryptContent(await res.json());
 			readerHtml = renderMarkdown(markdown);
 		} catch (e: unknown) {
 			toast.error(e instanceof Error && e.name === 'OperationError'
@@ -135,7 +134,7 @@
 			}
 			const res = await fetch(`/docs/private/journals/${entry.slug}.enc`);
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
-			editorContent = await decryptDoc(await res.json(), adminState.contentKey);
+			editorContent = await adminState.decryptContent(await res.json());
 		} catch (e: unknown) {
 			toast.error(e instanceof Error ? e.message : 'Failed to load content.');
 			editorMode = 'none';
@@ -156,7 +155,7 @@
 				: editorEntry!.slug;
 
 			journalCache.set(slug, editorContent);
-			const encContent = await encryptDoc(editorContent, adminState.contentKey);
+			const encContent = await adminState.encryptContent(editorContent);
 			const meta: JournalMeta = { slug, title, date: editorDate.trim() || null };
 			const newIndex = editorMode === 'create'
 				? [meta, ...journalIndexState.entries]

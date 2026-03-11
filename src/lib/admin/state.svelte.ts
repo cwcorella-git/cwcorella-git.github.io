@@ -2,6 +2,13 @@ import type { Book, JournalMeta, LinkMeta } from '$lib/types';
 import allBooksStatic from '$lib/books.json';
 import { commitFiles } from '$lib/admin/github';
 import { draftStore } from '$lib/admin/draft';
+import {
+	encryptDoc, decryptDoc,
+	importRawKey, encryptDocWithKey, decryptDocWithKey,
+	type EncryptedDoc
+} from '$lib/admin/crypto';
+
+export type KeyMode = 'passphrase' | 'rawkey';
 
 export const ADMIN_SEQUENCE = '```';
 
@@ -208,40 +215,83 @@ export const homeState = {
 let _active = $state(false);
 let _pat = $state('');
 let _contentKey = $state('');
+let _keyMode = $state<KeyMode>('passphrase');
+let _cryptoKey = $state<CryptoKey | null>(null);
 
 export const adminState = {
-	get active() { return _active; },
-	get pat() { return _pat; },
+	get active()     { return _active; },
+	get pat()        { return _pat; },
 	get contentKey() { return _contentKey; },
+	get keyMode()    { return _keyMode; },
 
-	activate(pat: string, key: string) {
+	async activate(pat: string, key: string, mode: KeyMode = 'passphrase') {
 		_pat = pat;
 		_contentKey = key;
+		_keyMode = mode;
 		_active = true;
+		_cryptoKey = mode === 'rawkey' ? await importRawKey(key) : null;
 		sessionStorage.setItem('cwc-admin-pat', pat);
 		sessionStorage.setItem('cwc-admin-key', key);
+		sessionStorage.setItem('cwc-admin-keymode', mode);
 	},
 
 	async logout() {
-await writeQueue.flush();
+		await writeQueue.flush();
 		_active = false;
 		_pat = '';
 		_contentKey = '';
+		_keyMode = 'passphrase';
+		_cryptoKey = null;
 		sessionStorage.removeItem('cwc-admin-pat');
 		sessionStorage.removeItem('cwc-admin-key');
+		sessionStorage.removeItem('cwc-admin-keymode');
 		journalIndexState.clear();
 		linksState.clear();
 	},
 
-	restoreFromSession() {
+	async restoreFromSession() {
 		const pat = sessionStorage.getItem('cwc-admin-pat');
 		const key = sessionStorage.getItem('cwc-admin-key');
+		const mode = (sessionStorage.getItem('cwc-admin-keymode') ?? 'passphrase') as KeyMode;
 		if (pat && key) {
 			_pat = pat;
 			_contentKey = key;
+			_keyMode = mode;
+			_cryptoKey = mode === 'rawkey' ? await importRawKey(key) : null;
 			_active = true;
 		}
-	}
+	},
+
+	/** Update PAT mid-session (no re-auth needed). */
+	updatePAT(newPat: string) {
+		_pat = newPat.trim();
+		sessionStorage.setItem('cwc-admin-pat', _pat);
+	},
+
+	/** Update content key mid-session. */
+	async updateContentKey(newKey: string, mode: KeyMode) {
+		_contentKey = newKey.trim();
+		_keyMode = mode;
+		_cryptoKey = mode === 'rawkey' ? await importRawKey(_contentKey) : null;
+		sessionStorage.setItem('cwc-admin-key', _contentKey);
+		sessionStorage.setItem('cwc-admin-keymode', mode);
+	},
+
+	/** Encrypt content using the current key/mode. */
+	async encryptContent(markdown: string): Promise<EncryptedDoc> {
+		if (_keyMode === 'rawkey' && _cryptoKey) {
+			return encryptDocWithKey(markdown, _cryptoKey);
+		}
+		return encryptDoc(markdown, _contentKey);
+	},
+
+	/** Decrypt content — auto-detects mode from salt field. */
+	async decryptContent(enc: EncryptedDoc): Promise<string> {
+		if (enc.salt === '' && _cryptoKey) {
+			return decryptDocWithKey(enc, _cryptoKey);
+		}
+		return decryptDoc(enc, _contentKey);
+	},
 };
 
 // ── BookForm state ────────────────────────────────────────────────────────────

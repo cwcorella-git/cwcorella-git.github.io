@@ -38,7 +38,7 @@
 
 	onMount(async () => {
 		themeState.restoreFromStorage();
-		adminState.restoreFromSession();
+		await adminState.restoreFromSession();
 		const restored = writeQueue.restoreFromDraft();
 		if (restored > 0) toast.success(`draft restored — pending sync`);
 		if (isUnlockDay()) await archiveState.tryUnlock();

@@ -30,7 +30,7 @@
 		try {
 			const valid = await validatePAT(pat.trim());
 			if (!valid) { patError = 'Invalid PAT — check token and permissions.'; return; }
-			adminState.activate(pat.trim(), contentKey.trim());
+			await adminState.activate(pat.trim(), contentKey.trim());
 			open = false;
 		} catch {
 			toast.error('Network error — could not validate PAT.');

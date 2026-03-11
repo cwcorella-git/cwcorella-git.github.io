@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { adminState, writeQueue, linksState } from '$lib/admin/state.svelte';
-	import { encryptDoc, decryptDoc } from '$lib/admin/crypto';
 	import { toast } from '$lib/admin/toast.svelte';
 	import type { LinkMeta } from '$lib/types';
 	import CategorySection from '$lib/components/CategorySection.svelte';
@@ -21,7 +20,7 @@
 				? 'Index not found — run scripts/import-bookmarks.mjs first.'
 				: `HTTP ${res.status}`);
 			const enc = await res.json();
-			const json = await decryptDoc(enc, adminState.contentKey);
+			const json = await adminState.decryptContent(enc);
 			linksState.set(JSON.parse(json));
 		} catch (e: unknown) {
 			indexError = e instanceof Error && e.name === 'OperationError'
@@ -31,7 +30,7 @@
 	}
 
 	async function saveIndex(newIndex: LinkMeta[], message: string) {
-		const encIndex = await encryptDoc(JSON.stringify(newIndex), adminState.contentKey);
+		const encIndex = await adminState.encryptContent(JSON.stringify(newIndex));
 		writeQueue.push({ domain: 'links', encIndexJson: JSON.stringify(encIndex), message });
 		linksState.set(newIndex);
 	}
