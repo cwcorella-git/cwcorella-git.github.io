@@ -86,6 +86,7 @@ export const writeQueue = {
 		if (!_pat) {
 			_syncStatus = 'error';
 			_syncError = 'GitHub PAT not set — add it in admin settings (⊙).';
+			console.warn('[writeQueue] flush blocked: no PAT');
 			return;
 		}
 		_flushing = true;
@@ -107,6 +108,7 @@ export const writeQueue = {
 			_syncStatus = _pending.size > 0 ? 'dirty' : 'idle';
 			_syncError = '';
 		} catch (e: unknown) {
+			console.error('[writeQueue] flush failed:', e);
 			// restore snapshot entries that weren't yet pushed during this flush
 			const restored = new Map(_pending);
 			for (const [k, v] of snapshot) {

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { adminState, writeQueue } from '$lib/admin/state.svelte';
+	import { toast } from '$lib/admin/toast.svelte';
 	import ThemePanel from './ThemePanel.svelte';
 	import SettingsPanel from './SettingsPanel.svelte';
 
@@ -10,6 +11,9 @@
 
 	async function handleSync() {
 		await writeQueue.flush();
+		if (writeQueue.status === 'error') {
+			toast.error(writeQueue.error || 'Sync failed.');
+		}
 	}
 
 	function toggleThemePanel() {
