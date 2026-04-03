@@ -35,6 +35,18 @@
 	function removeLink(i: number) { links = links.filter((_, idx) => idx !== i); }
 	let docVisibility = $state<'public' | 'admin'>(_book?.doc?.visibility ?? 'public');
 	let docContent = $state('');
+	let docLoading = $state(false);
+
+	// Pre-populate doc content for public docs so the user can see/edit existing content.
+	// Private (encrypted) docs are skipped — decrypting on every open is too heavy.
+	if (_book?.doc?.visibility === 'public' && _book.doc.file) {
+		docLoading = true;
+		fetch(`/docs/public/${_book.doc.file}.md`)
+			.then(r => r.ok ? r.text() : Promise.reject())
+			.then(text => { docContent = text; })
+			.catch(() => { /* file missing or fetch failed — leave empty */ })
+			.finally(() => { docLoading = false; });
+	}
 
 	let saving = $state(false);
 	let deleting = $state(false);
@@ -223,8 +235,8 @@
 					</label>
 				</div>
 				<label>
-					<span>Markdown content (leave empty to keep existing)</span>
-					<textarea bind:value={docContent} rows={10} placeholder="# Title&#10;&#10;Paste markdown…"></textarea>
+					<span>Markdown content{docLoading ? ' (loading…)' : ''}</span>
+					<textarea bind:value={docContent} rows={10} placeholder="# Title&#10;&#10;Paste markdown…" disabled={docLoading}></textarea>
 				</label>
 			</fieldset>
 		</div>

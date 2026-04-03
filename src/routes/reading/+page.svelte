@@ -3,7 +3,7 @@
 	import allBooksStatic from '$lib/books.json';
 	import { adminState, bookFormState, booksState, writeQueue } from '$lib/admin/state.svelte';
 	import { toast } from '$lib/admin/toast.svelte';
-	import DocReader from '$lib/components/DocReader.svelte';
+	import BookView from '$lib/components/BookView.svelte';
 
 	// Derive from shared booksState so BookForm updates are visible here
 	let books = $derived(booksState.books);
@@ -105,15 +105,24 @@
 		return book.links && book.links.length > 0;
 	}
 
-	// ── doc reader ───────────────────────────────────────────────
-	let docReaderBook = $state<Book | null>(null);
+	// ── book view ────────────────────────────────────────────────
+	let bookViewBook = $state<Book | null>(null);
 
 	function handleRowClick(book: Book) {
 		if (book.doc?.visibility === 'admin' && !adminState.active) {
 			toast.error('no source available');
 			return;
 		}
-		docReaderBook = book;
+		bookViewBook = book;
+	}
+
+	function handleBookSaved(updatedBooks: Book[]) {
+		// Keep bookViewBook in sync with the updated book entry so the
+		// header/fields reflect the save without having to re-open.
+		if (bookViewBook) {
+			const updated = updatedBooks.find(b => b.id === bookViewBook!.id);
+			if (updated) bookViewBook = updated;
+		}
 	}
 
 </script>
@@ -124,9 +133,13 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<!-- DocReader overlay -->
-{#if docReaderBook}
-	<DocReader book={docReaderBook} onClose={() => (docReaderBook = null)} />
+<!-- BookView overlay -->
+{#if bookViewBook}
+	<BookView
+		book={bookViewBook}
+		onClose={() => (bookViewBook = null)}
+		onSaved={handleBookSaved}
+	/>
 {/if}
 
 <!-- Context menu -->
@@ -210,13 +223,6 @@
 								onclick={() => toggleRead(book)}
 								aria-label={book.read ? 'Mark as unread' : 'Mark as read'}
 							>{book.read ? 'unmark' : 'mark read'}</button>
-						{/if}
-						{#if adminState.active}
-							<button
-								class="edit-pencil"
-								onclick={() => bookFormState.openEdit(book)}
-								aria-label="Edit {book.title}"
-							>edit</button>
 						{/if}
 					</div>
 				</li>
@@ -400,22 +406,6 @@
 	.read-toggle.is-read { color: var(--clr-text); }
 	.read-toggle:disabled { opacity: 0.4; cursor: not-allowed; }
 
-	.edit-pencil {
-		background: none;
-		border: none;
-		cursor: pointer;
-		font-family: var(--font-ui);
-		font-size: 0.52rem;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--clr-text);
-		padding: 0 0.6rem;
-		transition: color 0.15s;
-		flex-shrink: 0;
-		white-space: nowrap;
-	}
-	.edit-pencil:hover { color: var(--clr-text); }
-
 	.count {
 		margin-top: 2rem;
 		font-family: var(--font-ui);
@@ -464,7 +454,7 @@
 		.page { padding-top: 4.5rem; }
 		.search-area { margin-bottom: 1.5rem; }
 		.inner { padding: 1.5rem 1.25rem 4rem; }
-		.read-toggle, .edit-pencil {
+		.read-toggle {
 			padding: 0.5rem 0.4rem;
 			min-height: 44px;
 			display: inline-flex;

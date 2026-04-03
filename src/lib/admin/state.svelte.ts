@@ -74,6 +74,17 @@ export const writeQueue = {
 				payload = { ...payload, extraUpdates: [...mergedUpdates.values()], deletions: mergedDeletions };
 			}
 		}
+		// Books: merge extraUpdates/deletions — prevents mark-read or other rapid pushes
+		// from discarding a pending doc-file write that was queued by save().
+		if (payload.domain === 'books') {
+			const existing = _pending.get('books') as Extract<DomainPayload, { domain: 'books' }> | undefined;
+			if (existing) {
+				const mergedUpdates = new Map((existing.extraUpdates ?? []).map(u => [u.path, u]));
+				for (const u of (payload.extraUpdates ?? [])) mergedUpdates.set(u.path, u);
+				const mergedDeletions = [...new Set([...(existing.deletions ?? []), ...(payload.deletions ?? [])])];
+				payload = { ...payload, extraUpdates: [...mergedUpdates.values()], deletions: mergedDeletions };
+			}
+		}
 		_pending = new Map(_pending).set(payload.domain, payload);
 		_syncStatus = 'dirty';
 		draftStore.save(payload.domain, payload);

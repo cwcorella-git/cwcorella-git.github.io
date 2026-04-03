@@ -32,5 +32,12 @@ export function renderMarkdown(markdown: string): string {
 		const anchor = slugify(text);
 		return `<h${depth} id="${anchor}">${text}</h${depth}>\n`;
 	};
-	return marked(markdown, { renderer }) as string;
+	let html = marked(markdown, { renderer }) as string;
+	// Convert <ann note="...">text</ann> to interactive hover-annotation spans.
+	// The note attribute may contain HTML entities but not unescaped quotes.
+	html = html.replace(/<ann\s+note="([^"]*)">([\s\S]*?)<\/ann>/g, (_, note, text) => {
+		const escaped = note.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+		return `<span class="ann" data-note="${escaped}">${text}</span>`;
+	});
+	return html;
 }
