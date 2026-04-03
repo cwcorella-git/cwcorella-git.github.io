@@ -50,6 +50,7 @@
 
 	let saving = $state(false);
 	let deleting = $state(false);
+	let deleteConfirm = $state(false);
 	let validationError = $state('');
 
 	function slugify(text: string): string {
@@ -248,9 +249,16 @@
 
 	<div class="modal-footer">
 		{#if !isNew}
-			<button class="delete-btn" onclick={deleteBook} disabled={deleting || saving}>
-				{deleting ? 'deleting…' : 'delete'}
-			</button>
+			{#if deleteConfirm}
+				<div class="delete-confirm">
+					<button class="delete-btn confirm" onclick={deleteBook} disabled={deleting}>
+						{deleting ? 'deleting…' : 'yes, delete'}
+					</button>
+					<button class="delete-cancel" onclick={() => deleteConfirm = false} disabled={deleting}>cancel</button>
+				</div>
+			{:else}
+				<button class="delete-btn" onclick={() => deleteConfirm = true} disabled={saving}>delete</button>
+			{/if}
 		{/if}
 		<div class="footer-right">
 			<button onclick={onClose} disabled={saving || deleting}>cancel</button>
@@ -477,6 +485,17 @@
 		color: var(--clr-danger-muted);
 	}
 	.delete-btn:hover:not(:disabled) { color: var(--clr-danger); border-color: rgba(180, 60, 60, 0.6); background: rgba(180, 60, 60, 0.06); }
+	.delete-btn.confirm { background: rgba(180, 60, 60, 0.08); }
+
+	.delete-confirm { display: flex; align-items: center; gap: 0.5rem; }
+	.delete-cancel {
+		background: none; border: none;
+		color: var(--clr-dark-text); opacity: 0.55;
+		font-family: var(--font-ui); font-size: 0.58rem;
+		letter-spacing: 0.06em; padding: 0.2rem 0.3rem;
+		cursor: pointer; transition: opacity 0.15s;
+	}
+	.delete-cancel:hover:not(:disabled) { opacity: 1; }
 
 	@media (max-width: 480px) {
 		.modal-body { padding: 1rem; }

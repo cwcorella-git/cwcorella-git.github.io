@@ -158,6 +158,9 @@
 		onClose();
 	}
 
+	// ── delete confirm ────────────────────────────────────────────
+	let deleteConfirm = $state(false);
+
 	// ── notes panel (view mode) ───────────────────────────────────
 	let notesOpen = $state(false);
 
@@ -244,7 +247,7 @@
 			{/if}
 			{#if mode === 'edit'}
 				<button class="hdr-btn save-btn" onclick={save} disabled={saving}>{saving ? 'saving…' : 'save'}</button>
-				<button class="hdr-btn" onclick={() => { mode = 'view'; validationError = ''; }}>cancel</button>
+				<button class="hdr-btn" onclick={() => { mode = 'view'; validationError = ''; deleteConfirm = false; }}>cancel</button>
 			{/if}
 			<button class="close-btn" onclick={onClose} aria-label="Close">×</button>
 		</div>
@@ -348,7 +351,15 @@
 
 					<!-- Delete -->
 					<div class="sidebar-section sidebar-footer">
-						<button class="delete-btn" onclick={deleteBook}>delete book</button>
+						{#if deleteConfirm}
+							<p class="delete-confirm-msg">delete "{book.title}"?</p>
+							<div class="delete-confirm-btns">
+								<button class="delete-btn confirm" onclick={deleteBook}>yes, delete</button>
+								<button class="delete-cancel" onclick={() => deleteConfirm = false}>cancel</button>
+							</div>
+						{:else}
+							<button class="delete-btn" onclick={() => deleteConfirm = true}>delete book</button>
+						{/if}
 					</div>
 				</div>
 			</div>
@@ -839,6 +850,32 @@
 		align-self: flex-start;
 	}
 	.delete-btn:hover { color: var(--clr-danger); border-color: rgba(180,60,60,0.6); }
+	.delete-btn.confirm { background: rgba(180,60,60,0.08); }
+
+	.delete-confirm-msg {
+		font-family: var(--font-ui);
+		font-size: 0.6rem;
+		color: var(--clr-text);
+		opacity: 0.7;
+		margin: 0 0 0.4rem;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.delete-confirm-btns { display: flex; gap: 0.4rem; align-items: center; }
+	.delete-cancel {
+		background: none;
+		border: none;
+		color: var(--clr-text);
+		font-family: var(--font-ui);
+		font-size: 0.58rem;
+		letter-spacing: 0.06em;
+		padding: 0.3rem 0.4rem;
+		cursor: pointer;
+		opacity: 0.55;
+		transition: opacity 0.15s;
+	}
+	.delete-cancel:hover { opacity: 1; }
 
 	/* ── footer (view mode) ──────────────────────────────────────── */
 	.overlay-footer {
