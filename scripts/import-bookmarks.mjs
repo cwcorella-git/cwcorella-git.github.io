@@ -8,7 +8,10 @@
  * Usage:
  *   node scripts/import-bookmarks.mjs <passphrase> [--fetch-titles] [--dry-run]
  *
- * Reads three hardcoded bookmark files from ~/Downloads.
+ * Modes:
+ *   (default)  — full overwrite from ~/Downloads source files
+ *   --merge    — load existing links-index.enc, dedup, append new from ~/Desktop/bookmarks.html
+ *
  * Output: static/docs/private/links-index.enc
  */
 
@@ -25,11 +28,13 @@ const getRandomValues = (arr) => webcrypto.getRandomValues(arr);
 
 const args = process.argv.slice(2);
 const passphrase = args.find(a => !a.startsWith('--'));
+const mergeMode = args.includes('--merge');
+const retagAll = args.includes('--retag-all');
 const fetchTitles = args.includes('--fetch-titles');
 const dryRun = args.includes('--dry-run');
 
 if (!passphrase) {
-  console.error('Usage: node scripts/import-bookmarks.mjs <passphrase> [--fetch-titles] [--dry-run]');
+  console.error('Usage: node scripts/import-bookmarks.mjs <passphrase> [--merge] [--fetch-titles] [--dry-run]');
   process.exit(1);
 }
 
@@ -38,6 +43,8 @@ if (!passphrase) {
 const __dir = new URL('..', import.meta.url).pathname;
 const OUTPUT_PATH = join(__dir, 'static/docs/private/links-index.enc');
 const DOWNLOADS = join(homedir(), 'Downloads');
+
+const MERGE_SOURCE = join(homedir(), 'Desktop', 'bookmarks.html');
 
 const SOURCE_FILES = [
   { path: join(DOWNLOADS, 'bookmarks.html'),                        source: '◇' },
@@ -66,6 +73,48 @@ async function encryptData(text) {
   );
   const ct = await subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(text));
   return { iv: toB64(iv), ct: toB64(ct), salt: toB64(salt) };
+}
+
+function fromB64(b64) {
+  return Uint8Array.from(Buffer.from(b64, 'base64'));
+}
+
+async function decryptData(obj) {
+  const enc = new TextEncoder();
+  const dec = new TextDecoder();
+  const keyMaterial = await subtle.importKey(
+    'raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey']
+  );
+  const key = await subtle.deriveKey(
+    { name: 'PBKDF2', salt: fromB64(obj.salt), iterations: 200_000, hash: 'SHA-256' },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false, ['decrypt']
+  );
+  const pt = await subtle.decrypt({ name: 'AES-GCM', iv: fromB64(obj.iv) }, key, fromB64(obj.ct));
+  return dec.decode(pt);
+}
+
+// ── URL normalization (for dedup) ────────────────────────────────────────
+
+// Domains where query params are noise (product ID is in the path)
+const STRIP_QUERY_DOMAINS = new Set([
+  'newegg.com', 'amazon.com', 'etsy.com', 'bhphotovideo.com',
+  'adorama.com', 'pcpartpicker.com', 'homedepot.com', 'store.steampowered.com',
+]);
+
+function normalizeUrl(url) {
+  try {
+    const u = new URL(url);
+    u.hostname = u.hostname.toLowerCase();
+    const bare = u.hostname.replace(/^www\./, '');
+    let path = u.pathname.replace(/\/+$/, '') || '/';
+    // Strip query params for shopping/product domains
+    const search = STRIP_QUERY_DOMAINS.has(bare) ? '' : u.search;
+    return `${u.protocol}//${u.host}${path}${search}`;
+  } catch {
+    return url.toLowerCase().replace(/\/+$/, '');
+  }
 }
 
 // ── ID generation ─────────────────────────────────────────────────────────
@@ -217,16 +266,26 @@ const FOLDER_TO_CATEGORY = {
   'music': 'Media',
   'artists': 'Media',
   'godot shaders': 'Game Dev',
+  'gamedev': 'Game Dev',
   'e-reader': 'Hardware',
   'server hardware': 'Hardware',
   'technology': 'Technology',
   'tools': 'Technology',
+  'hugging face': 'Technology',
+  'github': 'Technology',
   'reading': 'Books',
   'authors': 'Books',
   'organizations': 'Organizations',
   'website': 'Technology',
   'marketing (examples)': 'Technology',
   'rstu contribution': 'Organizations',
+  'sourced': 'Research',
+  'references': 'Research',
+  'research': 'Research',
+  'work': 'Personal',
+  'to source': 'Personal',
+  'to scrape': 'Personal',
+  'reddit': 'Personal',
 };
 
 const DOMAIN_TO_CATEGORY = {
@@ -323,6 +382,13 @@ const DOMAIN_TO_CATEGORY = {
   'eff.org': 'Politics',
   'gnu.org': 'Politics',
   'fsf.org': 'Politics',
+  'itsgoingdown.org': 'Politics',
+  'youngcommunists.org': 'Politics',
+  'workerorganizing.org': 'Politics',
+  'weareultraviolet.org': 'Politics',
+  'nonviolent-conflict.org': 'Politics',
+  'unicornriot.ninja': 'Politics',
+  'workingclasshistory.com': 'Politics',
   'reddit.com': 'Personal',
   // History
   'archives.gov': 'History',
@@ -345,21 +411,32 @@ const DOMAIN_TO_CATEGORY = {
   'poetryfoundation.org': 'Media',
   'ranker.com': 'Media',
   'store.steampowered.com': 'Media',
+  'webtoons.com': 'Media',
+  'allmanga.to': 'Media',
+  'emuparadise.me': 'Media',
+  'readcomiconline.to': 'Media',
   // More game dev
   'shadertoy.com': 'Game Dev',
+  'moddb.com': 'Game Dev',
   // More hardware
   'printables.com': 'Hardware',
   'bambulab.com': 'Hardware',
+  'us.store.bambulab.com': 'Hardware',
   'newegg.com': 'Hardware',
   'bhphotovideo.com': 'Hardware',
   'mcmaster.com': 'Hardware',
   'rdotdisplays.com': 'Hardware',
   'bluettipower.com': 'Hardware',
+  'homedepot.com': 'Hardware',
+  'adorama.com': 'Hardware',
+  'pcpartpicker.com': 'Hardware',
   // More politics
   'sproutdistro.com': 'Politics',
   'rebelsteps.com': 'Politics',
   'opencollective.com': 'Organizations',
   'legiscan.com': 'Politics',
+  'nvchwa.org': 'Organizations',
+  'nevadacertboard.org': 'Organizations',
   // More technology
   'nvidia.com': 'Technology',
   'docs.ipfs.tech': 'Technology',
@@ -372,6 +449,41 @@ const DOMAIN_TO_CATEGORY = {
   'google.com': 'Personal',
   'reno.gov': 'Personal',
   'discord.com': 'Personal',
+  'duolingo.com': 'Personal',
+  'kickstarter.com': 'Personal',
+};
+
+// ── Reddit subreddit categorization ──────────────────────────────────────
+
+const SUBREDDIT_CATEGORY = {
+  'vibecoding': 'Technology',
+  'VibeCodersNest': 'Technology',
+  'ClaudeCode': 'Technology',
+  'GeminiAI': 'Technology',
+  'TopologyAI': 'Technology',
+  'LocalLLaMA': 'Technology',
+  'MachineLearning': 'Technology',
+  'programming': 'Technology',
+  'linux': 'Technology',
+  'linux_gaming': 'Technology',
+  'selfhosted': 'Technology',
+  'Blender': 'Game Dev',
+  'godot': 'Game Dev',
+  'gamedev': 'Game Dev',
+  'IndieDev': 'Game Dev',
+  'askphilosophy': 'Research',
+  'philosophy': 'Research',
+  'neuroscience': 'Research',
+  'psychology': 'Research',
+  'AskHistorians': 'History',
+  'Anarchism': 'Politics',
+  'socialism': 'Politics',
+  'antiwork': 'Politics',
+  'SteamDeck': 'Hardware',
+  'MechanicalKeyboards': 'Hardware',
+  '3Dprinting': 'Hardware',
+  'Meshtastic': 'Hardware',
+  'solopreneur': 'Personal',
 };
 
 const TITLE_KEYWORD_CATEGORY = [
@@ -389,7 +501,17 @@ const TITLE_KEYWORD_CATEGORY = [
 ];
 
 function categorize(bookmark) {
-  // 1. Domain match (most reliable — handles the unsorted/godot catch-all bulk)
+  // 1. Reddit subreddit-specific categorization
+  try {
+    const u = new URL(bookmark.url);
+    const hostname = u.hostname.replace(/^www\./, '');
+    if (hostname === 'reddit.com' || hostname === 'old.reddit.com') {
+      const subMatch = u.pathname.match(/^\/r\/([^/]+)/);
+      if (subMatch && SUBREDDIT_CATEGORY[subMatch[1]]) return SUBREDDIT_CATEGORY[subMatch[1]];
+    }
+  } catch { /* ignore */ }
+
+  // 2. Domain match (most reliable — handles the unsorted/godot catch-all bulk)
   try {
     const hostname = new URL(bookmark.url).hostname.replace(/^www\./, '');
     if (DOMAIN_TO_CATEGORY[hostname]) return DOMAIN_TO_CATEGORY[hostname];
@@ -532,22 +654,58 @@ async function fetchTitlesInBatches(links, concurrency = 5) {
 
 // ── main ──────────────────────────────────────────────────────────────────
 
-console.log('import-bookmarks.mjs\n');
+console.log(`import-bookmarks.mjs${mergeMode ? ' (merge mode)' : ''}\n`);
 
-// Parse all source files
+// ── Load existing index (merge mode) ─────────────────────────────────────
+
+let existingLinks = [];
+let existingUrls = new Set();
+
+if (mergeMode) {
+  try {
+    const enc = JSON.parse(readFileSync(OUTPUT_PATH, 'utf8'));
+    const json = await decryptData(enc);
+    existingLinks = JSON.parse(json);
+    for (const l of existingLinks) existingUrls.add(normalizeUrl(l.url));
+    console.log(`Existing index: ${existingLinks.length} links`);
+  } catch (e) {
+    console.error('Failed to decrypt links-index.enc — check passphrase');
+    console.error(e.message);
+    process.exit(1);
+  }
+}
+
+// ── Parse source files ───────────────────────────────────────────────────
+
 const allBookmarks = [];
-for (const { path, source } of SOURCE_FILES) {
+
+if (mergeMode) {
+  // Merge: single file from Desktop
   let html;
   try {
-    html = readFileSync(path, 'utf8');
+    html = readFileSync(MERGE_SOURCE, 'utf8');
   } catch {
-    console.error(`Cannot read: ${path}`);
+    console.error(`Cannot read: ${MERGE_SOURCE}`);
     process.exit(1);
   }
   const parsed = parseBookmarkHtml(html);
-  for (const b of parsed) b.source = source;
   allBookmarks.push(...parsed);
-  console.log(`${source} ${path.split('/').pop()}: ${parsed.length} bookmarks`);
+  console.log(`${MERGE_SOURCE.split('/').pop()}: ${parsed.length} bookmarks`);
+} else {
+  // Full overwrite: multiple source files from Downloads
+  for (const { path, source } of SOURCE_FILES) {
+    let html;
+    try {
+      html = readFileSync(path, 'utf8');
+    } catch {
+      console.error(`Cannot read: ${path}`);
+      process.exit(1);
+    }
+    const parsed = parseBookmarkHtml(html);
+    for (const b of parsed) b.source = source;
+    allBookmarks.push(...parsed);
+    console.log(`${source} ${path.split('/').pop()}: ${parsed.length} bookmarks`);
+  }
 }
 
 console.log(`\nTotal raw: ${allBookmarks.length}`);
@@ -557,32 +715,48 @@ const cleaned = allBookmarks.filter(b => !isJunk(b.url));
 const junkCount = allBookmarks.length - cleaned.length;
 console.log(`Junk removed: ${junkCount}`);
 
-// Deduplicate by URL — diamond wins, then newest addDate
+// Deduplicate within the import batch by URL
 const urlMap = new Map();
 for (const b of cleaned) {
-  const existing = urlMap.get(b.url);
+  const normUrl = normalizeUrl(b.url);
+  const existing = urlMap.get(normUrl);
   if (!existing) {
-    urlMap.set(b.url, b);
-  } else {
-    // Diamond (◇) always wins
+    urlMap.set(normUrl, b);
+  } else if (!mergeMode) {
+    // Full-overwrite mode: diamond (◇) always wins, then newest addDate
     if (b.source === '◇' && existing.source !== '◇') {
-      // Keep diamond's data but merge folder context
       b.folders = [...new Set([...b.folders, ...existing.folders])];
-      urlMap.set(b.url, b);
+      urlMap.set(normUrl, b);
     } else if (existing.source !== '◇' && b.addDate > existing.addDate) {
-      // Neither is diamond — keep newest
       b.folders = [...new Set([...b.folders, ...existing.folders])];
-      urlMap.set(b.url, b);
+      urlMap.set(normUrl, b);
     }
-    // Otherwise keep existing (it's diamond, or older but diamond)
+  } else {
+    // Merge mode: keep newest addDate, merge folders
+    if (b.addDate > existing.addDate) {
+      b.folders = [...new Set([...b.folders, ...existing.folders])];
+      urlMap.set(normUrl, b);
+    } else {
+      existing.folders = [...new Set([...existing.folders, ...b.folders])];
+    }
   }
 }
 
-const unique = [...urlMap.values()];
-console.log(`After dedup: ${unique.length} unique links`);
+let unique = [...urlMap.values()];
+console.log(`After internal dedup: ${unique.length} unique links`);
+
+// Merge mode: remove entries whose URL is already in the existing index
+let skippedDupes = 0;
+if (mergeMode) {
+  const before = unique.length;
+  unique = unique.filter(b => !existingUrls.has(normalizeUrl(b.url)));
+  skippedDupes = before - unique.length;
+  console.log(`Already in index (skipped): ${skippedDupes}`);
+  console.log(`New entries to add: ${unique.length}`);
+}
 
 // Build LinkMeta objects
-const links = unique.map(b => {
+const newLinks = unique.map(b => {
   const category = categorize(b);
   const tags = autoTag(b);
   const added = b.addDate
@@ -597,41 +771,60 @@ const links = unique.map(b => {
     category,
     tags,
     added,
-    source: b.source,
+    ...(b.source ? { source: b.source } : {}),
     _needsTitle: needsTitle, // internal flag, stripped before output
   };
 });
 
-// Stats
+// Stats for new entries
 const categoryStats = {};
-for (const l of links) categoryStats[l.category] = (categoryStats[l.category] || 0) + 1;
-console.log('\nCategories:');
+for (const l of newLinks) categoryStats[l.category] = (categoryStats[l.category] || 0) + 1;
+console.log(`\nNew entries by category:`);
 Object.entries(categoryStats)
   .sort((a, b) => b[1] - a[1])
   .forEach(([cat, n]) => console.log(`  ${cat}: ${n}`));
 
-const sourceStats = {};
-for (const l of links) sourceStats[l.source] = (sourceStats[l.source] || 0) + 1;
-console.log('\nSources:');
-Object.entries(sourceStats).forEach(([s, n]) => console.log(`  ${s}: ${n}`));
+if (!mergeMode) {
+  const sourceStats = {};
+  for (const l of newLinks) sourceStats[l.source] = (sourceStats[l.source] || 0) + 1;
+  console.log('\nSources:');
+  Object.entries(sourceStats).forEach(([s, n]) => console.log(`  ${s}: ${n}`));
+}
 
-const needsTitleCount = links.filter(l => l._needsTitle).length;
+const needsTitleCount = newLinks.filter(l => l._needsTitle).length;
 console.log(`\nDomain-only titles needing fetch: ${needsTitleCount}`);
 
 // Fetch titles if requested
 if (fetchTitles) {
-  await fetchTitlesInBatches(links);
+  await fetchTitlesInBatches(newLinks);
 }
 
 // Strip internal flags before output
-const output = links.map(({ _needsTitle, ...rest }) => rest);
+const cleanedNew = newLinks.map(({ _needsTitle, ...rest }) => rest);
+
+// Merge or overwrite
+let output = mergeMode ? [...existingLinks, ...cleanedNew] : cleanedNew;
+
+// Retag all entries (backfill tags on existing links that predate the tag rules)
+if (retagAll) {
+  let gained = 0;
+  for (const link of output) {
+    const fresh = autoTag({ title: link.title, url: link.url });
+    const before = link.tags ? link.tags.length : 0;
+    link.tags = [...new Set([...(link.tags || []), ...fresh])];
+    if (link.tags.length > before) gained++;
+  }
+  console.log(`\nRetag pass: ${gained} links gained new tags`);
+}
 
 if (dryRun) {
   console.log('\n--- DRY RUN — no files written ---');
   console.log(`Would write ${output.length} links to ${OUTPUT_PATH}`);
-  // Write a JSON preview to stdout for inspection
-  const preview = output.slice(0, 5);
-  console.log('\nSample (first 5):');
+  if (mergeMode) {
+    console.log(`  (${existingLinks.length} existing + ${cleanedNew.length} new)`);
+  }
+  const preview = cleanedNew.slice(0, 10);
+  console.log(`\nSample new entries (first ${preview.length}):`);
   console.log(JSON.stringify(preview, null, 2));
 } else {
   // Encrypt and write
@@ -639,5 +832,8 @@ if (dryRun) {
   const encrypted = await encryptData(JSON.stringify(output));
   writeFileSync(OUTPUT_PATH, JSON.stringify(encrypted));
   console.log(`\n✓ links-index.enc written (${output.length} entries)`);
+  if (mergeMode) {
+    console.log(`  (${existingLinks.length} existing + ${cleanedNew.length} new)`);
+  }
   console.log('Next: git add static/docs/private/links-index.enc && git commit && git push');
 }
