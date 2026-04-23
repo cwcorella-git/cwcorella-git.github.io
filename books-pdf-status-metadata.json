@@ -1,0 +1,10 @@
+{
+  "generated": "2026-04-23T04:11:46.140Z",
+  "total_books": 901,
+  "status_summary": {
+    "found": 104,
+    "not-searched": 797
+  },
+  "bonus_books_in_pdf_index": 89,
+  "notes": "Phase 2 agent found 89 additional related works (not in reading collection). This file tracks only your 901-book collection."
+}
