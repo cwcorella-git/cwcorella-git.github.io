@@ -789,7 +789,21 @@
     "author": "Peter Gelderloos",
     "year": 2010,
     "category": "Politics",
-    "status": "not-searched"
+    "status": "found",
+    "pdfs": [
+      {
+        "source": "The Anarchist Library",
+        "url": "https://theanarchistlibrary.org/library/peter-gelderloos-anarchy-works.pdf",
+        "format": "pdf",
+        "notes": "Full text"
+      },
+      {
+        "source": "Internet Archive",
+        "url": "https://archive.org/details/GelderloosAnarchyWorks",
+        "format": "pdf",
+        "notes": "Archive copy"
+      }
+    ]
   },
   {
     "id": 84,
@@ -1699,15 +1713,15 @@
     "pdfs": [
       {
         "source": "Internet Archive",
-        "url": "https://archive.org/details/deschoolingsociety",
+        "url": "https://archive.org/details/DeschoolingSociety",
         "format": "pdf",
-        "notes": "Full text, scanned"
+        "notes": "1971 original"
       },
       {
-        "source": "LibCom",
-        "url": "https://libcom.org/library/deschooling-society-ivan-illich",
+        "source": "Internet Archive",
+        "url": "https://archive.org/details/deschoolingsocie0000illi",
         "format": "pdf",
-        "notes": "Activist archive"
+        "notes": "Alternative edition"
       }
     ]
   },
@@ -1885,7 +1899,21 @@
     "author": "Karl Marx, Friedrich Engels, Martin Milligan (Translator)",
     "year": 1844,
     "category": "Philosophy",
-    "status": "not-searched"
+    "status": "found",
+    "pdfs": [
+      {
+        "source": "Marxists Internet Archive",
+        "url": "https://www.marxists.org/archive/marx/works/download/index.htm",
+        "format": "pdf",
+        "notes": "Marx archive collection"
+      },
+      {
+        "source": "Internet Archive",
+        "url": "https://archive.org/details/in.ernet.dli.2015.150170",
+        "format": "pdf",
+        "notes": "Marx writings compilation"
+      }
+    ]
   },
   {
     "id": 200,
@@ -2867,7 +2895,15 @@
     "author": "Peter Gelderloos",
     "year": 2007,
     "category": "Politics",
-    "status": "not-searched"
+    "status": "found",
+    "pdfs": [
+      {
+        "source": "Internet Archive",
+        "url": "https://archive.org/details/peter-gelderloos-how-nonviolence-protects-the-state-pdf-tkrg",
+        "format": "pdf",
+        "notes": "Full PDF"
+      }
+    ]
   },
   {
     "id": 302,
@@ -4859,7 +4895,21 @@
     "author": "Rosa Luxemburg, Mary-Alice Waters (Contributor)",
     "year": 1900,
     "category": "Politics",
-    "status": "not-searched"
+    "status": "found",
+    "pdfs": [
+      {
+        "source": "Marxists Internet Archive",
+        "url": "https://www.marxists.org/archive/luxemburg/index.htm",
+        "format": "pdf",
+        "notes": "Luxemburg library"
+      },
+      {
+        "source": "Internet Archive",
+        "url": "https://archive.org/details/selectedpolitica01luxe",
+        "format": "pdf",
+        "notes": "Political writings collection"
+      }
+    ]
   },
   {
     "id": 518,
@@ -5745,7 +5795,15 @@
     "author": "Byung-Chul Han",
     "year": 2010,
     "category": "Philosophy",
-    "status": "not-searched"
+    "status": "found",
+    "pdfs": [
+      {
+        "source": "Internet Archive",
+        "url": "https://archive.org/details/burnoutsociety0000hanb",
+        "format": "pdf",
+        "notes": "2010 original"
+      }
+    ]
   },
   {
     "id": 615,
