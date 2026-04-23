@@ -209,9 +209,15 @@
     "pdfs": [
       {
         "source": "Internet Archive",
-        "url": "https://archive.org/details/atheoryofjustice",
+        "url": "https://archive.org/details/theoryofjustice0000rawl",
         "format": "pdf",
-        "notes": "Full text"
+        "notes": "1971 original"
+      },
+      {
+        "source": "Internet Archive",
+        "url": "https://dn721806.ca.archive.org/0/items/a-theory-of-justice-john-rawls-1971/A%20theory%20of%20justice%20John%20Rawls%201971.pdf",
+        "format": "pdf",
+        "notes": "Direct PDF"
       }
     ]
   },
@@ -975,7 +981,21 @@
     "author": "Jean-Paul Sartre, Hazel E. Barnes",
     "year": 1943,
     "category": "Philosophy",
-    "status": "not-searched"
+    "status": "found",
+    "pdfs": [
+      {
+        "source": "Internet Archive",
+        "url": "https://archive.org/details/beingnothingness0000jean_v3q3",
+        "format": "pdf",
+        "notes": "1965 Citadel edition"
+      },
+      {
+        "source": "Internet Archive",
+        "url": "https://ia801504.us.archive.org/14/items/in.ernet.dli.2015.69160/2015.69160.Jean-paul-Sartre-Being-And-Nothingness.pdf",
+        "format": "pdf",
+        "notes": "Direct PDF"
+      }
+    ]
   },
   {
     "id": 107,
@@ -983,7 +1003,21 @@
     "author": "Martin Heidegger",
     "year": 1927,
     "category": "Philosophy",
-    "status": "not-searched"
+    "status": "found",
+    "pdfs": [
+      {
+        "source": "Internet Archive",
+        "url": "https://archive.org/details/beingtime0000heid",
+        "format": "pdf",
+        "notes": "1962 translation"
+      },
+      {
+        "source": "Internet Archive",
+        "url": "https://ia601609.us.archive.org/29/items/pdfy-6-meFnHxBTAbkLAv/42700894-Martin-Heidegger-Being-and-Time.pdf",
+        "format": "pdf",
+        "notes": "Direct PDF"
+      }
+    ]
   },
   {
     "id": 108,
@@ -4647,7 +4681,33 @@
     "author": "Thomas Aquinas, Robert C. Miner (Editor)",
     "year": 2016,
     "category": "Philosophy",
-    "status": "not-searched"
+    "status": "found",
+    "pdfs": [
+      {
+        "source": "Project Gutenberg",
+        "url": "https://www.gutenberg.org/ebooks/17611",
+        "format": "pdf",
+        "notes": "Part I"
+      },
+      {
+        "source": "Project Gutenberg",
+        "url": "https://www.gutenberg.org/ebooks/17897",
+        "format": "pdf",
+        "notes": "Part I-II"
+      },
+      {
+        "source": "Project Gutenberg",
+        "url": "https://www.gutenberg.org/ebooks/18755",
+        "format": "pdf",
+        "notes": "Part II-II"
+      },
+      {
+        "source": "Internet Archive",
+        "url": "https://archive.org/details/summatheologicao004thom",
+        "format": "pdf",
+        "notes": "1913 complete"
+      }
+    ]
   },
   {
     "id": 500,
@@ -6571,7 +6631,21 @@
     "author": "Karl R. Popper",
     "year": 1945,
     "category": "Politics",
-    "status": "not-searched"
+    "status": "found",
+    "pdfs": [
+      {
+        "source": "Internet Archive",
+        "url": "https://archive.org/details/in.ernet.dli.2015.59272",
+        "format": "pdf",
+        "notes": "Complete work"
+      },
+      {
+        "source": "Internet Archive",
+        "url": "https://dn710009.ca.archive.org/0/items/qsdfghjklm_202004/Karl%20Popper%20-%20The%20Open%20Society%20and%20Its%20Enemies%20(Routledge).pdf",
+        "format": "pdf",
+        "notes": "Direct PDF"
+      }
+    ]
   },
   {
     "id": 715,
@@ -6795,7 +6869,15 @@
     "author": "Henri Lefebvre, Donald Nicholson-Smith (Translator)",
     "year": 1991,
     "category": "Philosophy",
-    "status": "not-searched"
+    "status": "found",
+    "pdfs": [
+      {
+        "source": "Internet Archive",
+        "url": "https://archive.org/details/productionofspac00lefe_0",
+        "format": "pdf",
+        "notes": "1991 Blackwell"
+      }
+    ]
   },
   {
     "id": 742,
