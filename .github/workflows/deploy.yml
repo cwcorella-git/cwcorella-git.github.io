@@ -13,6 +13,9 @@ jobs:
   deploy-live:
     name: Deploy to Cloudflare Pages (cwcorella.com)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
     steps:
       - uses: actions/checkout@v4
 
