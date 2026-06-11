@@ -62,7 +62,7 @@ jobs:
       - name: Build (archive mode)
         run: npm run build
         env:
-          PUBLIC_SITE_MODE: archive
+          VITE_SITE_MODE: archive
 
       - uses: actions/upload-pages-artifact@v3
         with:
