@@ -26,7 +26,7 @@ function countEnc(dir) {
 	return count;
 }
 const encCount = countEnc(PRIVATE_DOCS);
-const tlockExists = existsSync(join(ROOT, 'static/content-key.tlock'));
+const tlockExists = existsSync(join(ROOT, 'static/docs/private/content-key.tlock'));
 
 const CHAIN_HASH = '52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971';
 const UNLOCK_ROUND = '751,863,412';

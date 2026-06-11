@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { adminState, writeQueue, type KeyMode } from '$lib/admin/state.svelte';
-	import { validatePAT } from '$lib/admin/github';
+	import { validatePAT, commitFiles } from '$lib/admin/github';
 	import { importRawKey } from '$lib/admin/crypto';
+	import { sealContentKey } from '$lib/admin/tlock';
 	import { toast } from '$lib/admin/toast.svelte';
 
 	let { onLogoutRequest }: { onLogoutRequest: () => void } = $props();
@@ -25,6 +27,35 @@
 			patError = 'Network error — could not validate PAT.';
 		} finally {
 			patSaving = false;
+		}
+	}
+
+	// ── Time capsule section ──────────────────────────────────────────────────
+	let tlockSealed = $state<boolean | null>(null); // null = checking
+	let tlockSealing = $state(false);
+
+	onMount(async () => {
+		const res = await fetch('/docs/private/content-key.tlock');
+		tlockSealed = res.ok;
+	});
+
+	async function sealKey() {
+		if (!adminState.contentKey) { toast.error('No content key loaded.'); return; }
+		if (!adminState.pat) { toast.error('No PAT loaded — cannot commit.'); return; }
+		tlockSealing = true;
+		try {
+			const ciphertext = await sealContentKey(adminState.contentKey);
+			await commitFiles(
+				adminState.pat,
+				[{ path: 'static/docs/private/content-key.tlock', content: ciphertext }],
+				'chore: seal content key to tlock 2095-02-13'
+			);
+			tlockSealed = true;
+			toast.success('Content key sealed to 2095-02-13.');
+		} catch (e) {
+			toast.error(e instanceof Error ? e.message : 'Seal failed.');
+		} finally {
+			tlockSealing = false;
 		}
 	}
 
@@ -110,6 +141,31 @@
 			</button>
 		</div>
 		{#if keyError}<p class="field-error">{keyError}</p>{/if}
+	</section>
+
+	<!-- Time capsule -->
+	<section class="section">
+		<p class="section-label">time capsule</p>
+		<div class="tlock-row">
+			<span class="tlock-status">
+				{#if tlockSealed === null}
+					checking…
+				{:else if tlockSealed}
+					sealed ✓
+				{:else}
+					not sealed
+				{/if}
+			</span>
+			<button
+				class="action-btn"
+				onclick={sealKey}
+				disabled={tlockSealing || !adminState.contentKey}
+				title="Seal your content key against the drand beacon — unlocks 2095-02-13"
+			>
+				{tlockSealing ? '…' : tlockSealed ? 're-seal' : 'seal'}
+			</button>
+		</div>
+		<p class="tlock-hint">locks key to drand · unlocks 2095-02-13</p>
 	</section>
 
 	<!-- Logout -->
@@ -232,6 +288,30 @@
 		opacity: 1;
 		background: rgba(var(--dark-panel-rgb), 0.10);
 		border-color: rgba(var(--dark-panel-rgb), 0.28);
+	}
+
+	.tlock-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+	}
+
+	.tlock-status {
+		font-family: var(--font-ui);
+		font-size: 0.6rem;
+		letter-spacing: 0.06em;
+		color: var(--clr-dark-text);
+		opacity: 0.6;
+	}
+
+	.tlock-hint {
+		font-family: var(--font-ui);
+		font-size: 0.52rem;
+		letter-spacing: 0.05em;
+		color: var(--clr-dark-text);
+		opacity: 0.35;
+		margin: 0;
 	}
 
 	.section-logout {
