@@ -12,6 +12,7 @@
 	let patValue = $state(adminState.pat);
 	let patSaving = $state(false);
 	let patError = $state('');
+	let patVisible = $state(false);
 
 	async function savePAT() {
 		const newPat = patValue.trim();
@@ -64,6 +65,7 @@
 	let keyMode = $state<KeyMode>(adminState.keyMode);
 	let keySaving = $state(false);
 	let keyError = $state('');
+	let keyVisible = $state(false);
 
 	function switchKeyMode(mode: KeyMode) {
 		if (mode === keyMode) return;
@@ -99,12 +101,13 @@
 		<div class="field-row">
 			<input
 				class="field-input"
-				type="password"
+				type={patVisible ? 'text' : 'password'}
 				autocomplete="off"
 				bind:value={patValue}
 				placeholder="ghp_..."
 				disabled={patSaving}
 			/>
+			<button class="peek-btn" onclick={() => patVisible = !patVisible} title={patVisible ? 'hide' : 'show'}>{patVisible ? '○' : '●'}</button>
 			<button class="action-btn" onclick={savePAT} disabled={patSaving}>
 				{patSaving ? '…' : 'update'}
 			</button>
@@ -130,12 +133,13 @@
 		<div class="field-row">
 			<input
 				class="field-input"
-				type="password"
+				type={keyVisible ? 'text' : 'password'}
 				autocomplete="off"
 				bind:value={keyValue}
 				placeholder={keyMode === 'rawkey' ? '64 hex or 44-char base64' : 'passphrase'}
 				disabled={keySaving}
 			/>
+			<button class="peek-btn" onclick={() => keyVisible = !keyVisible} title={keyVisible ? 'hide' : 'show'}>{keyVisible ? '○' : '●'}</button>
 			<button class="action-btn" onclick={saveKey} disabled={keySaving}>
 				{keySaving ? '…' : 'update'}
 			</button>
@@ -237,6 +241,20 @@
 	}
 	.field-input:focus { border-color: rgba(var(--dark-panel-rgb), 0.32); }
 	.field-input:disabled { opacity: 0.5; }
+
+	.peek-btn {
+		background: none;
+		border: 1px solid rgba(var(--dark-panel-rgb), 0.15);
+		color: var(--clr-dark-text);
+		font-size: 0.5rem;
+		padding: 0 0.45rem;
+		cursor: pointer;
+		opacity: 0.4;
+		transition: opacity 0.12s;
+		line-height: 1;
+		flex-shrink: 0;
+	}
+	.peek-btn:hover { opacity: 0.8; }
 
 	.action-btn {
 		background: rgba(var(--dark-panel-rgb), 0.08);
