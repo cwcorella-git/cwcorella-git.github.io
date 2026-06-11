@@ -86,6 +86,7 @@
 		try {
 			await adminState.updateContentKey(newKey, keyMode);
 			toast.success('Content key updated.');
+			if (adminState.pat) await sealKey();
 		} finally {
 			keySaving = false;
 		}
