@@ -7,10 +7,8 @@
 	import { archiveState } from '$lib/admin/archive.svelte';
 	import { isUnlockDay } from '$lib/admin/tlock';
 	import { toast } from '$lib/admin/toast.svelte';
-	import { isArchive } from '$lib/admin/mode';
 	import AdminDrawer from '$lib/components/AdminDrawer.svelte';
 	import AdminToolbar from '$lib/components/AdminToolbar.svelte';
-	import ArchiveBanner from '$lib/components/ArchiveBanner.svelte';
 	import BookForm from '$lib/components/BookForm.svelte';
 	import Toasts from '$lib/components/Toasts.svelte';
 	import Sky from '$lib/components/Sky.svelte';
@@ -53,9 +51,6 @@
 
 <svelte:head>
 	<link rel="icon" type="image/svg+xml" href={favicon} />
-	{#if isArchive}
-		<meta name="robots" content="noindex, nofollow" />
-	{/if}
 </svelte:head>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -63,9 +58,6 @@
 <Sky />
 <AdminDrawer bind:this={drawerRef} />
 <Toasts />
-{#if isArchive}
-	<ArchiveBanner />
-{/if}
 
 {#if bookFormState.open}
 	<BookForm
@@ -79,7 +71,7 @@
 	<div class="nav-items">
 		<a href="/" class:active={$page.url.pathname === '/'}>cwcorella</a>
 		<a href="/reading" class:active={$page.url.pathname === '/reading'}>reading</a>
-		{#if adminState.active || archiveState.mode || isArchive}
+		{#if adminState.active || archiveState.mode}
 			<a href="/journals" class:active={$page.url.pathname === '/journals'}>journals</a>
 			<a href="/links" class:active={$page.url.pathname === '/links'}>links</a>
 		{/if}

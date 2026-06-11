@@ -59,14 +59,19 @@ jobs:
 
       - run: npm ci
 
-      - name: Build (archive mode)
-        run: npm run build
-        env:
-          VITE_SITE_MODE: archive
+      - name: Build archive HTML
+        run: node scripts/build-archive.mjs
+
+      - name: Build archive zip
+        run: |
+          cd static
+          zip -r ../archive-build/archive.zip docs/private/
+          [ -f content-key.tlock ] && zip ../archive-build/archive.zip content-key.tlock || true
+          cd ..
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: build
+          path: archive-build
 
       - name: Deploy to GitHub Pages
         id: deployment
