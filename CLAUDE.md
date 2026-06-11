@@ -1,6 +1,6 @@
 # CLAUDE.md — cwcorella-git.github.io
 
-Personal site: reading list, journals, home page. Fully static, deployed to GitHub Pages. All writes go through the GitHub REST API from the browser using a session-scoped PAT. No server, ever.
+Personal site: reading list, journals, home page. Fully static. Live site at cwcorella.com (Cloudflare Pages); cwcorella-git.github.io is a minimal HTML archive mirror. All writes go through the GitHub REST API from the browser using a session-scoped PAT. No server, ever.
 
 ## Hard constraints
 
@@ -16,7 +16,7 @@ Personal site: reading list, journals, home page. Fully static, deployed to GitH
 |---|---|
 | Framework | SvelteKit 2 + Svelte 5 (runes) |
 | Adapter | `adapter-static` — fully prerendered, no SSR |
-| Hosting | GitHub Pages via GitHub Actions on push to `main` |
+| Hosting | Cloudflare Pages (`cwcorella.com`) + GitHub Pages archive (`cwcorella-git.github.io`) via GitHub Actions on push to `main` |
 | Build | Vite / `npm run build` → `/build` |
 | Node | 20 (`nvm use 20`) |
 | Tests | Vitest — `npm test` |
@@ -49,7 +49,9 @@ npm test          # vitest
 
 **Theme**: 6 palettes (amber, sky, dusk, neutral, rust, sage). amber/dusk/rust are dark-glass with fixed colors; sky/neutral/sage adapt all panels to time of day via Sky.svelte per-frame CSS var updates.
 
-**tlock time-capsule**: Content sealed until 2095-02-13 using drand Quicknet. `archiveState.tryUnlock()` called on page load when `isUnlockDay()`. Content key recovered from `content-key.tlock` via drand beacon.
+**tlock time-capsule**: Content key sealed 2026-06-11 to drand Quicknet round 751,863,412 (unlocks 2095-02-13). Stored at `static/docs/private/content-key.tlock`. `archiveState.tryUnlock()` called on page load when `isUnlockDay()`. SettingsPanel has a time capsule section showing seal status; auto-reseals when content key is updated.
+
+**Archive mirror**: `scripts/build-archive.mjs` generates `archive-build/` — minimal HTML (no SvelteKit, no JS) with home content, reading list, and a download link for `archive.zip`. The zip bundles all `.enc` files from `static/docs/private/` plus `content-key.tlock` and a `README.txt` explaining the decryption chain. GitHub Actions deploys this to GitHub Pages on every push.
 
 ## Key files
 
@@ -80,13 +82,15 @@ src/lib/components/YearPicker.svelte
 scripts/enrich-links.mjs             — Open Library enrichment script
 scripts/sort-links.mjs               — CLI for batch link sort/inspect/move/delete/retag
 scripts/encrypt-journals.mjs         — local tool: encrypt writing dir → static/docs/private/journals/
+scripts/build-archive.mjs            — generates archive-build/ (minimal HTML + README.txt for GitHub Pages)
+static/docs/private/content-key.tlock — tlock-sealed AES content key (unlocks 2095-02-13)
 static/.nojekyll                     — prevents GitHub Pages from running Jekyll
-.github/workflows/deploy.yml         — CI/CD: build + deploy to GH Pages
+.github/workflows/deploy.yml         — two parallel jobs: deploy-live (Cloudflare Pages) + deploy-archive (GitHub Pages)
 ```
 
 ## Current status
 
-**Done**: Admin system + settings panel, reading list (902 books, 898 sourced), journal CRUD, homepage inline editor, doc reader, local-first write queue (10s debounce + manual sync), AES-256-GCM encryption (passphrase + raw key modes), 41 Vitest tests, 6-palette theme switcher (sky/neutral/sage time-of-day adaptive), tlock time-capsule (2095-02-13), encrypted links page (2,094 bookmarks, 10 categories).
+**Done**: Admin system + settings panel (PAT/key show-hide, time capsule seal), reading list (902 books, 898 sourced), journal CRUD, homepage inline editor, doc reader, local-first write queue (10s debounce + manual sync), AES-256-GCM encryption (passphrase + raw key modes), 41 Vitest tests, 6-palette theme switcher (sky/neutral/sage time-of-day adaptive), tlock time-capsule (sealed 2026-06-11, unlocks 2095-02-13), encrypted links page (2,094 bookmarks, 10 categories), dual-deploy (Cloudflare Pages live + GitHub Pages archive mirror with encrypted zip).
 
 **Not done**:
 - Homepage actual content (currently placeholder)
