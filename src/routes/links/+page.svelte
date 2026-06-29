@@ -1,9 +1,16 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { adminState, writeQueue, linksState } from '$lib/admin/state.svelte';
+	import { archiveState } from '$lib/admin/archive.svelte';
 	import { toast } from '$lib/admin/toast.svelte';
 	import type { LinkMeta } from '$lib/types';
 	import CategorySection from '$lib/components/CategorySection.svelte';
 	import LinkRow from '$lib/components/LinkRow.svelte';
+
+	// Redirect non-admins immediately (archiveState.mode allows read-only access in 2095)
+	$effect(() => {
+		if (!adminState.active && !archiveState.mode) goto('/');
+	});
 
 	// ── index ─────────────────────────────────────────────────────────────
 	let indexError = $state('');
@@ -690,17 +697,6 @@
 	</div>
 </div>
 
-{:else}
-
-<div class="page">
-	<div class="inner">
-		<div class="search-area">
-			<h1 class="heading">links</h1>
-		</div>
-		<p class="status">private — admin access required.</p>
-	</div>
-</div>
-
 {/if}
 
 <style>
@@ -719,12 +715,7 @@
 		border: 1px solid var(--glass-border);
 		will-change: background, border-color;
 	}
-	.heading {
-		font-family: var(--font-prose);
-		font-size: 1rem; font-weight: normal;
-		letter-spacing: 0.12em; color: var(--clr-text); margin: 0;
-	}
-	.status { font-family: var(--font-ui); font-size: 0.65rem; letter-spacing: 0.08em; color: var(--clr-text); }
+.status { font-family: var(--font-ui); font-size: 0.65rem; letter-spacing: 0.08em; color: var(--clr-text); }
 	.status.error { color: var(--clr-danger); }
 	.dim { font-family: var(--font-ui); font-size: 0.6rem; letter-spacing: 0.06em; color: var(--clr-text); }
 
