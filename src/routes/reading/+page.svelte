@@ -70,7 +70,7 @@
 	function clearAll() { activeTag = ''; searchQuery = ''; }
 
 	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') { clearAll(); closeMenu(); }
+		if (e.key === 'Escape') { clearAll(); closeMenu(); confirmingId = null; }
 		if (e.key === 'Enter') { suggestionsDismissed = true; }
 	}
 
@@ -81,6 +81,22 @@
 		);
 		booksState.set(updated);
 		writeQueue.push({ domain: 'books', books: updated });
+	}
+
+	// ── inline delete ────────────────────────────────────────────
+	let confirmingId = $state<number | null>(null);
+	let deleteSaving = $state(false);
+
+	async function deleteBook(book: Book) {
+		deleteSaving = true;
+		try {
+			const updated = booksState.books.filter(b => b.id !== book.id);
+			booksState.set(updated);
+			writeQueue.push({ domain: 'books', books: updated });
+			confirmingId = null;
+		} finally {
+			deleteSaving = false;
+		}
 	}
 
 	// ── context menu ─────────────────────────────────────────────
@@ -217,6 +233,17 @@
 							<span class="meta">{book.author}{book.year ? ` · ${book.year}` : ''}</span>
 						</div>
 						{#if adminState.active}
+							{#if confirmingId === book.id}
+								<span class="delete-confirm">
+									<button class="del-btn confirm-yes" onclick={() => deleteBook(book)} disabled={deleteSaving}>
+										{deleteSaving ? '…' : '✓'}
+									</button>
+									<button class="del-btn confirm-no" onclick={() => confirmingId = null}>×</button>
+								</span>
+							{:else}
+								<button class="row-action-btn" onclick={() => bookFormState.openEdit(book)} aria-label="Edit">edit</button>
+								<button class="del-btn" onclick={() => confirmingId = book.id} aria-label="Delete">×</button>
+							{/if}
 							<button
 								class="read-toggle"
 								class:is-read={book.read}
@@ -387,6 +414,49 @@
 		letter-spacing: 0.06em;
 		color: var(--clr-text);
 	}
+
+	.row-action-btn {
+		background: none;
+		border: none;
+		cursor: pointer;
+		font-family: var(--font-ui);
+		font-size: 0.52rem;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--clr-text);
+		opacity: 0.35;
+		padding: 0 0.4rem;
+		transition: opacity 0.15s;
+		flex-shrink: 0;
+		white-space: nowrap;
+	}
+	.row-action-btn:hover { opacity: 0.8; }
+
+	.del-btn {
+		background: none;
+		border: none;
+		cursor: pointer;
+		font-family: var(--font-ui);
+		font-size: 0.75rem;
+		color: var(--clr-text);
+		opacity: 0.28;
+		padding: 0 0.4rem;
+		line-height: 1;
+		transition: opacity 0.15s, color 0.15s;
+		flex-shrink: 0;
+	}
+	.del-btn:hover:not(:disabled) { opacity: 0.8; color: var(--clr-danger); }
+	.del-btn:disabled { opacity: 0.2; cursor: not-allowed; }
+
+	.delete-confirm {
+		display: flex;
+		align-items: center;
+		gap: 0.15rem;
+	}
+	.del-btn.confirm-yes { color: var(--clr-success); opacity: 0.7; }
+	.del-btn.confirm-yes:hover:not(:disabled) { opacity: 1; color: var(--clr-success); }
+	.del-btn.confirm-no { color: var(--clr-text); opacity: 0.35; }
+	.del-btn.confirm-no:hover { opacity: 0.8; color: var(--clr-danger); }
 
 	.read-toggle {
 		background: none;
