@@ -294,8 +294,8 @@
 		letter-spacing: 0.1em;
 		color: var(--clr-text);
 		opacity: 0.22;
-		pointer-events: none;
-		user-select: none;
+		pointer-events: auto;
+		cursor: text;
 	}
 
 	@media (max-width: 480px) {
