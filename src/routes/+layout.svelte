@@ -15,6 +15,8 @@
 
 	let { children } = $props();
 
+	const commitHash = (import.meta.env['VITE_COMMIT_HASH'] as string | undefined)?.slice(0, 7) ?? '';
+
 	let drawerRef: AdminDrawer;
 	let buffer = '';
 	let logoutConfirmOpen = $state(false);
@@ -96,6 +98,10 @@
 <div class="page-content">
 	{@render children()}
 </div>
+
+{#if commitHash}
+	<span class="build-hash">{commitHash}</span>
+{/if}
 
 <style>
 	@font-face {
@@ -277,6 +283,20 @@
 	.logout-cancel:hover  { border-color: rgba(var(--dark-panel-rgb), 0.45); }
 	.logout-confirm { color: var(--clr-danger); border-color: rgba(var(--dark-panel-rgb), 0.22); }
 	.logout-confirm:hover { border-color: var(--clr-danger); }
+
+	.build-hash {
+		position: fixed;
+		bottom: 0.75rem;
+		right: 0.9rem;
+		z-index: 10;
+		font-family: var(--font-ui);
+		font-size: 0.48rem;
+		letter-spacing: 0.1em;
+		color: var(--clr-text);
+		opacity: 0.22;
+		pointer-events: none;
+		user-select: none;
+	}
 
 	@media (max-width: 480px) {
 		nav { padding: 0.85rem 1rem; }

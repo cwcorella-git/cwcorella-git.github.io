@@ -27,6 +27,8 @@ jobs:
       - run: npm ci
 
       - run: npm run build
+        env:
+          VITE_COMMIT_HASH: ${{ github.sha }}
 
       - uses: cloudflare/pages-action@v1
         with:

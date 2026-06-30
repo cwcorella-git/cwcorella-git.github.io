@@ -103,7 +103,12 @@
 						r.style.setProperty('--clr-text', `rgb(${p.textDay[0]},${p.textDay[1]},${p.textDay[2]})`);
 					} else {
 						const [dr, dg, db] = p.glassDay;
+						const [tr, tg, tb] = p.textDay;
 						r.style.setProperty('--glass-bg-heavy', `rgba(${dr}, ${dg}, ${db}, 0.78)`);
+						r.style.setProperty('--glass-bg',       `rgba(${dr}, ${dg}, ${db}, 0.22)`);
+						r.style.setProperty('--glass-border',   `rgba(${dr}, ${dg}, ${db}, 0.40)`);
+						r.style.setProperty('--glass-nav-bg',   `rgba(${dr}, ${dg}, ${db}, 0.30)`);
+						r.style.setProperty('--clr-text', `rgb(${tr}, ${tg}, ${tb})`);
 					}
 				}
 
