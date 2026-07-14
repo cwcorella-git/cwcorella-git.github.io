@@ -43,17 +43,22 @@ every one of those failure modes impossible.
 ## Architecture (three runtime pieces + one dormant)
 
 ### B — Library API (new)
-- FastAPI container on the **workstation** (next to `veritable-games-postgres` and the
-  Cloudflare tunnel). Its **own Postgres + own files volume**: document bodies stored
-  as markdown/text files on B's volume, DB holds metadata + `file_path`. Keeps the DB
-  lean for the 100k-row metadata queries that drive browse/search/sort.
-- Exposed at a new CF-tunnel hostname (≈ `library-api.veritablegames.com`).
-- **Auth:** Bearer token, validated by FastAPI. Token carried in cwcorella's existing
-  admin-key mechanism (localStorage), sent as `Authorization: Bearer`.
+- FastAPI service on the **workstation** (next to `veritable-games-postgres` and the
+  Cloudflare tunnel). Its **own SQLite database + own files volume** (`/data/library-api/`):
+  document bodies stored as markdown/text files on B's volume, `library.db` (SQLite, WAL,
+  FTS5) holds metadata + `file_path`. Keeps the DB lean for the 100k-row metadata queries
+  that drive browse/search/sort. **(SQLite chosen over Postgres 2026-07-14 — matches house
+  style, single-admin, maximally independent, no DB container; see B1 spec in the
+  `library-api` repo.)**
+- Exposed at a new CF-tunnel hostname (≈ `library-api.veritablegames.com`), uvicorn on
+  `127.0.0.1` behind nginx (house pattern). **Departs from the house CF-Access auth** because
+  it's called cross-origin by cwcorella's browser SPA (which CF Access would block).
+- **Auth:** app-layer Bearer token, validated by a FastAPI dependency. Token carried in
+  cwcorella's existing admin-key mechanism (localStorage), sent as `Authorization: Bearer`.
+  Plus **CORS** allowing the `cwcorella.com` origin.
 - **Serves:** keyset-cursor pages over a single global order; metadata **and body
-  full-text search** (Postgres `tsvector` GIN + `pg_trgm`); writes (metadata + body
-  edits) with **revision history**; `word_count` + `character_count` recomputed on every
-  save.
+  full-text search** (SQLite **FTS5**); writes (metadata + body edits) with **revision
+  history**; `word_count` + `character_count` recomputed on every save.
 
 ### C — cwcorella `/library` (new)
 - Admin-gated SvelteKit route modeled on the existing private `/links` page
@@ -117,11 +122,11 @@ be added without a retrofit.
   when all columns sort the same way). Always `ORDER BY sort_col <dir>, id <dir> LIMIT
   n+1` (the +1 gives `hasNextPage` with no count). **PK tie-breaker always.**
 - **Indexes:** one composite index per selectable sort, matching column order *and*
-  direction. FTS GIN (`tsvector`) for body/title; `pg_trgm` GIN for fuzzy title/author;
-  b-tree on facets (language / collection / date / tags).
-- **Scrollbar total:** use an **estimated** filtered count (EXPLAIN / `reltuples`) to
-  size the phantom; exact count only when the filtered set is already small
-  (filter-first keeps it small).
+  direction. **SQLite FTS5** over title/author/body (`unicode61`; optional `trigram` FTS
+  table for substring/fuzzy — decided in B2); b-tree indexes on facets (language /
+  collection / date / tags).
+- **Scrollbar total:** a `COUNT(*)` over the filtered set (fast enough at 100k in SQLite
+  for a single admin, cache if needed) sizes the phantom; filter-first keeps the set small.
 - **Sentinel:** guarded by `isFetching` + `hasNextPage`, re-keyed per page to avoid
   double-fetch / re-entrancy.
 - **Reset semantics:** any change to (filters, sort column, sort dir, search text) is a
