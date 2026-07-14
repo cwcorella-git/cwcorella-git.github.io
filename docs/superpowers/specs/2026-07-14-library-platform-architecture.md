@@ -78,11 +78,13 @@ every one of those failure modes impossible.
 - Add a **shell-only** path so `/library` renders its frame without loading documents.
 - **Data is copied, not moved** — the main-site library stays dormant and revivable.
 
-### VATRA launcher (`launcher/`) — cauterize
-- The launcher reads library data via `/api/launcher/library`. After the move, cleanly
-  **cauterize** that dependency behind a clear seam so nothing dangles — the main-site
-  interface stays dormant/revivable, but the launcher must not call a broken/ambiguous
-  endpoint.
+### VATRA launcher (`launcher/`) — NOT affected
+- **Correction (2026-07-14):** an earlier draft of this spec called for "cauterizing" a
+  launcher library dependency. That was a mis-scoping. The launcher's
+  `/api/launcher/library` endpoint serves **game entitlements** (`entitlements.title_grants`
+  joined with itch/butler "caves" — the user's owned games), **not** the document library.
+  It shares only the word "library." The launcher has **no dependency on the document
+  library** and requires **no changes** for this migration. Left untouched.
 
 ## Data model (B owns)
 
