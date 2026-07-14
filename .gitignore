@@ -5,6 +5,7 @@ node_modules
 *.pdf
 
 # Output
+/archive-build
 .output
 .vercel
 .netlify
