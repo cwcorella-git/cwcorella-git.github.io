@@ -31,6 +31,14 @@ let _errorDetail = $state('');
 let _openDoc = $state<LibraryDoc | null>(null);
 let _openDocStatus = $state<OpenDocStatus>('idle');
 
+// Request-epoch guards (plain counters, not reactive). Every new query generation
+// bumps _queryEpoch; an in-flight first-page/load-more that resolves after the
+// query changed is DISCARDED rather than spliced onto the new query's list —
+// this is what keeps two orderings from ever mixing (the reliability contract).
+// _docEpoch does the same for the single-doc reader (out-of-order opens / close).
+let _queryEpoch = 0;
+let _docEpoch = 0;
+
 function _mapError(e: unknown) {
 	if (e instanceof OfflineError) {
 		_status = 'offline';
@@ -43,12 +51,15 @@ function _mapError(e: unknown) {
 }
 
 async function _fetchFirstPage() {
+	const epoch = ++_queryEpoch; // start a new query generation
 	_state = { ...emptyState(), isFetching: true };
 	try {
 		const resp = await client.listDocuments(toQuery(_controls, null, LIMIT));
+		if (epoch !== _queryEpoch) return; // superseded by a newer query — discard
 		_state = appendPage(emptyState(), resp);
 		_status = 'ready';
 	} catch (e) {
+		if (epoch !== _queryEpoch) return; // superseded — don't clobber the new query
 		_state = { ..._state, isFetching: false };
 		_mapError(e);
 	}
@@ -91,12 +102,15 @@ export const libraryState = {
 
 	async loadMore() {
 		if (!canLoadMore(_state)) return;
+		const epoch = _queryEpoch; // this page belongs to the current query generation
 		_state = { ..._state, isFetching: true };
 		try {
 			const resp = await client.listDocuments(toQuery(_controls, _state.cursor, LIMIT));
+			if (epoch !== _queryEpoch) return; // query changed mid-flight — drop this page
 			_state = appendPage({ ..._state, isFetching: false }, resp);
 			_status = 'ready';
 		} catch (e) {
+			if (epoch !== _queryEpoch) return; // superseded — leave the new query alone
 			if (isStaleCursor(e)) {
 				_state = emptyState();
 				await _fetchFirstPage();
@@ -108,16 +122,22 @@ export const libraryState = {
 	},
 
 	async openDocById(id: number | string) {
+		const epoch = ++_docEpoch;
 		_openDocStatus = 'loading';
 		try {
-			_openDoc = await client.getDocument(id);
+			const doc = await client.getDocument(id);
+			if (epoch !== _docEpoch) return; // a newer open/close superseded this one
+			_openDoc = doc;
 			_openDocStatus = 'idle';
 		} catch {
+			if (epoch !== _docEpoch) return;
 			_openDocStatus = 'error';
 		}
 	},
 
 	closeDoc() {
+		_docEpoch++; // invalidate any in-flight open so it can't re-populate the modal
 		_openDoc = null;
+		_openDocStatus = 'idle'; // reset so the modal actually dismisses (not stuck loading/error)
 	}
 };
