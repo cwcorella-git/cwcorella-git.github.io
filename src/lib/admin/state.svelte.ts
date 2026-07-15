@@ -231,6 +231,7 @@ export const homeState = {
 
 // ── Admin state ───────────────────────────────────────────────────────────────
 let _active = $state(false);
+let _initialized = $state(false); // true once restoreFromSession has run (so admin-gated pages don't bounce before rehydration)
 let _pat = $state('');
 let _libraryToken = $state('');
 let _contentKey = $state('');
@@ -239,6 +240,7 @@ let _cryptoKey = $state<CryptoKey | null>(null);
 
 export const adminState = {
 	get active()       { return _active; },
+	get initialized()  { return _initialized; },
 	get pat()          { return _pat; },
 	get libraryToken() { return _libraryToken; },
 	get contentKey()   { return _contentKey; },
@@ -285,6 +287,7 @@ export const adminState = {
 		}
 		const libTok = localStorage.getItem('cwc-library-token');
 		if (libTok) _libraryToken = libTok;
+		_initialized = true;
 	},
 
 	/** Update PAT mid-session (no re-auth needed). */

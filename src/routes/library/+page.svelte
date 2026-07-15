@@ -6,9 +6,10 @@
 	import LibraryControls from '$lib/components/library/LibraryControls.svelte';
 	import DocReader from '$lib/components/library/DocReader.svelte';
 
-	// Redirect non-admins immediately (library has no archive/read-only mode)
+	// Redirect non-admins — but only AFTER session rehydration, so a hard load /
+	// refresh of /library doesn't bounce a logged-in admin before restoreFromSession runs.
 	$effect(() => {
-		if (!adminState.active) goto('/');
+		if (adminState.initialized && !adminState.active) goto('/');
 	});
 
 	$effect(() => {

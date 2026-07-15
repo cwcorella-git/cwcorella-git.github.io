@@ -7,9 +7,10 @@
 	import CategorySection from '$lib/components/CategorySection.svelte';
 	import LinkRow from '$lib/components/LinkRow.svelte';
 
-	// Redirect non-admins immediately (archiveState.mode allows read-only access in 2095)
+	// Redirect non-admins — but only AFTER session rehydration (initialized), so a
+	// hard load / refresh doesn't bounce a logged-in admin before restoreFromSession runs.
 	$effect(() => {
-		if (!adminState.active && !archiveState.mode) goto('/');
+		if (adminState.initialized && !adminState.active && !archiveState.mode) goto('/');
 	});
 
 	// ── index ─────────────────────────────────────────────────────────────
