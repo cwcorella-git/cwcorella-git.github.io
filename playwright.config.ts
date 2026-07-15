@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
 	testDir: './tests',
+	testMatch: /.*\.(spec|test|e2e)\.[jt]s$/,
 	outputDir: '/tmp/pw-results',
 	snapshotDir: '/tmp/pw-snapshots',
 

@@ -9,7 +9,7 @@
 	const { item, onOpen }: Props = $props();
 </script>
 
-<button class="doc-card" onclick={() => onOpen(item.id)}>
+<button class="doc-card" data-doc-id={item.id} onclick={() => onOpen(item.id)}>
 	<span class="title">{item.title}</span>
 	<span class="author">{item.author ?? '—'}</span>
 	<span class="row">

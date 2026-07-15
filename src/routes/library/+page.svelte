@@ -4,6 +4,7 @@
 	import { libraryState } from '$lib/library/libraryState.svelte';
 	import DocList from '$lib/components/library/DocList.svelte';
 	import LibraryControls from '$lib/components/library/LibraryControls.svelte';
+	import DocReader from '$lib/components/library/DocReader.svelte';
 
 	// Redirect non-admins immediately (library has no archive/read-only mode)
 	$effect(() => {
@@ -54,6 +55,8 @@
 		{/if}
 	</div>
 </div>
+
+<DocReader />
 
 {/if}
 
