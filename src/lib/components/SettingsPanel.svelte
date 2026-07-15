@@ -31,6 +31,14 @@
 		}
 	}
 
+	// ── Library token section ─────────────────────────────────────────────────
+	let libraryTokenValue = $state(adminState.libraryToken);
+
+	function saveLibraryToken() {
+		adminState.updateLibraryToken(libraryTokenValue);
+		toast.success('Library token updated.');
+	}
+
 	// ── Time capsule section ──────────────────────────────────────────────────
 	let tlockSealed = $state<boolean | null>(null); // null = checking
 	let tlockSealing = $state(false);
@@ -114,6 +122,21 @@
 			</button>
 		</div>
 		{#if patError}<p class="field-error">{patError}</p>{/if}
+	</section>
+
+	<!-- Library token -->
+	<section class="section">
+		<p class="section-label">library api token</p>
+		<div class="field-row">
+			<input
+				class="field-input"
+				type="password"
+				autocomplete="off"
+				bind:value={libraryTokenValue}
+				placeholder="library-api bearer token"
+			/>
+			<button class="action-btn" onclick={saveLibraryToken}>update</button>
+		</div>
 	</section>
 
 	<!-- Content key -->

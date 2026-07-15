@@ -232,15 +232,17 @@ export const homeState = {
 // ── Admin state ───────────────────────────────────────────────────────────────
 let _active = $state(false);
 let _pat = $state('');
+let _libraryToken = $state('');
 let _contentKey = $state('');
 let _keyMode = $state<KeyMode>('passphrase');
 let _cryptoKey = $state<CryptoKey | null>(null);
 
 export const adminState = {
-	get active()     { return _active; },
-	get pat()        { return _pat; },
-	get contentKey() { return _contentKey; },
-	get keyMode()    { return _keyMode; },
+	get active()       { return _active; },
+	get pat()          { return _pat; },
+	get libraryToken() { return _libraryToken; },
+	get contentKey()   { return _contentKey; },
+	get keyMode()      { return _keyMode; },
 
 	/** Activate admin mode with a content key. PAT is set separately via updatePAT(). */
 	async activate(key: string, mode: KeyMode = 'passphrase') {
@@ -256,10 +258,12 @@ export const adminState = {
 		await writeQueue.flush();
 		_active = false;
 		_pat = '';
+		_libraryToken = '';
 		_contentKey = '';
 		_keyMode = 'passphrase';
 		_cryptoKey = null;
 		localStorage.removeItem('cwc-admin-pat');
+		localStorage.removeItem('cwc-library-token');
 		localStorage.removeItem('cwc-admin-key');
 		localStorage.removeItem('cwc-admin-keymode');
 		journalIndexState.clear();
@@ -279,12 +283,20 @@ export const adminState = {
 		if (pat) {
 			_pat = pat;
 		}
+		const libTok = localStorage.getItem('cwc-library-token');
+		if (libTok) _libraryToken = libTok;
 	},
 
 	/** Update PAT mid-session (no re-auth needed). */
 	updatePAT(newPat: string) {
 		_pat = newPat.trim();
 		localStorage.setItem('cwc-admin-pat', _pat);
+	},
+
+	/** Update library API token mid-session. */
+	updateLibraryToken(t: string) {
+		_libraryToken = t.trim();
+		localStorage.setItem('cwc-library-token', _libraryToken);
 	},
 
 	/** Update content key mid-session. */
