@@ -57,9 +57,16 @@ async function probeB2(): Promise<boolean> {
 async function activateAdminAndSetToken(page: Page) {
 	// Type the ``` sequence outside any input to open the AdminDrawer.
 	await page.goto('/');
-	await page.keyboard.type('```');
+	// The ``` trigger is a svelte:window keydown handler that only exists after
+	// hydration — wait for the app to settle, then retry the sequence until the
+	// drawer actually opens (typing before hydration is silently dropped).
+	await page.waitForLoadState('networkidle');
+	await page.locator('body').click({ position: { x: 5, y: 5 } });
 	const drawer = page.getByRole('dialog', { name: 'Admin login' });
-	await expect(drawer).toBeVisible();
+	await expect(async () => {
+		await page.keyboard.type('```');
+		await expect(drawer).toBeVisible({ timeout: 1000 });
+	}).toPass({ timeout: 15000 });
 	await drawer.locator('input[type="password"]').fill('e2e-test-content-key');
 	await drawer.getByRole('button', { name: /unlock/i }).click();
 	await expect(drawer).toBeHidden();
@@ -78,18 +85,15 @@ async function activateAdminAndSetToken(page: Page) {
 	await page.keyboard.press('Escape');
 }
 
-// SPA-navigate to /library (see the header note above for why a hard
-// page.goto() would race the page's admin-gate redirect).
+// Navigate to /library. A hard page.goto() is safe now that the admin-gate
+// redirect is gated on adminState.initialized (set after the layout's
+// restoreFromSession() rehydrates from localStorage) — so a fresh load no
+// longer bounces a logged-in admin. This hop therefore also exercises the
+// rehydration path (the content key + library token were persisted to
+// localStorage during activation).
 async function gotoLibrarySpa(page: Page) {
-	await page.evaluate(() => {
-		const a = document.createElement('a');
-		a.href = '/library';
-		a.id = '__e2e-library-nav';
-		a.style.position = 'fixed';
-		document.body.appendChild(a);
-	});
-	await page.locator('#__e2e-library-nav').click();
-	await page.evaluate(() => document.getElementById('__e2e-library-nav')?.remove());
+	await page.goto('/library');
+	await page.waitForLoadState('networkidle');
 }
 
 test.describe('library reader + pagination + filters', () => {
@@ -125,8 +129,12 @@ test.describe('library reader + pagination + filters', () => {
 		// >=2 growths means >=2 additional pages were appended beyond the first.
 		let growthEvents = 0;
 		for (let i = 0; i < 20 && growthEvents < 2; i++) {
-			await page.mouse.wheel(0, 2000);
-			await page.waitForTimeout(300);
+			// virtua's VList is a nested scroll container — the wheel must land on
+			// it, so hover a currently-rendered row (which sits inside the scroller)
+			// before dispatching the wheel.
+			await page.locator('[data-doc-id]').last().hover();
+			await page.mouse.wheel(0, 3000);
+			await page.waitForTimeout(400);
 			const before = seenIds.size;
 			for (const el of await page.locator('[data-doc-id]').all()) {
 				const id = await el.getAttribute('data-doc-id');
