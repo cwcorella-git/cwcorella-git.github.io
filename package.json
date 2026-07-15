@@ -29,6 +29,7 @@
 	"dependencies": {
 		"compromise": "^14.15.0",
 		"drand-client": "^1.4.2",
-		"tlock-js": "^0.9.0"
+		"tlock-js": "^0.9.0",
+		"virtua": "^0.49.3"
 	}
 }

@@ -8,7 +8,8 @@ import {
 	toQuery,
 	canLoadMore,
 	appendPage,
-	isStaleCursor
+	isStaleCursor,
+	computeQueryKey
 } from './libraryLogic';
 import type { LibraryControls, LibraryState } from './libraryLogic';
 import type { LibraryDoc, Facets } from './types';
@@ -62,6 +63,7 @@ export const libraryState = {
 	get openDoc() { return _openDoc; },
 	get openDocStatus() { return _openDocStatus; },
 	get canLoadMore() { return canLoadMore(_state); },
+	get queryKey() { return computeQueryKey(_controls); },
 
 	async init() {
 		if (_status !== 'idle') return;

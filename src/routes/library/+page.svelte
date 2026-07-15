@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { adminState } from '$lib/admin/state.svelte';
 	import { libraryState } from '$lib/library/libraryState.svelte';
+	import DocList from '$lib/components/library/DocList.svelte';
 
 	// Redirect non-admins immediately (library has no archive/read-only mode)
 	$effect(() => {
@@ -33,17 +34,25 @@
 			{#if libraryState.state.items.length === 0}
 				<p class="status">no documents match.</p>
 			{:else}
-				<p class="count">{libraryState.state.total ?? libraryState.state.items.length} documents</p>
-				<div class="doc-list">
-					{#each libraryState.state.items as d (d.id)}
-						<div class="doc-row">{d.title}</div>
-					{/each}
-				</div>
-				{#if libraryState.canLoadMore}
-					<button class="load-more-btn" onclick={() => libraryState.loadMore()}>
-						{libraryState.state.isFetching ? 'loading…' : 'load more'}
-					</button>
-				{/if}
+				<button
+					class="view-toggle"
+					onclick={() =>
+						libraryState.applyControls({
+							view: libraryState.controls.view === 'list' ? 'grid' : 'list'
+						})}
+				>
+					view: {libraryState.controls.view}
+				</button>
+				<DocList
+					items={libraryState.state.items}
+					view={libraryState.controls.view}
+					total={libraryState.state.total}
+					canLoadMore={libraryState.canLoadMore}
+					isFetching={libraryState.state.isFetching}
+					onLoadMore={() => libraryState.loadMore()}
+					queryKey={libraryState.queryKey}
+					onOpen={(id) => libraryState.openDocById(id)}
+				/>
 			{/if}
 		{/if}
 	</div>
@@ -74,30 +83,17 @@
 	}
 	.status { font-family: var(--font-ui); font-size: 0.65rem; letter-spacing: 0.08em; color: var(--clr-text); }
 	.status.error { color: var(--clr-danger); }
-	.count {
-		font-family: var(--font-ui);
-		font-size: 0.62rem; letter-spacing: 0.1em; color: var(--clr-text);
-		opacity: 0.7;
-		margin: 0 0 1rem;
-	}
-	.doc-list { display: flex; flex-direction: column; gap: 0.4rem; }
-	.doc-row {
-		font-family: var(--font-ui);
-		font-size: 0.78rem; color: var(--clr-text);
-		padding: 0.4rem 0;
-		border-bottom: 1px solid rgba(var(--ui-rgb), 0.12);
-	}
-	.load-more-btn {
+	.view-toggle {
 		display: block;
-		margin: 1.5rem auto 0;
+		margin: 0 0 1rem;
 		background: none;
 		border: 1px solid rgba(var(--ui-rgb), 0.28);
 		color: var(--clr-text);
 		font-family: var(--font-ui);
 		font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase;
-		padding: 0.4rem 1rem; cursor: pointer; transition: all 0.15s;
+		padding: 0.3rem 0.7rem; cursor: pointer; transition: all 0.15s;
 	}
-	.load-more-btn:hover { border-color: rgba(var(--ui-rgb), 0.45); }
+	.view-toggle:hover { border-color: rgba(var(--ui-rgb), 0.45); }
 
 	@media (max-width: 480px) {
 		.page { padding-top: 4.5rem; }
