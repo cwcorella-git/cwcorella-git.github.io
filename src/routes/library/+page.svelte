@@ -3,6 +3,7 @@
 	import { adminState } from '$lib/admin/state.svelte';
 	import { libraryState } from '$lib/library/libraryState.svelte';
 	import DocList from '$lib/components/library/DocList.svelte';
+	import LibraryControls from '$lib/components/library/LibraryControls.svelte';
 
 	// Redirect non-admins immediately (library has no archive/read-only mode)
 	$effect(() => {
@@ -31,18 +32,14 @@
 		{:else if libraryState.status === 'error'}
 			<p class="status error">library error: {libraryState.errorDetail}</p>
 		{:else if libraryState.status === 'ready'}
+			<LibraryControls
+				controls={libraryState.controls}
+				facets={libraryState.facets}
+				onChange={(p) => libraryState.applyControls(p)}
+			/>
 			{#if libraryState.state.items.length === 0}
 				<p class="status">no documents match.</p>
 			{:else}
-				<button
-					class="view-toggle"
-					onclick={() =>
-						libraryState.applyControls({
-							view: libraryState.controls.view === 'list' ? 'grid' : 'list'
-						})}
-				>
-					view: {libraryState.controls.view}
-				</button>
 				<DocList
 					items={libraryState.state.items}
 					view={libraryState.controls.view}
@@ -83,17 +80,6 @@
 	}
 	.status { font-family: var(--font-ui); font-size: 0.65rem; letter-spacing: 0.08em; color: var(--clr-text); }
 	.status.error { color: var(--clr-danger); }
-	.view-toggle {
-		display: block;
-		margin: 0 0 1rem;
-		background: none;
-		border: 1px solid rgba(var(--ui-rgb), 0.28);
-		color: var(--clr-text);
-		font-family: var(--font-ui);
-		font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase;
-		padding: 0.3rem 0.7rem; cursor: pointer; transition: all 0.15s;
-	}
-	.view-toggle:hover { border-color: rgba(var(--ui-rgb), 0.45); }
 
 	@media (max-width: 480px) {
 		.page { padding-top: 4.5rem; }
