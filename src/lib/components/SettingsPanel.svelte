@@ -33,6 +33,7 @@
 
 	// ── Library token section ─────────────────────────────────────────────────
 	let libraryTokenValue = $state(adminState.libraryToken);
+	let libraryTokenVisible = $state(false);
 
 	function saveLibraryToken() {
 		adminState.updateLibraryToken(libraryTokenValue);
@@ -130,11 +131,12 @@
 		<div class="field-row">
 			<input
 				class="field-input"
-				type="password"
+				type={libraryTokenVisible ? 'text' : 'password'}
 				autocomplete="off"
 				bind:value={libraryTokenValue}
 				placeholder="library-api bearer token"
 			/>
+			<button class="peek-btn" onclick={() => libraryTokenVisible = !libraryTokenVisible} title={libraryTokenVisible ? 'hide' : 'show'}>{libraryTokenVisible ? '○' : '●'}</button>
 			<button class="action-btn" onclick={saveLibraryToken}>update</button>
 		</div>
 	</section>
