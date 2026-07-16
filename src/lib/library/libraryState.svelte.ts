@@ -100,7 +100,7 @@ async function _fetchWindow(key: number, epoch: number) {
 		if (epoch !== _queryEpoch) return;
 		_mapError(e);
 	} finally {
-		_inflightWindows.delete(key);
+		if (epoch === _queryEpoch) _inflightWindows.delete(key);
 	}
 }
 
@@ -181,7 +181,7 @@ export const libraryState = {
 			};
 			if (_controls.q !== '') params.q = _controls.q;
 			const { offset } = await client.getAnchorOffset(params);
-			return Math.min(offset, Math.max(0, total - 1));
+			return Math.max(0, Math.min(offset, Math.max(0, total - 1)));
 		} catch (e) {
 			_mapError(e);
 			return 0;
