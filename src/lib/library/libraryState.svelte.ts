@@ -1,55 +1,49 @@
 import { env } from '$env/dynamic/public';
 import { adminState } from '$lib/admin/state.svelte';
 import { createLibraryClient, AuthError, OfflineError, ApiError } from './api';
+import { defaultControls, toQuery, computeQueryKey, controlsChanged } from './libraryLogic';
+import type { LibraryControls } from './libraryLogic';
 import {
-	defaultControls,
-	emptyState,
-	controlsChanged,
-	toQuery,
-	canLoadMore,
-	appendPage,
-	isStaleCursor,
-	computeQueryKey
-} from './libraryLogic';
-import type { LibraryControls, LibraryState } from './libraryLogic';
-import type { LibraryDoc, Facets } from './types';
-
-const LIMIT = 50;
-
-// A jump (seekTo) doesn't change sort/filters, so computeQueryKey alone won't
-// change — the seek generation is folded in so DocList's queryKey effect still
-// fires (scroll-to-top + load-more latch reset) on every jump.
-export function composeQueryKey(base: string, seekGen: number): string {
-	return base + '|s' + seekGen;
-}
+	LRU_CAP,
+	LOOKAHEAD,
+	windowBounds,
+	windowsForRange,
+	evictWindows,
+	resolveAnchorIndex
+} from './windowLogic';
+import type { DocListItem, LibraryDoc, Facets, AnchorOffsetParams } from './types';
 
 const baseUrl = env.PUBLIC_LIBRARY_API_URL || 'https://library-api.cwcorella.com';
-
 const client = createLibraryClient({ baseUrl, getToken: () => adminState.libraryToken });
 
 type Status = 'idle' | 'loading' | 'ready' | 'offline' | 'auth' | 'error';
 type OpenDocStatus = 'idle' | 'loading' | 'error';
 
 let _controls = $state<LibraryControls>(defaultControls());
-let _state = $state<LibraryState>(emptyState());
 let _facets = $state<Facets | null>(null);
 let _status = $state<Status>('idle');
 let _errorDetail = $state('');
 let _openDoc = $state<LibraryDoc | null>(null);
 let _openDocStatus = $state<OpenDocStatus>('idle');
 
-// Request-epoch guards (plain counters, not reactive). Every new query generation
-// bumps _queryEpoch; an in-flight first-page/load-more that resolves after the
-// query changed is DISCARDED rather than spliced onto the new query's list —
-// this is what keeps two orderings from ever mixing (the reliability contract).
-// _docEpoch does the same for the single-doc reader (out-of-order opens / close).
+let _total = $state<number | null>(null);
+let _version = $state(0); // bumped whenever the row cache changes
+let _queryKey = $state(computeQueryKey(defaultControls()));
+
+// Non-reactive stores; reactivity is carried by _version + _total.
+const _rowCache = new Map<number, DocListItem>();
+const _loadedWindows = new Set<number>();
+const _inflightWindows = new Set<number>();
+let _activeWindows: number[] = [];
+
+// Request-epoch guard: a window response from a superseded query is discarded,
+// so two orderings never mix (the reliability contract).
 let _queryEpoch = 0;
 let _docEpoch = 0;
 
-// Consumed (and cleared) by the next _fetchFirstPage; null = a plain top page.
-let _pendingSeek: string | null = null;
-// Bumped on every seekTo so the queryKey changes even when controls don't.
-let _seekGen = $state(0);
+// Debounced range coalescing for scroll.
+let _debounceTimer: ReturnType<typeof setTimeout> | null = null;
+let _pendingRange: { start: number; end: number } | null = null;
 
 function _mapError(e: unknown) {
 	if (e instanceof OfflineError) {
@@ -62,38 +56,87 @@ function _mapError(e: unknown) {
 	}
 }
 
-async function _fetchFirstPage() {
-	const epoch = ++_queryEpoch; // start a new query generation
-	const seek = _pendingSeek; // consume the pending jump (null = plain top page)
-	_pendingSeek = null;
-	_state = { ...emptyState(), isFetching: true };
-	try {
-		const resp = await client.listDocuments(toQuery(_controls, null, LIMIT, seek));
-		if (epoch !== _queryEpoch) return; // superseded by a newer query — discard
-		_state = appendPage(emptyState(), resp);
-		_status = 'ready';
-	} catch (e) {
-		if (epoch !== _queryEpoch) return; // superseded — don't clobber the new query
-		_state = { ..._state, isFetching: false };
-		_mapError(e);
+function _resetData() {
+	_rowCache.clear();
+	_loadedWindows.clear();
+	_inflightWindows.clear();
+	_activeWindows = [];
+	_total = null;
+	_version++;
+}
+
+function _appliedFilters(): Partial<AnchorOffsetParams> {
+	const out: Record<string, unknown> = {};
+	for (const [k, v] of Object.entries(_controls.filters)) {
+		if (v !== undefined && v !== '') out[k] = v;
 	}
+	return out as Partial<AnchorOffsetParams>;
+}
+
+function _evict() {
+	for (const k of evictWindows(_loadedWindows, _activeWindows, LRU_CAP)) {
+		_loadedWindows.delete(k);
+		const { offset, limit } = windowBounds(k);
+		for (let i = 0; i < limit; i++) _rowCache.delete(offset + i);
+	}
+}
+
+async function _fetchWindow(key: number, epoch: number) {
+	if (_loadedWindows.has(key) || _inflightWindows.has(key)) return;
+	_inflightWindows.add(key);
+	const { offset, limit } = windowBounds(key);
+	try {
+		const resp = await client.listDocuments(toQuery(_controls, offset, limit));
+		if (epoch !== _queryEpoch) return; // superseded — discard
+		_total = resp.total;
+		for (let i = 0; i < resp.items.length; i++) {
+			_rowCache.set(offset + i, resp.items[i]);
+		}
+		_loadedWindows.add(key);
+		_status = 'ready';
+		_evict();
+		_version++;
+	} catch (e) {
+		if (epoch !== _queryEpoch) return;
+		_mapError(e);
+	} finally {
+		_inflightWindows.delete(key);
+	}
+}
+
+function _runEnsure(start: number, end: number) {
+	const keys = windowsForRange(start, end, LOOKAHEAD);
+	_activeWindows = keys;
+	const epoch = _queryEpoch;
+	for (const k of keys) void _fetchWindow(k, epoch);
+}
+
+async function _newQuery() {
+	_queryEpoch++;
+	_resetData();
+	_activeWindows = [0];
+	await _fetchWindow(0, _queryEpoch);
 }
 
 export const libraryState = {
 	get controls() { return _controls; },
-	get state() { return _state; },
 	get facets() { return _facets; },
 	get status() { return _status; },
 	get errorDetail() { return _errorDetail; },
+	get total() { return _total; },
+	get queryKey() { return _queryKey; },
 	get openDoc() { return _openDoc; },
 	get openDocStatus() { return _openDocStatus; },
-	get canLoadMore() { return canLoadMore(_state); },
-	get queryKey() { return composeQueryKey(computeQueryKey(_controls), _seekGen); },
+
+	rowAt(index: number): DocListItem | undefined {
+		void _version; // subscribe: re-reads when the cache changes
+		return _rowCache.get(index);
+	},
 
 	async init() {
 		if (_status !== 'idle') return;
 		_status = 'loading';
-		await Promise.all([_fetchFirstPage(), this.loadFacets()]);
+		await Promise.all([_newQuery(), this.loadFacets()]);
 	},
 
 	async loadFacets() {
@@ -109,36 +152,39 @@ export const libraryState = {
 		const next = { ...prev, ...patch };
 		_controls = next;
 		if (controlsChanged(prev, next)) {
-			_state = emptyState();
-			void _fetchFirstPage();
+			_queryKey = computeQueryKey(next);
+			void _newQuery();
 		}
 	},
 
-	seekTo(seek: string | null) {
-		_pendingSeek = seek; // null = jump to the top of the current ordering
-		_seekGen++; // force queryKey to change so DocList scrolls to top
-		_state = emptyState();
-		void _fetchFirstPage();
+	ensureWindowsForRange(start: number, end: number) {
+		_pendingRange = { start, end };
+		if (_debounceTimer) return;
+		_debounceTimer = setTimeout(() => {
+			_debounceTimer = null;
+			const r = _pendingRange;
+			_pendingRange = null;
+			if (r) _runEnsure(r.start, r.end);
+		}, 80);
 	},
 
-	async loadMore() {
-		if (!canLoadMore(_state)) return;
-		const epoch = _queryEpoch; // this page belongs to the current query generation
-		_state = { ..._state, isFetching: true };
+	async jumpToAnchor(seek: string | null): Promise<number> {
+		const total = _total ?? 0;
+		const shortcut = resolveAnchorIndex(seek, _controls.dir, total);
+		if (shortcut !== null) return shortcut;
 		try {
-			const resp = await client.listDocuments(toQuery(_controls, _state.cursor, LIMIT));
-			if (epoch !== _queryEpoch) return; // query changed mid-flight — drop this page
-			_state = appendPage({ ..._state, isFetching: false }, resp);
-			_status = 'ready';
+			const params: AnchorOffsetParams = {
+				sort: _controls.sort,
+				dir: _controls.dir,
+				value: seek as string,
+				..._appliedFilters()
+			};
+			if (_controls.q !== '') params.q = _controls.q;
+			const { offset } = await client.getAnchorOffset(params);
+			return Math.min(offset, Math.max(0, total - 1));
 		} catch (e) {
-			if (epoch !== _queryEpoch) return; // superseded — leave the new query alone
-			if (isStaleCursor(e)) {
-				_state = emptyState();
-				await _fetchFirstPage();
-			} else {
-				_state = { ..._state, isFetching: false };
-				_mapError(e);
-			}
+			_mapError(e);
+			return 0;
 		}
 	},
 
@@ -147,7 +193,7 @@ export const libraryState = {
 		_openDocStatus = 'loading';
 		try {
 			const doc = await client.getDocument(id);
-			if (epoch !== _docEpoch) return; // a newer open/close superseded this one
+			if (epoch !== _docEpoch) return;
 			_openDoc = doc;
 			_openDocStatus = 'idle';
 		} catch {
@@ -157,8 +203,8 @@ export const libraryState = {
 	},
 
 	closeDoc() {
-		_docEpoch++; // invalidate any in-flight open so it can't re-populate the modal
+		_docEpoch++;
 		_openDoc = null;
-		_openDocStatus = 'idle'; // reset so the modal actually dismisses (not stuck loading/error)
+		_openDocStatus = 'idle';
 	}
 };
