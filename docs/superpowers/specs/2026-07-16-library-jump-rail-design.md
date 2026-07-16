@@ -31,7 +31,8 @@ The rail adapts to the active sort:
 | Sort column | Rail |
 |---|---|
 | `title`, `author` (text) | `#` · A · B · … · Z |
-| `publication_date`, `updated_at` (date) | `‹1800` · 1800s · 1810s · … · 2020s · `undated` |
+| `publication_date` (date) | `‹1800` · 1800s · 1810s · … · 2020s · `undated` |
+| `updated_at` | *no rail* — every doc shares the migration timestamp (`2026-07-15`), so a rail would be a single dead bucket. |
 
 The rail is **direction-aware**: ascending seeks `>= anchor`, descending seeks
 `<= anchor`, so the rail always reads top-to-bottom the way the list is ordered.
@@ -105,10 +106,10 @@ the frontend `Facets` type change.
 
 ```ts
 type RailAnchor = { label: string; seek: string | null };
-railKind(sort): 'alpha' | 'date'
+railKind(sort): 'alpha' | 'date' | 'none'   // title/author→alpha, publication_date→date, else none
 alphaAnchors(dir): RailAnchor[]           // '#' (seek:null) + A..Z, reversed for desc
 dateAnchors(range, dir): RailAnchor[]     // ‹1800 + decades + undated, dir-ordered
-buildRail(sort, dir, facets): RailAnchor[]
+buildRail(sort, dir, facets): RailAnchor[]  // [] when kind==='none' or facets missing
 ```
 
 - `alphaAnchors`: `#` (seek `null` → top), then A–Z each with `seek` = the letter.
