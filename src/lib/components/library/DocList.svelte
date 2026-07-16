@@ -7,119 +7,87 @@
 	import type { RailAnchor } from '$lib/library/railLogic';
 
 	interface Props {
-		items: DocListItem[];
-		view: 'list' | 'grid';
 		total: number | null;
-		canLoadMore: boolean;
-		isFetching: boolean;
-		onLoadMore: () => void;
+		rowAt: (index: number) => DocListItem | undefined;
+		view: 'list' | 'grid';
 		queryKey: string;
 		onOpen: (id: number | string) => void;
+		onVisibleRange: (start: number, end: number) => void;
+		resolveJumpIndex: (seek: string | null) => Promise<number>;
 		anchors: RailAnchor[];
-		onSeek: (seek: string | null) => void;
 	}
 
-	const {
-		items,
-		view,
-		total,
-		canLoadMore,
-		isFetching,
-		onLoadMore,
-		queryKey,
-		onOpen,
-		anchors,
-		onSeek
-	}: Props = $props();
-
-	// How close (in item-index terms) the last visible row must be to the end
-	// of the currently-loaded items before we ask for the next page.
-	const NEAR_END_INDEX_MARGIN = 10;
+	const { total, rowAt, view, queryKey, onOpen, onVisibleRange, resolveJumpIndex, anchors }: Props =
+		$props();
 
 	let vlistRef: VListHandle | undefined = $state();
 
-	// Re-entrancy latch: prevents a burst of scroll events (or repeated calls
-	// while a fetch is in flight) from firing onLoadMore() more than once for
-	// the same in-flight/next page. Cleared once the current fetch resolves
-	// (isFetching flips back to false) or the query changes.
-	let pendingRequest = $state(false);
+	// Index array of length `total`; VList renders only the visible slice.
+	const slots = $derived(total ? Array.from({ length: total }, (_, i) => i) : []);
 
-	function maybeLoadMore(offset: number) {
+	function reportVisible(offset: number) {
 		if (!vlistRef) return;
-		if (!canLoadMore) return; // canLoadMore already encodes !isFetching
-		if (pendingRequest) return; // already asked for this page; wait for it to resolve
-
-		const viewportSize = vlistRef.getViewportSize();
-		const lastVisibleIndex = vlistRef.findItemIndex(offset + viewportSize);
-
-		if (items.length - lastVisibleIndex <= NEAR_END_INDEX_MARGIN) {
-			pendingRequest = true;
-			onLoadMore();
-		}
+		const vp = vlistRef.getViewportSize();
+		const start = vlistRef.findItemIndex(offset);
+		const end = vlistRef.findItemIndex(offset + vp);
+		onVisibleRange(start, end);
 	}
 
 	function handleScroll(offset: number) {
-		maybeLoadMore(offset);
+		reportVisible(offset);
 	}
 
-	// Re-check after every page append (also covers the case where a page of
-	// results is shorter than the viewport, so no scroll event ever fires).
-	$effect(() => {
-		void items.length;
-		if (!vlistRef) return;
-		maybeLoadMore(vlistRef.getScrollOffset());
-	});
+	async function handleJump(seek: string | null) {
+		const index = await resolveJumpIndex(seek);
+		vlistRef?.scrollToIndex(index);
+	}
 
-	// A fetch just completed (success or failure) — re-arm the latch so the
-	// next scroll (or the effect above) can request another page.
-	let prevIsFetching: boolean | undefined;
-	$effect(() => {
-		const wasFetching = prevIsFetching;
-		prevIsFetching = isFetching;
-		if (wasFetching && !isFetching) {
-			pendingRequest = false;
-		}
-	});
-
-	// New query (search/sort/filter changed) = fresh list. Reset the latch and
-	// scroll back to the top so stale scroll position doesn't false-trigger or
-	// leave the user scrolled into what is now a different result set.
+	// New query = fresh list: scroll to top. (libraryState already reset the cache.)
 	let prevQueryKey: string | undefined;
 	$effect(() => {
 		const previous = prevQueryKey;
 		prevQueryKey = queryKey;
 		if (previous !== undefined && queryKey !== previous) {
-			pendingRequest = false;
 			vlistRef?.scrollTo(0);
 		}
+	});
+
+	// Once total is known (or grows into view), ensure the visible window loads —
+	// also covers a viewport taller than the first fetched window.
+	$effect(() => {
+		void total;
+		if (!vlistRef || !total) return;
+		reportVisible(vlistRef.getScrollOffset());
 	});
 </script>
 
 <div class="doc-list-wrap">
 	{#if total !== null}
-		<p class="count">showing {items.length} of {total}</p>
+		<p class="count">{total} documents</p>
 	{/if}
 	<div class="list-and-rail">
 		<VList
-			data={items}
-			getKey={(item) => item.id}
+			data={slots}
+			getKey={(i) => i}
 			bind:this={vlistRef}
 			onscroll={handleScroll}
 			style="height: 70vh; flex: 1; min-width: 0;"
 		>
-			{#snippet children(item)}
-				{#if view === 'grid'}
-					<div class="grid-cell"><DocCard {item} {onOpen} /></div>
+			{#snippet children(index)}
+				{@const row = rowAt(index)}
+				{#if row}
+					{#if view === 'grid'}
+						<div class="grid-cell"><DocCard item={row} {onOpen} /></div>
+					{:else}
+						<DocRow item={row} {onOpen} />
+					{/if}
 				{:else}
-					<DocRow {item} {onOpen} />
+					<div class="skeleton" aria-hidden="true"></div>
 				{/if}
 			{/snippet}
 		</VList>
-		<JumpRail {anchors} {onSeek} />
+		<JumpRail {anchors} onSeek={handleJump} />
 	</div>
-	{#if isFetching}
-		<p class="status loading-more">loading more…</p>
-	{/if}
 </div>
 
 <style>
@@ -148,13 +116,11 @@
 	.grid-cell {
 		padding: 0.3rem 0;
 	}
-	.status.loading-more {
-		font-family: var(--font-ui);
-		font-size: 0.6rem;
-		letter-spacing: 0.08em;
-		color: var(--clr-text);
-		opacity: 0.6;
-		text-align: center;
-		margin: 0.75rem 0 0;
+	.skeleton {
+		height: 2.4rem;
+		margin: 0.15rem 0;
+		border-radius: 3px;
+		background: var(--clr-text);
+		opacity: 0.06;
 	}
 </style>
