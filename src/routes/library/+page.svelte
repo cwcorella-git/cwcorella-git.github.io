@@ -48,20 +48,18 @@
 				facets={libraryState.facets}
 				onChange={(p) => libraryState.applyControls(p)}
 			/>
-			{#if libraryState.state.items.length === 0}
+			{#if libraryState.total === 0}
 				<p class="status">no documents match.</p>
 			{:else}
 				<DocList
-					items={libraryState.state.items}
+					total={libraryState.total}
+					rowAt={(i) => libraryState.rowAt(i)}
 					view={libraryState.controls.view}
-					total={libraryState.state.total}
-					canLoadMore={libraryState.canLoadMore}
-					isFetching={libraryState.state.isFetching}
-					onLoadMore={() => libraryState.loadMore()}
 					queryKey={libraryState.queryKey}
 					onOpen={(id) => libraryState.openDocById(id)}
+					onVisibleRange={(s, e) => libraryState.ensureWindowsForRange(s, e)}
+					resolveJumpIndex={(seek) => libraryState.jumpToAnchor(seek)}
 					{anchors}
-					onSeek={(seek) => libraryState.seekTo(seek)}
 				/>
 			{/if}
 		{/if}
