@@ -47,7 +47,7 @@ every one of those failure modes impossible.
   Cloudflare tunnel). Its **own Postgres + own files volume**: document bodies stored
   as markdown/text files on B's volume, DB holds metadata + `file_path`. Keeps the DB
   lean for the 100k-row metadata queries that drive browse/search/sort.
-- Exposed at a new CF-tunnel hostname (≈ `library-api.veritablegames.com`).
+- Exposed at a new CF-tunnel hostname (≈ `library-api.cwcorella.com`).
 - **Auth:** Bearer token, validated by FastAPI. Token carried in cwcorella's existing
   admin-key mechanism (localStorage), sent as `Authorization: Bearer`.
 - **Serves:** keyset-cursor pages over a single global order; metadata **and body

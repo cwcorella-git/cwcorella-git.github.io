@@ -16,7 +16,7 @@ import type { LibraryDoc, Facets } from './types';
 
 const LIMIT = 50;
 
-const baseUrl = env.PUBLIC_LIBRARY_API_URL || 'https://library-api.veritablegames.com';
+const baseUrl = env.PUBLIC_LIBRARY_API_URL || 'https://library-api.cwcorella.com';
 
 const client = createLibraryClient({ baseUrl, getToken: () => adminState.libraryToken });
 

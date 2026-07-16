@@ -3,7 +3,7 @@
 **Date:** 2026-07-14
 **Repo:** `cwcorella-git.github.io` (SvelteKit 2 + Svelte 5 runes, `adapter-static`)
 **Umbrella spec:** `docs/superpowers/specs/2026-07-14-library-platform-architecture.md`
-**Depends on:** B2 (read API — `library-api`, deployed at `library-api.veritablegames.com`). **Status:** Approved design — ready for plan.
+**Depends on:** B2 (read API — `library-api`, deployed at `library-api.cwcorella.com`). **Status:** Approved design — ready for plan.
 
 ## Purpose
 
@@ -56,7 +56,7 @@ Follows the `/links` pattern exactly (`src/routes/links/+page.svelte`):
 
 ### `src/lib/library/api.ts` — the B2 client
 - Base URL from a build-time public env var `PUBLIC_LIBRARY_API_URL` (default
-  `https://library-api.veritablegames.com`); dev points it at a local B2 (`http://127.0.0.1:8080`).
+  `https://library-api.cwcorella.com`); dev points it at a local B2 (`http://127.0.0.1:8080`).
 - `Authorization: Bearer ${adminState.libraryToken}` on every call; `credentials: 'omit'` (bearer, not
   cookies — matches B2's CORS `allow_credentials=false`).
 - Functions: `listDocuments(query) -> {items, next_cursor, total}`, `getDocument(id) -> doc`,
