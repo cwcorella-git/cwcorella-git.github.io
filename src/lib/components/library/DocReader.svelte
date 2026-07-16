@@ -296,8 +296,4 @@
 		overflow-x: auto;
 	}
 	:global(.doc-body ul, .doc-body ol) { line-height: 1.8; color: var(--clr-text); padding-left: 1.5rem; }
-
-	@media (max-width: 640px) {
-		.doc-scroll { padding: 1.25rem; }
-	}
 </style>
