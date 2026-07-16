@@ -16,6 +16,13 @@ import type { LibraryDoc, Facets } from './types';
 
 const LIMIT = 50;
 
+// A jump (seekTo) doesn't change sort/filters, so computeQueryKey alone won't
+// change — the seek generation is folded in so DocList's queryKey effect still
+// fires (scroll-to-top + load-more latch reset) on every jump.
+export function composeQueryKey(base: string, seekGen: number): string {
+	return base + '|s' + seekGen;
+}
+
 const baseUrl = env.PUBLIC_LIBRARY_API_URL || 'https://library-api.cwcorella.com';
 
 const client = createLibraryClient({ baseUrl, getToken: () => adminState.libraryToken });
@@ -39,6 +46,11 @@ let _openDocStatus = $state<OpenDocStatus>('idle');
 let _queryEpoch = 0;
 let _docEpoch = 0;
 
+// Consumed (and cleared) by the next _fetchFirstPage; null = a plain top page.
+let _pendingSeek: string | null = null;
+// Bumped on every seekTo so the queryKey changes even when controls don't.
+let _seekGen = $state(0);
+
 function _mapError(e: unknown) {
 	if (e instanceof OfflineError) {
 		_status = 'offline';
@@ -52,9 +64,11 @@ function _mapError(e: unknown) {
 
 async function _fetchFirstPage() {
 	const epoch = ++_queryEpoch; // start a new query generation
+	const seek = _pendingSeek; // consume the pending jump (null = plain top page)
+	_pendingSeek = null;
 	_state = { ...emptyState(), isFetching: true };
 	try {
-		const resp = await client.listDocuments(toQuery(_controls, null, LIMIT));
+		const resp = await client.listDocuments(toQuery(_controls, null, LIMIT, seek));
 		if (epoch !== _queryEpoch) return; // superseded by a newer query — discard
 		_state = appendPage(emptyState(), resp);
 		_status = 'ready';
@@ -74,7 +88,7 @@ export const libraryState = {
 	get openDoc() { return _openDoc; },
 	get openDocStatus() { return _openDocStatus; },
 	get canLoadMore() { return canLoadMore(_state); },
-	get queryKey() { return computeQueryKey(_controls); },
+	get queryKey() { return composeQueryKey(computeQueryKey(_controls), _seekGen); },
 
 	async init() {
 		if (_status !== 'idle') return;
@@ -98,6 +112,13 @@ export const libraryState = {
 			_state = emptyState();
 			void _fetchFirstPage();
 		}
+	},
+
+	seekTo(seek: string | null) {
+		_pendingSeek = seek; // null = jump to the top of the current ordering
+		_seekGen++; // force queryKey to change so DocList scrolls to top
+		_state = emptyState();
+		void _fetchFirstPage();
 	},
 
 	async loadMore() {
