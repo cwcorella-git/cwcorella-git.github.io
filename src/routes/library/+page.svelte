@@ -5,6 +5,7 @@
 	import DocList from '$lib/components/library/DocList.svelte';
 	import LibraryControls from '$lib/components/library/LibraryControls.svelte';
 	import DocReader from '$lib/components/library/DocReader.svelte';
+	import { buildRail } from '$lib/library/railLogic';
 
 	// Redirect non-admins — but only AFTER session rehydration, so a hard load /
 	// refresh of /library doesn't bounce a logged-in admin before restoreFromSession runs.
@@ -15,6 +16,14 @@
 	$effect(() => {
 		if (adminState.active && libraryState.status === 'idle') libraryState.init();
 	});
+
+	const anchors = $derived(
+		buildRail(
+			libraryState.controls.sort,
+			libraryState.controls.dir,
+			libraryState.facets?.date_range ?? null
+		)
+	);
 </script>
 
 <svelte:head><title>library — cwcorella</title></svelte:head>
@@ -51,6 +60,8 @@
 					onLoadMore={() => libraryState.loadMore()}
 					queryKey={libraryState.queryKey}
 					onOpen={(id) => libraryState.openDocById(id)}
+					{anchors}
+					onSeek={(seek) => libraryState.seekTo(seek)}
 				/>
 			{/if}
 		{/if}

@@ -2,7 +2,9 @@
 	import { VList, type VListHandle } from 'virtua/svelte';
 	import DocRow from './DocRow.svelte';
 	import DocCard from './DocCard.svelte';
+	import JumpRail from './JumpRail.svelte';
 	import type { DocListItem } from '$lib/library/types';
+	import type { RailAnchor } from '$lib/library/railLogic';
 
 	interface Props {
 		items: DocListItem[];
@@ -13,10 +15,22 @@
 		onLoadMore: () => void;
 		queryKey: string;
 		onOpen: (id: number | string) => void;
+		anchors: RailAnchor[];
+		onSeek: (seek: string | null) => void;
 	}
 
-	const { items, view, total, canLoadMore, isFetching, onLoadMore, queryKey, onOpen }: Props =
-		$props();
+	const {
+		items,
+		view,
+		total,
+		canLoadMore,
+		isFetching,
+		onLoadMore,
+		queryKey,
+		onOpen,
+		anchors,
+		onSeek
+	}: Props = $props();
 
 	// How close (in item-index terms) the last visible row must be to the end
 	// of the currently-loaded items before we ask for the next page.
@@ -85,21 +99,24 @@
 	{#if total !== null}
 		<p class="count">showing {items.length} of {total}</p>
 	{/if}
-	<VList
-		data={items}
-		getKey={(item) => item.id}
-		bind:this={vlistRef}
-		onscroll={handleScroll}
-		style="height: 70vh;"
-	>
-		{#snippet children(item)}
-			{#if view === 'grid'}
-				<div class="grid-cell"><DocCard {item} {onOpen} /></div>
-			{:else}
-				<DocRow {item} {onOpen} />
-			{/if}
-		{/snippet}
-	</VList>
+	<div class="list-and-rail">
+		<VList
+			data={items}
+			getKey={(item) => item.id}
+			bind:this={vlistRef}
+			onscroll={handleScroll}
+			style="height: 70vh; flex: 1; min-width: 0;"
+		>
+			{#snippet children(item)}
+				{#if view === 'grid'}
+					<div class="grid-cell"><DocCard {item} {onOpen} /></div>
+				{:else}
+					<DocRow {item} {onOpen} />
+				{/if}
+			{/snippet}
+		</VList>
+		<JumpRail {anchors} {onSeek} />
+	</div>
 	{#if isFetching}
 		<p class="status loading-more">loading more…</p>
 	{/if}
@@ -109,6 +126,16 @@
 	.doc-list-wrap {
 		display: flex;
 		flex-direction: column;
+	}
+	.list-and-rail {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.25rem;
+	}
+	@media (max-width: 480px) {
+		.list-and-rail {
+			flex-direction: column-reverse;
+		}
 	}
 	.count {
 		font-family: var(--font-ui);
