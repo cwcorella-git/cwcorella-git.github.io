@@ -1,4 +1,11 @@
-import type { LibraryDoc, LibraryQuery, ListResponse, Facets } from './types';
+import type {
+	LibraryDoc,
+	LibraryQuery,
+	ListResponse,
+	Facets,
+	AnchorOffsetParams,
+	AnchorOffsetResponse
+} from './types';
 
 export class AuthError extends Error {
 	constructor(message = 'Authentication failed.') {
@@ -26,7 +33,7 @@ export class ApiError extends Error {
 	}
 }
 
-export function serializeQuery(q: LibraryQuery): string {
+export function serializeQuery(q: Record<string, unknown>): string {
 	const params = new URLSearchParams();
 	for (const [key, value] of Object.entries(q)) {
 		if (value === undefined || value === null || value === '') continue;
@@ -44,7 +51,10 @@ interface CreateLibraryClientOptions {
 }
 
 export function createLibraryClient({ baseUrl, getToken, fetchImpl = fetch }: CreateLibraryClientOptions) {
-	async function request<T>(path: string, options: { query?: LibraryQuery } = {}): Promise<T> {
+	async function request<T>(
+		path: string,
+		options: { query?: Record<string, unknown> } = {}
+	): Promise<T> {
 		const qs = options.query ? serializeQuery(options.query) : '';
 		const url = baseUrl.replace(/\/$/, '') + path + (qs ? '?' + qs : '');
 
@@ -78,13 +88,18 @@ export function createLibraryClient({ baseUrl, getToken, fetchImpl = fetch }: Cr
 
 	return {
 		listDocuments(query: LibraryQuery = {}): Promise<ListResponse> {
-			return request<ListResponse>('/documents', { query });
+			return request<ListResponse>('/documents', { query: query as Record<string, unknown> });
 		},
 		getDocument(id: number | string): Promise<LibraryDoc> {
 			return request<LibraryDoc>('/documents/' + id);
 		},
 		getFacets(): Promise<Facets> {
 			return request<Facets>('/facets');
+		},
+		getAnchorOffset(params: AnchorOffsetParams): Promise<AnchorOffsetResponse> {
+			return request<AnchorOffsetResponse>('/anchor-offset', {
+				query: params as unknown as Record<string, unknown>
+			});
 		}
 	};
 }

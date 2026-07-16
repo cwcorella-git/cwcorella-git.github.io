@@ -41,7 +41,6 @@ export interface Facets {
 export interface LibraryQuery {
 	sort?: string;
 	dir?: 'asc' | 'desc';
-	cursor?: string | null;
 	q?: string;
 	language?: string;
 	source?: string;
@@ -49,8 +48,25 @@ export interface LibraryQuery {
 	tag?: string;
 	visibility?: string;
 	needs_formatting?: 0 | 1;
-	seek?: string;
+	offset?: number;
 	limit?: number;
+}
+
+export interface AnchorOffsetParams {
+	sort: string;
+	dir: 'asc' | 'desc';
+	value: string;
+	q?: string;
+	language?: string;
+	source?: string;
+	collection?: string;
+	tag?: string;
+	visibility?: string;
+	needs_formatting?: 0 | 1;
+}
+
+export interface AnchorOffsetResponse {
+	offset: number;
 }
 
 export interface ListResponse {

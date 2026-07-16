@@ -1,5 +1,4 @@
-import { ApiError } from './api';
-import type { DocListItem, LibraryQuery, ListResponse } from './types';
+import type { LibraryQuery } from './types';
 
 export interface LibraryControls {
 	sort: string; // one of B2's 4: title|author|publication_date|updated_at
@@ -17,14 +16,6 @@ export interface LibraryControls {
 	view: 'list' | 'grid';
 }
 
-export interface LibraryState {
-	items: DocListItem[];
-	cursor: string | null; // B2 next_cursor; null = at start or exhausted
-	hasNext: boolean;
-	total: number | null; // from B2 COUNT; null until first page loads
-	isFetching: boolean;
-}
-
 /** Whether a filter value counts as "applied". 0 is a real value, not empty. */
 function isAppliedFilterValue(value: unknown): boolean {
 	return value !== undefined && value !== '';
@@ -32,10 +23,6 @@ function isAppliedFilterValue(value: unknown): boolean {
 
 export function defaultControls(): LibraryControls {
 	return { sort: 'title', dir: 'asc', q: '', filters: {}, view: 'list' };
-}
-
-export function emptyState(): LibraryState {
-	return { items: [], cursor: null, hasNext: true, total: null, isFetching: false };
 }
 
 export function computeQueryKey(c: LibraryControls): string {
@@ -55,17 +42,8 @@ export function controlsChanged(prev: LibraryControls, next: LibraryControls): b
 	return computeQueryKey(prev) !== computeQueryKey(next);
 }
 
-export function toQuery(
-	c: LibraryControls,
-	cursor: string | null,
-	limit: number,
-	seek: string | null = null
-): LibraryQuery {
-	const query: LibraryQuery = {
-		sort: c.sort,
-		dir: c.dir,
-		limit
-	};
+export function toQuery(c: LibraryControls, offset: number, limit: number): LibraryQuery {
+	const query: LibraryQuery = { sort: c.sort, dir: c.dir, limit, offset };
 
 	if (c.q !== '') {
 		query.q = c.q;
@@ -77,33 +55,5 @@ export function toQuery(
 		}
 	}
 
-	if (cursor !== null) {
-		query.cursor = cursor;
-	} else if (seek !== null && seek !== '') {
-		// seek only ever anchors a FIRST page; continuation pages use the cursor.
-		query.seek = seek;
-	}
-
 	return query;
-}
-
-export function canLoadMore(s: LibraryState): boolean {
-	return !s.isFetching && s.hasNext;
-}
-
-export function appendPage(s: LibraryState, resp: ListResponse): LibraryState {
-	const existingIds = new Set(s.items.map((item) => item.id));
-	const newItems = resp.items.filter((item) => !existingIds.has(item.id));
-
-	return {
-		items: [...s.items, ...newItems],
-		cursor: resp.next_cursor,
-		hasNext: resp.next_cursor != null,
-		total: resp.total,
-		isFetching: false
-	};
-}
-
-export function isStaleCursor(err: unknown): boolean {
-	return err instanceof ApiError && err.status === 400;
 }
