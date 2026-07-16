@@ -55,6 +55,7 @@
 					total={libraryState.total}
 					rowAt={(i) => libraryState.rowAt(i)}
 					view={libraryState.controls.view}
+					sort={libraryState.controls.sort}
 					queryKey={libraryState.queryKey}
 					onOpen={(id) => libraryState.openDocById(id)}
 					onVisibleRange={(s, e) => libraryState.ensureWindowsForRange(s, e)}

@@ -4,12 +4,13 @@
 	import DocCard from './DocCard.svelte';
 	import JumpRail from './JumpRail.svelte';
 	import type { DocListItem } from '$lib/library/types';
-	import type { RailAnchor } from '$lib/library/railLogic';
+	import { anchorLabelForRow, type RailAnchor } from '$lib/library/railLogic';
 
 	interface Props {
 		total: number | null;
 		rowAt: (index: number) => DocListItem | undefined;
 		view: 'list' | 'grid';
+		sort: string;
 		queryKey: string;
 		onOpen: (id: number | string) => void;
 		onVisibleRange: (start: number, end: number) => void;
@@ -17,19 +18,40 @@
 		anchors: RailAnchor[];
 	}
 
-	const { total, rowAt, view, queryKey, onOpen, onVisibleRange, resolveJumpIndex, anchors }: Props =
-		$props();
+	const {
+		total,
+		rowAt,
+		view,
+		sort,
+		queryKey,
+		onOpen,
+		onVisibleRange,
+		resolveJumpIndex,
+		anchors
+	}: Props = $props();
 
 	let vlistRef: VListHandle | undefined = $state();
+	let topIndex = $state<number | null>(null);
 
 	// Index array of length `total`; VList renders only the visible slice.
 	const slots = $derived(total ? Array.from({ length: total }, (_, i) => i) : []);
+
+	// Live "you are here": the top visible row's own field decides its anchor
+	// bucket. `rowAt` reads _version internally, so this re-runs when a window
+	// lands; only overwrite when the row is loaded, so the label holds over gaps.
+	let activeLabel = $state<string | null>(null);
+	$effect(() => {
+		if (topIndex === null) return;
+		const row = rowAt(topIndex);
+		if (row) activeLabel = anchorLabelForRow(sort, row);
+	});
 
 	function reportVisible(offset: number) {
 		if (!vlistRef) return;
 		const vp = vlistRef.getViewportSize();
 		const start = vlistRef.findItemIndex(offset);
 		const end = vlistRef.findItemIndex(offset + vp);
+		topIndex = start;
 		onVisibleRange(start, end);
 	}
 
@@ -41,6 +63,10 @@
 		const index = await resolveJumpIndex(seek);
 		vlistRef?.scrollToIndex(index);
 		onVisibleRange(index, index);
+	}
+
+	function handleScrubTo(index: number) {
+		vlistRef?.scrollToIndex(index);
 	}
 
 	// New query = fresh list: scroll to top. (libraryState already reset the cache.)
@@ -87,7 +113,13 @@
 				{/if}
 			{/snippet}
 		</VList>
-		<JumpRail {anchors} onSeek={handleJump} />
+		<JumpRail
+			{anchors}
+			onSeek={handleJump}
+			{total}
+			{activeLabel}
+			onScrubTo={handleScrubTo}
+		/>
 	</div>
 </div>
 
