@@ -3,6 +3,8 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import { page } from '$app/stores';
 	import { adminState, bookFormState, writeQueue, ADMIN_SEQUENCE } from '$lib/admin/state.svelte';
+	import { navState } from '$lib/nav/navState.svelte';
+	import { visibleItems } from '$lib/nav/navLogic';
 	import { themeState } from '$lib/admin/theme.svelte';
 	import { archiveState } from '$lib/admin/archive.svelte';
 	import { isUnlockDay } from '$lib/admin/tlock';
@@ -14,6 +16,8 @@
 	import Sky from '$lib/components/Sky.svelte';
 
 	let { children } = $props();
+
+	const navLinks = $derived(visibleItems(navState.items, adminState.active || archiveState.mode));
 
 	const commitHash = (import.meta.env['VITE_COMMIT_HASH'] as string | undefined)?.slice(0, 7) ?? '';
 
@@ -71,12 +75,9 @@
 
 <nav>
 	<div class="nav-items">
-		<a href="/" class:active={$page.url.pathname === '/'}>cwcorella</a>
-		<a href="/reading" class:active={$page.url.pathname === '/reading'}>reading</a>
-		{#if adminState.active || archiveState.mode}
-			<a href="/journals" class:active={$page.url.pathname === '/journals'}>journals</a>
-			<a href="/links" class:active={$page.url.pathname === '/links'}>links</a>
-		{/if}
+		{#each navLinks as item (item.id)}
+			<a href={item.href} class:active={$page.url.pathname === item.href}>{item.label}</a>
+		{/each}
 		<AdminToolbar onLogoutRequest={() => logoutConfirmOpen = true} alwaysShowTheme />
 	</div>
 </nav>

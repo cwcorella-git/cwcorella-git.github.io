@@ -1,0 +1,7 @@
+[
+	{ "id": "home", "label": "cwcorella", "href": "/", "shown": true, "audience": "public", "pinned": true },
+	{ "id": "reading", "label": "reading", "href": "/reading", "shown": true, "audience": "public" },
+	{ "id": "library", "label": "library", "href": "/library", "shown": true, "audience": "admin", "adminLocked": true },
+	{ "id": "journals", "label": "journals", "href": "/journals", "shown": true, "audience": "admin", "adminLocked": true },
+	{ "id": "links", "label": "links", "href": "/links", "shown": true, "audience": "admin", "adminLocked": true }
+]

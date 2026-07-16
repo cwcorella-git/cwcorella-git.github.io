@@ -3,11 +3,13 @@
 	import { toast } from '$lib/admin/toast.svelte';
 	import ThemePanel from './ThemePanel.svelte';
 	import SettingsPanel from './SettingsPanel.svelte';
+	import NavPanel from './NavPanel.svelte';
 
 	let { onLogoutRequest, alwaysShowTheme = false }: { onLogoutRequest: () => void; alwaysShowTheme?: boolean } = $props();
 
 	let adminMenuOpen = $state(false);
 	let themePanelOpen = $state(false);
+	let navPanelOpen = $state(false);
 
 	async function handleSync() {
 		await writeQueue.flush();
@@ -18,12 +20,17 @@
 
 	function toggleThemePanel() {
 		themePanelOpen = !themePanelOpen;
-		if (themePanelOpen) adminMenuOpen = false;
+		if (themePanelOpen) { adminMenuOpen = false; navPanelOpen = false; }
 	}
 
 	function toggleAdminMenu() {
 		adminMenuOpen = !adminMenuOpen;
-		if (adminMenuOpen) themePanelOpen = false;
+		if (adminMenuOpen) { themePanelOpen = false; navPanelOpen = false; }
+	}
+
+	function toggleNavPanel() {
+		navPanelOpen = !navPanelOpen;
+		if (navPanelOpen) { themePanelOpen = false; adminMenuOpen = false; }
 	}
 
 	function handleClickOutside(node: HTMLElement) {
@@ -31,6 +38,7 @@
 			if (!node.contains(e.target as Node)) {
 				adminMenuOpen = false;
 				themePanelOpen = false;
+				navPanelOpen = false;
 			}
 		}
 		document.addEventListener('click', onClick, true);
@@ -64,6 +72,20 @@
 	</div>
 
 	{#if adminState.active}
+		<!-- Nav bar settings (admin only) -->
+		<div class="admin-menu-wrapper">
+			<button
+				class="admin-menu-btn"
+				class:active={navPanelOpen}
+				onclick={toggleNavPanel}
+				aria-expanded={navPanelOpen}
+				aria-label="Navigation bar settings"
+			>☰ <span class="btn-label">nav</span></button>
+			{#if navPanelOpen}
+				<NavPanel />
+			{/if}
+		</div>
+
 		<!-- Admin settings (admin only) -->
 		<div class="admin-menu-wrapper">
 			<button
