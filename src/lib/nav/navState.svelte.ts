@@ -7,7 +7,7 @@
 import navStatic from '$lib/content/nav.json';
 import { commitFiles } from '$lib/admin/github';
 import { adminState } from '$lib/admin/state.svelte';
-import { audienceEditable, shownEditable, type NavAudience, type NavItem } from '$lib/nav/navLogic';
+import { audienceEditable, shownEditable, moveItem, type NavAudience, type NavItem } from '$lib/nav/navLogic';
 
 const DEFAULTS = navStatic as NavItem[];
 
@@ -43,6 +43,14 @@ export const navState = {
 		item.audience = audience;
 		_dirty = true;
 		return true;
+	},
+
+	move(id: string, dir: 'up' | 'down') {
+		const next = moveItem(_items, id, dir);
+		if (next !== _items) {
+			_items = next;
+			_dirty = true;
+		}
 	},
 
 	reset() {

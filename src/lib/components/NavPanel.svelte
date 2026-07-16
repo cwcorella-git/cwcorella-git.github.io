@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { navState } from '$lib/nav/navState.svelte';
 	import { adminState } from '$lib/admin/state.svelte';
-	import { audienceEditable, shownEditable, isGoingPublic, type NavItem, type NavAudience } from '$lib/nav/navLogic';
+	import { audienceEditable, shownEditable, canMove, isGoingPublic, type NavItem, type NavAudience } from '$lib/nav/navLogic';
 	import { toast } from '$lib/admin/toast.svelte';
 
 	// The one item awaiting a private→public confirmation (null = none pending).
@@ -21,6 +21,13 @@
 		pendingPublic = null;
 	}
 
+	// Hover explanation for why an item's audience can't be changed.
+	function lockReason(item: NavItem): string {
+		if (item.pinned) return 'site home — always shown and public';
+		if (item.adminLocked) return 'this page is admin-only — a public link would just redirect visitors, so it can’t be made public';
+		return '';
+	}
+
 	async function publish() {
 		try {
 			await navState.publish();
@@ -36,33 +43,41 @@
 
 	<div class="rows">
 		{#each navState.items as item (item.id)}
+			{@const locked = !audienceEditable(item)}
 			<div class="row">
+				<div class="reorder">
+					<button class="arrow" disabled={!canMove(navState.items, item.id, 'up')}
+						onclick={() => navState.move(item.id, 'up')} aria-label="move {item.label} up" title="move up">▲</button>
+					<button class="arrow" disabled={!canMove(navState.items, item.id, 'down')}
+						onclick={() => navState.move(item.id, 'down')} aria-label="move {item.label} down" title="move down">▼</button>
+				</div>
+
 				<button
 					class="show-btn"
 					class:on={item.shown}
 					disabled={!shownEditable(item)}
 					onclick={() => navState.toggleShown(item.id)}
-					title={item.shown ? 'shown — click to hide' : 'hidden — click to show'}
+					title={item.pinned ? 'site home — always shown' : item.shown ? 'shown — click to hide' : 'hidden — click to show'}
 					aria-label={item.shown ? 'hide ' + item.label : 'show ' + item.label}
 				>{item.shown ? '●' : '○'}</button>
 
 				<span class="label" class:muted={!item.shown}>{item.label}</span>
 
-				<div class="aud-toggle" class:locked={!audienceEditable(item)}>
+				<div class="aud-toggle" class:locked title={lockReason(item)}>
 					<button
 						class="aud-btn"
 						class:active={item.audience === 'admin'}
-						disabled={!audienceEditable(item)}
+						class:struck={locked && item.audience !== 'admin'}
+						disabled={locked}
 						onclick={() => chooseAudience(item, 'admin')}
 					>admin</button>
 					<button
 						class="aud-btn"
 						class:active={item.audience === 'public'}
-						disabled={!audienceEditable(item)}
+						class:struck={locked && item.audience !== 'public'}
+						disabled={locked}
 						onclick={() => chooseAudience(item, 'public')}
 					>public</button>
-					{#if item.adminLocked}<span class="lock" title="page is admin-only — a public link would just redirect visitors">🔒</span>{/if}
-					{#if item.pinned}<span class="lock" title="site home — always shown & public">📌</span>{/if}
 				</div>
 			</div>
 		{/each}
@@ -79,15 +94,18 @@
 	{/if}
 
 	<div class="footer">
-		<button class="ghost" disabled={!navState.dirty || navState.publishing} onclick={() => navState.reset()}>reset</button>
-		<button
-			class="publish"
-			disabled={!navState.dirty || navState.publishing || !adminState.pat}
-			onclick={publish}
-			title={!adminState.pat ? 'set a github PAT in settings first' : 'commit nav.json → redeploy'}
-		>{navState.publishing ? '…' : 'publish nav'}</button>
+		<span class="dirty-note">{navState.dirty ? 'unsaved changes' : 'no changes'}</span>
+		<div class="footer-btns">
+			<button class="ghost" disabled={!navState.dirty || navState.publishing} onclick={() => navState.reset()}>reset</button>
+			<button
+				class="publish"
+				disabled={!navState.dirty || navState.publishing || !adminState.pat}
+				onclick={publish}
+				title={!adminState.pat ? 'set a github PAT in settings first' : 'save & publish nav.json → redeploy'}
+			>{navState.publishing ? '…' : 'save & publish'}</button>
+		</div>
 	</div>
-	{#if !adminState.pat}<p class="hint">needs a github PAT (settings ⊙) to publish</p>{/if}
+	{#if navState.dirty && !adminState.pat}<p class="hint">needs a github PAT (settings ⊙) to publish</p>{/if}
 </div>
 
 <style>
@@ -101,7 +119,7 @@
 		backdrop-filter: var(--glass-blur);
 		-webkit-backdrop-filter: var(--glass-blur);
 		padding: 0.85rem 0.9rem;
-		width: 268px;
+		width: 288px;
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
@@ -119,11 +137,22 @@
 
 	.rows { display: flex; flex-direction: column; gap: 0.4rem; }
 
-	.row {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
+	.row { display: flex; align-items: center; gap: 0.5rem; }
+
+	.reorder { display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; }
+	.arrow {
+		background: none;
+		border: none;
+		color: var(--clr-dark-text);
+		font-size: 0.42rem;
+		line-height: 0.9;
+		padding: 0 0.15rem;
+		cursor: pointer;
+		opacity: 0.5;
+		transition: opacity 0.12s;
 	}
+	.arrow:hover:not(:disabled) { opacity: 1; }
+	.arrow:disabled { opacity: 0.15; cursor: default; }
 
 	.show-btn {
 		background: none;
@@ -150,7 +179,7 @@
 	}
 	.label.muted { opacity: 0.4; text-decoration: line-through; }
 
-	.aud-toggle { display: flex; align-items: center; gap: 0.3rem; flex-shrink: 0; }
+	.aud-toggle { display: flex; align-items: center; flex-shrink: 0; }
 
 	.aud-btn {
 		background: none;
@@ -159,7 +188,7 @@
 		font-family: var(--font-ui);
 		font-size: 0.5rem;
 		letter-spacing: 0.05em;
-		padding: 0.2rem 0.35rem;
+		padding: 0.2rem 0.4rem;
 		cursor: pointer;
 		opacity: 0.45;
 		transition: all 0.1s;
@@ -171,11 +200,13 @@
 		background: rgba(var(--dark-panel-rgb), 0.12);
 		border-color: rgba(var(--dark-panel-rgb), 0.30);
 	}
-	.aud-toggle.locked .aud-btn { cursor: not-allowed; }
-	.aud-toggle.locked .aud-btn.active { opacity: 0.7; }
-	.aud-btn:disabled:not(.active) { opacity: 0.25; }
-
-	.lock { font-size: 0.6rem; opacity: 0.6; margin-left: 0.05rem; }
+	/* An unavailable option (locked route can't be public; home can't be admin) */
+	.aud-btn.struck {
+		text-decoration: line-through;
+		opacity: 0.3;
+		cursor: not-allowed;
+	}
+	.aud-toggle.locked { cursor: help; }
 
 	.confirm {
 		border: 1px solid rgba(var(--dark-panel-rgb), 0.20);
@@ -211,11 +242,20 @@
 
 	.footer {
 		display: flex;
-		gap: 0.4rem;
-		justify-content: flex-end;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
 		padding-top: 0.6rem;
 		border-top: 1px solid rgba(var(--dark-panel-rgb), 0.12);
 	}
+	.dirty-note {
+		font-family: var(--font-ui);
+		font-size: 0.52rem;
+		letter-spacing: 0.06em;
+		color: var(--clr-dark-text);
+		opacity: 0.45;
+	}
+	.footer-btns { display: flex; gap: 0.4rem; }
 	.ghost, .publish {
 		background: rgba(var(--dark-panel-rgb), 0.08);
 		border: 1px solid rgba(var(--dark-panel-rgb), 0.20);

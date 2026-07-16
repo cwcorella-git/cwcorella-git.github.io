@@ -4,6 +4,8 @@ import {
 	isGoingPublic,
 	audienceEditable,
 	shownEditable,
+	canMove,
+	moveItem,
 	type NavItem
 } from './navLogic.js';
 
@@ -53,5 +55,30 @@ describe('edit guards', () => {
 		expect(shownEditable(items[0])).toBe(false); // home pinned
 		expect(shownEditable(items[2])).toBe(true); // library (adminLocked) can still be hidden
 		expect(shownEditable(items[1])).toBe(true);
+	});
+});
+
+describe('reorder', () => {
+	// home(pinned) reading library hidden-pub
+	it('moveItem swaps two non-pinned neighbours and returns a new array', () => {
+		const next = moveItem(items, 'library', 'up'); // library up, swaps with reading
+		expect(next).not.toBe(items);
+		expect(next.map((i) => i.id)).toEqual(['home', 'library', 'reading', 'hidden-pub']);
+	});
+
+	it('cannot move past or into a pinned item (home stays anchored at top)', () => {
+		expect(canMove(items, 'reading', 'up')).toBe(false); // above is pinned home
+		expect(moveItem(items, 'reading', 'up')).toBe(items); // no-op, same ref
+		expect(canMove(items, 'home', 'down')).toBe(false); // home itself is pinned
+	});
+
+	it('cannot move beyond the list edges', () => {
+		expect(canMove(items, 'hidden-pub', 'down')).toBe(false); // last item
+		expect(canMove(items, 'library', 'down')).toBe(true); // interior move is fine
+	});
+
+	it('unknown id is a no-op', () => {
+		expect(moveItem(items, 'nope', 'up')).toBe(items);
+		expect(canMove(items, 'nope', 'down')).toBe(false);
 	});
 });

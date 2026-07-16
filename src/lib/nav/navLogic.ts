@@ -40,3 +40,26 @@ export function audienceEditable(item: NavItem): boolean {
 export function shownEditable(item: NavItem): boolean {
 	return !item.pinned;
 }
+
+/** Whether `id` can move one slot in `dir` — false at the list edge, and false if
+ *  the item itself or its neighbour is pinned (pinned items stay put, so home
+ *  stays anchored at the top). */
+export function canMove(items: NavItem[], id: string, dir: 'up' | 'down'): boolean {
+	const idx = items.findIndex((i) => i.id === id);
+	if (idx < 0) return false;
+	const swap = dir === 'up' ? idx - 1 : idx + 1;
+	if (swap < 0 || swap >= items.length) return false;
+	return !items[idx].pinned && !items[swap].pinned;
+}
+
+/** Return a new list with `id` moved one slot in `dir`. Returns the SAME array
+ *  reference (a no-op) when the move isn't allowed — callers use identity to
+ *  detect whether anything changed. */
+export function moveItem(items: NavItem[], id: string, dir: 'up' | 'down'): NavItem[] {
+	if (!canMove(items, id, dir)) return items;
+	const idx = items.findIndex((i) => i.id === id);
+	const swap = dir === 'up' ? idx - 1 : idx + 1;
+	const next = items.slice();
+	[next[idx], next[swap]] = [next[swap], next[idx]];
+	return next;
+}
