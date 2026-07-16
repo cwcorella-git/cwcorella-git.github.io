@@ -69,3 +69,34 @@ export function buildRail(
 	if (kind === 'date') return range ? dateAnchors(range, dir) : [];
 	return [];
 }
+
+/** The anchor label a given row falls under — the inverse of buildRail, used for
+ *  the live "you are here" highlight. `dir`-independent (a row's bucket is the
+ *  same in both directions). Labels match buildRail's exactly. */
+export function anchorLabelForRow(
+	sort: string,
+	row: { title?: string | null; author?: string | null; publication_date?: string | null }
+): string | null {
+	const kind = railKind(sort);
+	if (kind === 'alpha') {
+		const field = sort === 'author' ? row.author : row.title;
+		const ch = (field ?? '').trim().charAt(0).toUpperCase();
+		return ch >= 'A' && ch <= 'Z' ? ch : '#';
+	}
+	if (kind === 'date') {
+		const raw = row.publication_date;
+		if (raw == null || raw === '') return 'undated';
+		const year = parseInt(raw.slice(0, 4), 10);
+		if (Number.isNaN(year)) return 'undated';
+		if (year < DECADE_FLOOR) return OLD_TAIL_LABEL;
+		return `${floorDecade(year)}s`;
+	}
+	return null;
+}
+
+/** Map a drag fraction [0,1] along the rail to a row index [0, total-1]. */
+export function fractionToIndex(fraction: number, total: number): number {
+	if (total <= 0) return 0;
+	const clamped = Math.min(Math.max(fraction, 0), 1);
+	return Math.min(Math.max(Math.round(clamped * (total - 1)), 0), total - 1);
+}

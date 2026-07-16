@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { railKind, alphaAnchors, dateAnchors, buildRail, UNDATED_SEEK } from './railLogic.js';
+import { anchorLabelForRow, fractionToIndex } from './railLogic';
 
 describe('railKind', () => {
 	it('maps sorts to rail kinds', () => {
@@ -63,5 +64,52 @@ describe('buildRail', () => {
 	});
 	it('dispatches to alpha for text sorts', () => {
 		expect(buildRail('title', 'asc', null)[0]).toEqual({ label: '#', seek: null });
+	});
+});
+
+describe('anchorLabelForRow', () => {
+	const row = (o: Partial<{ title: string | null; author: string | null; publication_date: string | null }>) =>
+		({ title: null, author: null, publication_date: null, ...o }) as any;
+
+	it('title initial → uppercase letter', () => {
+		expect(anchorLabelForRow('title', row({ title: 'Macbeth' }))).toBe('M');
+		expect(anchorLabelForRow('title', row({ title: 'macbeth' }))).toBe('M');
+	});
+	it('non-alpha / empty / null title → #', () => {
+		expect(anchorLabelForRow('title', row({ title: '"Quoted"' }))).toBe('#');
+		expect(anchorLabelForRow('title', row({ title: '123' }))).toBe('#');
+		expect(anchorLabelForRow('title', row({ title: '' }))).toBe('#');
+	});
+	it('author sort uses the author field; null author → #', () => {
+		expect(anchorLabelForRow('author', row({ author: 'Kropotkin', title: 'Zzz' }))).toBe('K');
+		expect(anchorLabelForRow('author', row({ author: null, title: 'Zzz' }))).toBe('#');
+	});
+	it('publication_date → decade / ‹1800 / undated', () => {
+		expect(anchorLabelForRow('publication_date', row({ publication_date: '1902' }))).toBe('1900s');
+		expect(anchorLabelForRow('publication_date', row({ publication_date: '2025-03-01' }))).toBe('2020s');
+		expect(anchorLabelForRow('publication_date', row({ publication_date: '1776' }))).toBe('‹1800');
+		expect(anchorLabelForRow('publication_date', row({ publication_date: null }))).toBe('undated');
+		expect(anchorLabelForRow('publication_date', row({ publication_date: '' }))).toBe('undated');
+		expect(anchorLabelForRow('publication_date', row({ publication_date: 'abcd' }))).toBe('undated');
+	});
+	it('non-rail sort → null', () => {
+		expect(anchorLabelForRow('updated_at', row({ title: 'X' }))).toBeNull();
+	});
+});
+
+describe('fractionToIndex', () => {
+	it('maps 0 and 1 to ends', () => {
+		expect(fractionToIndex(0, 1000)).toBe(0);
+		expect(fractionToIndex(1, 1000)).toBe(999);
+	});
+	it('maps the middle', () => {
+		expect(fractionToIndex(0.5, 1001)).toBe(500);
+	});
+	it('clamps out-of-range fractions', () => {
+		expect(fractionToIndex(-0.2, 1000)).toBe(0);
+		expect(fractionToIndex(1.5, 1000)).toBe(999);
+	});
+	it('total <= 0 → 0', () => {
+		expect(fractionToIndex(0.5, 0)).toBe(0);
 	});
 });
