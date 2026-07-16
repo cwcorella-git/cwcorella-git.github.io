@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { renderMarkdown } from '$lib/admin/markdown';
+	import { renderMarkdown, extractToc } from '$lib/admin/markdown';
 	import { libraryState } from '$lib/library/libraryState.svelte';
+	import DocInfoPanel from './DocInfoPanel.svelte';
 
 	function close() {
 		libraryState.closeDoc();
@@ -17,6 +18,65 @@
 	const bodyHtml = $derived(
 		libraryState.openDoc?.body ? renderMarkdown(libraryState.openDoc.body) : ''
 	);
+
+	const toc = $derived(libraryState.openDoc?.body ? extractToc(libraryState.openDoc.body) : []);
+
+	let activeAnchor = $state<string | null>(null);
+	let bodyEl: HTMLElement | undefined = $state();
+	let scrollEl: HTMLElement | undefined = $state();
+
+	// Active-section highlight: observe rendered heading anchors within the
+	// scroll container; pick the topmost intersecting one. Rebuilds when the
+	// body HTML or TOC changes (i.e. a new document opens).
+	$effect(() => {
+		void bodyHtml; // rebuild when body changes
+		const body = bodyEl;
+		const root = scrollEl;
+		activeAnchor = null;
+		if (!body || !root || toc.length === 0) return;
+
+		const anchors: HTMLElement[] = [];
+		for (const entry of toc) {
+			const el = body.querySelector<HTMLElement>(`#${CSS.escape(entry.anchor)}`);
+			if (el) anchors.push(el);
+		}
+		if (anchors.length === 0) return;
+
+		const visible = new Map<string, boolean>();
+		const observer = new IntersectionObserver(
+			(entries) => {
+				for (const entry of entries) {
+					const id = (entry.target as HTMLElement).id;
+					if (!id) continue;
+					if (entry.isIntersecting) visible.set(id, true);
+					else visible.delete(id);
+				}
+				if (visible.size === 0) return;
+				let bestId: string | null = null;
+				let bestTop = Number.POSITIVE_INFINITY;
+				for (const id of visible.keys()) {
+					const el = anchors.find((a) => a.id === id);
+					if (!el) continue;
+					const top = el.getBoundingClientRect().top;
+					if (top < bestTop) { bestTop = top; bestId = id; }
+				}
+				if (bestId) activeAnchor = bestId;
+			},
+			{ root, rootMargin: '0px 0px -65% 0px', threshold: [0, 1] }
+		);
+		anchors.forEach((a) => observer.observe(a));
+		return () => observer.disconnect();
+	});
+
+	function handleJump(anchor: string) {
+		const body = bodyEl;
+		const root = scrollEl;
+		if (!body || !root) return;
+		const el = body.querySelector<HTMLElement>(`#${CSS.escape(anchor)}`);
+		if (!el) return;
+		const top = root.scrollTop + (el.getBoundingClientRect().top - root.getBoundingClientRect().top) - 16;
+		root.scrollTo({ top, behavior: 'smooth' });
+	}
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -42,47 +102,20 @@
 				</div>
 			{:else if libraryState.openDoc}
 				{@const doc = libraryState.openDoc}
-				<div class="doc-scroll">
-					<h2 class="doc-heading">{doc.title}</h2>
-
-					<dl class="meta-grid">
-						<dt>author</dt><dd>{doc.author ?? '—'}</dd>
-						<dt>source</dt><dd>{doc.source}</dd>
-						<dt>published</dt><dd>{doc.publication_date ?? '—'}</dd>
-						<dt>language</dt><dd>{doc.language}</dd>
-						<dt>type</dt><dd>{doc.document_type}</dd>
-						<dt>words / chars</dt><dd>{doc.word_count.toLocaleString()} / {doc.char_count.toLocaleString()}</dd>
-						<dt>visibility</dt><dd>{doc.visibility}</dd>
-						<dt>updated</dt><dd>{doc.updated_at}</dd>
-					</dl>
-
-					{#if doc.needs_formatting}
-						<span class="badge">needs formatting</span>
-					{/if}
-
-					{#if doc.tags.length > 0}
-						<div class="chip-row">
-							{#each doc.tags as tag (tag)}
-								<span class="chip">{tag}</span>
-							{/each}
+				<div class="doc-scroll" bind:this={scrollEl}>
+					<div class="reader-grid">
+						<DocInfoPanel {toc} {activeAnchor} {doc} onJump={handleJump} />
+						<div class="prose-col">
+							<h2 class="doc-heading">{doc.title}</h2>
+							<div class="doc-body" bind:this={bodyEl}>
+								{#if doc.body && doc.body.trim().length > 0}
+									<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+									{@html bodyHtml}
+								{:else}
+									<p class="empty-note">(no body)</p>
+								{/if}
+							</div>
 						</div>
-					{/if}
-
-					{#if doc.collections.length > 0}
-						<div class="chip-row">
-							{#each doc.collections as collection (collection)}
-								<span class="chip chip-collection">{collection}</span>
-							{/each}
-						</div>
-					{/if}
-
-					<div class="doc-body">
-						{#if doc.body && doc.body.trim().length > 0}
-							<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-							{@html bodyHtml}
-						{:else}
-							<p class="empty-note">(no body)</p>
-						{/if}
 					</div>
 				</div>
 			{/if}
@@ -173,11 +206,39 @@
 	.doc-scroll {
 		flex: 1;
 		overflow-y: auto;
-		padding: 2rem;
-		max-width: 760px;
-		margin: 0 auto;
 		width: 100%;
 	}
+
+	.reader-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		max-width: 760px;
+		margin: 0 auto;
+		padding: 0 1.25rem 2rem;
+	}
+	@media (min-width: 900px) {
+		.reader-grid {
+			grid-template-columns: minmax(0, 720px) 240px;
+			gap: 2rem;
+			max-width: 1040px;
+			padding: 2rem 1.5rem;
+		}
+		.reader-grid :global(.sidebar) {
+			position: sticky;
+			top: 2rem;
+			align-self: start;
+			max-height: calc(100vh - 4rem);
+			overflow-y: auto;
+			grid-column: 2;
+			grid-row: 1;
+		}
+		.prose-col {
+			grid-column: 1;
+			grid-row: 1;
+		}
+	}
+	.prose-col { min-width: 0; padding-top: 2rem; }
+	@media (min-width: 900px) { .prose-col { padding-top: 0; } }
 
 	.doc-heading {
 		font-family: var(--font-prose);
@@ -186,54 +247,6 @@
 		color: var(--clr-text);
 		margin: 0 0 1rem;
 	}
-
-	.meta-grid {
-		display: grid;
-		grid-template-columns: max-content 1fr;
-		gap: 0.25rem 1rem;
-		font-family: var(--font-ui);
-		font-size: 0.62rem;
-		letter-spacing: 0.05em;
-		color: var(--clr-text);
-		margin: 0 0 1rem;
-	}
-	.meta-grid dt {
-		opacity: 0.55;
-		text-transform: uppercase;
-	}
-	.meta-grid dd {
-		margin: 0;
-		opacity: 0.85;
-	}
-
-	.badge {
-		display: inline-block;
-		border: 1px solid rgba(var(--ui-rgb), 0.28);
-		padding: 0.05rem 0.3rem;
-		text-transform: uppercase;
-		font-family: var(--font-ui);
-		font-size: 0.5rem;
-		opacity: 0.85;
-		margin-bottom: 0.8rem;
-	}
-
-	.chip-row {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.4rem;
-		margin-bottom: 0.8rem;
-	}
-
-	.chip {
-		font-family: var(--font-ui);
-		font-size: 0.55rem;
-		letter-spacing: 0.05em;
-		border: 1px solid rgba(var(--ui-rgb), 0.22);
-		padding: 0.15rem 0.5rem;
-		color: var(--clr-text);
-		opacity: 0.75;
-	}
-	.chip-collection { opacity: 0.9; }
 
 	.doc-body {
 		margin-top: 1.5rem;
