@@ -15,9 +15,7 @@
 	let expanded = $state(false);
 
 	const numbers = $derived(tocNumber(toc));
-	const barLabel = $derived(
-		activeLabel(toc, numbers, activeAnchor) ?? condenseMeta(doc) ?? ''
-	);
+	const barLabel = $derived(activeLabel(toc, numbers, activeAnchor) ?? condenseMeta(doc));
 	const minLevel = $derived(toc.length ? Math.min(...toc.map((t) => t.level)) : 1);
 
 	function jump(anchor: string) {
@@ -27,10 +25,6 @@
 
 	function toggle() {
 		expanded = !expanded;
-	}
-
-	function onBarKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') expanded = false;
 	}
 </script>
 
@@ -95,7 +89,7 @@
 </aside>
 
 <!-- Narrow slim bar (< 900px) -->
-<div class="slim" onkeydown={onBarKeydown}>
+<div class="slim">
 	<button class="slim-bar" onclick={toggle} aria-expanded={expanded}>
 		<span class="caret">{expanded ? '▾' : '▸'}</span>
 		<span class="slim-label">{expanded ? 'On this page' : barLabel}</span>
