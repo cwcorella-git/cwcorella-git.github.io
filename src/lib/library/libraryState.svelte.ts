@@ -63,6 +63,11 @@ function _resetData() {
 	_activeWindows = [];
 	_total = null;
 	_version++;
+	if (_debounceTimer) {
+		clearTimeout(_debounceTimer);
+		_debounceTimer = null;
+	}
+	_pendingRange = null;
 }
 
 function _appliedFilters(): Partial<AnchorOffsetParams> {

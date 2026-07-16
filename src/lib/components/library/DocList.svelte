@@ -40,6 +40,7 @@
 	async function handleJump(seek: string | null) {
 		const index = await resolveJumpIndex(seek);
 		vlistRef?.scrollToIndex(index);
+		onVisibleRange(index, index);
 	}
 
 	// New query = fresh list: scroll to top. (libraryState already reset the cache.)
