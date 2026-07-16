@@ -30,6 +30,12 @@ export interface Facets {
 	sources: FacetBucket[];
 	collections: FacetBucket[];
 	tags: FacetBucket[];
+	// Optional: an older backend won't send it. Drives the date rail's decade buckets.
+	date_range?: {
+		min_year: number | null;
+		max_year: number | null;
+		undated: number;
+	};
 }
 
 export interface LibraryQuery {
@@ -43,6 +49,7 @@ export interface LibraryQuery {
 	tag?: string;
 	visibility?: string;
 	needs_formatting?: 0 | 1;
+	seek?: string;
 	limit?: number;
 }
 

@@ -286,3 +286,19 @@ describe('isStaleCursor', () => {
 		expect(isStaleCursor(new Error('boom'))).toBe(false);
 	});
 });
+
+describe('toQuery seek', () => {
+	it('adds seek on a first page (cursor null)', () => {
+		const q = toQuery(defaultControls(), null, 50, 'M');
+		expect(q.seek).toBe('M');
+	});
+	it('omits seek on a continuation page (cursor present)', () => {
+		const q = toQuery(defaultControls(), 'somecursor', 50, 'M');
+		expect(q.seek).toBeUndefined();
+		expect(q.cursor).toBe('somecursor');
+	});
+	it('omits seek when null (top jump)', () => {
+		const q = toQuery(defaultControls(), null, 50, null);
+		expect(q.seek).toBeUndefined();
+	});
+});

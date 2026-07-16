@@ -55,7 +55,12 @@ export function controlsChanged(prev: LibraryControls, next: LibraryControls): b
 	return computeQueryKey(prev) !== computeQueryKey(next);
 }
 
-export function toQuery(c: LibraryControls, cursor: string | null, limit: number): LibraryQuery {
+export function toQuery(
+	c: LibraryControls,
+	cursor: string | null,
+	limit: number,
+	seek: string | null = null
+): LibraryQuery {
 	const query: LibraryQuery = {
 		sort: c.sort,
 		dir: c.dir,
@@ -74,6 +79,9 @@ export function toQuery(c: LibraryControls, cursor: string | null, limit: number
 
 	if (cursor !== null) {
 		query.cursor = cursor;
+	} else if (seek !== null && seek !== '') {
+		// seek only ever anchors a FIRST page; continuation pages use the cursor.
+		query.seek = seek;
 	}
 
 	return query;
