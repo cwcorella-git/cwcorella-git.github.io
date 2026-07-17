@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { renderMarkdown, extractToc } from '$lib/admin/markdown';
 	import { libraryState } from '$lib/library/libraryState.svelte';
+	import type { Decision } from '$lib/library/types';
 	import DocInfoPanel from './DocInfoPanel.svelte';
+
+	const DECISIONS: Decision[] = ['keep', 'hide', 'delete'];
+	function decide(d: Decision) { libraryState.setDecision(d); }
 
 	function close() {
 		libraryState.closeDoc();
@@ -86,7 +90,21 @@
 	<div class="backdrop" role="presentation" onclick={handleBackdropClick}></div>
 	<div class="overlay" role="dialog" aria-modal="true" aria-label={libraryState.openDoc?.title ?? 'Document'}>
 		<div class="overlay-header">
+			<div class="nav-group">
+				<button class="nav-btn" onclick={() => libraryState.openPrevDoc()} disabled={!libraryState.hasPrev} aria-label="Previous document">‹</button>
+				<button class="nav-btn" onclick={() => libraryState.openNextDoc()} disabled={!libraryState.hasNext} aria-label="Next document">›</button>
+			</div>
 			<span class="doc-title">{libraryState.openDoc?.title ?? ''}</span>
+			<div class="decide-group" role="group" aria-label="Curation decision">
+				{#each DECISIONS as d (d)}
+					<button
+						class="decide-btn decide-{d}"
+						class:active={libraryState.openDoc?.decision === d}
+						aria-pressed={libraryState.openDoc?.decision === d}
+						onclick={() => decide(d)}
+					>{d}</button>
+				{/each}
+			</div>
 			<button class="close-btn" onclick={close} aria-label="Close">×</button>
 		</div>
 
@@ -155,7 +173,28 @@
 		font-family: var(--font-prose);
 		font-size: 0.95rem;
 		color: var(--clr-text);
+		flex: 1;
+		min-width: 0;
+		text-align: center;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		padding: 0 1rem;
 	}
+
+	.nav-group, .decide-group { display: flex; gap: 0.3rem; }
+	.nav-btn, .decide-btn {
+		background: none;
+		border: 1px solid rgba(var(--ui-rgb), 0.28);
+		color: var(--clr-text);
+		font-family: var(--font-ui);
+		font-size: 0.62rem; letter-spacing: 0.06em; text-transform: uppercase;
+		padding: 0.2rem 0.5rem; cursor: pointer; transition: all 0.15s;
+	}
+	.nav-btn:disabled { opacity: 0.3; cursor: default; }
+	.decide-btn:hover { border-color: rgba(var(--ui-rgb), 0.45); }
+	.decide-btn.active { border-color: var(--clr-text); opacity: 1; }
+	.decide-delete.active { color: var(--clr-danger); border-color: var(--clr-danger); }
 
 	.close-btn {
 		background: none;
