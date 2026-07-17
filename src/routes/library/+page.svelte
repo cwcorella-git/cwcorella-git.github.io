@@ -46,6 +46,7 @@
 			<LibraryControls
 				controls={libraryState.controls}
 				facets={libraryState.facets}
+				stats={libraryState.curationStats}
 				onChange={(p) => libraryState.applyControls(p)}
 			/>
 			{#if libraryState.total === 0}
@@ -57,7 +58,7 @@
 					view={libraryState.controls.view}
 					sort={libraryState.controls.sort}
 					queryKey={libraryState.queryKey}
-					onOpen={(id) => libraryState.openDocById(id)}
+					onOpen={(index) => libraryState.openDocByIndex(index)}
 					onVisibleRange={(s, e) => libraryState.ensureWindowsForRange(s, e)}
 					resolveJumpIndex={(seek) => libraryState.jumpToAnchor(seek)}
 					{anchors}

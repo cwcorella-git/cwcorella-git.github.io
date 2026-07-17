@@ -26,6 +26,7 @@ export interface LibraryControls {
 		tag?: string;
 		visibility?: string;
 		needs_formatting?: 0 | 1;
+		decision?: import('./types').DecisionInput;
 	};
 	view: 'list' | 'grid';
 }

@@ -1,3 +1,6 @@
+export type Decision = 'keep' | 'hide' | 'delete';
+export type DecisionInput = Decision | 'undecided';
+
 export interface DocListItem {
 	id: number;
 	source: string;
@@ -12,6 +15,7 @@ export interface DocListItem {
 	visibility: string;
 	needs_formatting: boolean;
 	updated_at: string;
+	decision: Decision | null; // null = undecided
 }
 
 export interface LibraryDoc extends DocListItem {
@@ -52,6 +56,7 @@ export interface LibraryQuery {
 	tag?: string;
 	visibility?: string;
 	needs_formatting?: 0 | 1;
+	decision?: DecisionInput; // 'undecided' | 'keep' | 'hide' | 'delete'
 	offset?: number;
 	limit?: number;
 }
@@ -77,4 +82,13 @@ export interface ListResponse {
 	items: DocListItem[];
 	next_cursor: string | null;
 	total: number;
+}
+
+export interface CurationStats {
+	keep: number;
+	hide: number;
+	delete: number;
+	decided: number;
+	total: number;
+	undecided: number;
 }

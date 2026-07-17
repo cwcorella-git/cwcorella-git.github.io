@@ -4,7 +4,9 @@ import type {
 	ListResponse,
 	Facets,
 	AnchorOffsetParams,
-	AnchorOffsetResponse
+	AnchorOffsetResponse,
+	DecisionInput,
+	CurationStats
 } from './types';
 
 export class AuthError extends Error {
@@ -53,17 +55,25 @@ interface CreateLibraryClientOptions {
 export function createLibraryClient({ baseUrl, getToken, fetchImpl = fetch }: CreateLibraryClientOptions) {
 	async function request<T>(
 		path: string,
-		options: { query?: object } = {}
+		options: { query?: object; method?: string; body?: unknown } = {}
 	): Promise<T> {
 		const qs = options.query ? serializeQuery(options.query) : '';
 		const url = baseUrl.replace(/\/$/, '') + path + (qs ? '?' + qs : '');
 
+		const headers: Record<string, string> = { Authorization: 'Bearer ' + getToken() };
+		const init: RequestInit = {
+			method: options.method ?? 'GET',
+			headers,
+			credentials: 'omit'
+		};
+		if (options.body !== undefined) {
+			headers['Content-Type'] = 'application/json';
+			init.body = JSON.stringify(options.body);
+		}
+
 		let res: Response;
 		try {
-			res = await fetchImpl(url, {
-				headers: { Authorization: 'Bearer ' + getToken() },
-				credentials: 'omit'
-			});
+			res = await fetchImpl(url, init);
 		} catch {
 			throw new OfflineError();
 		}
@@ -100,6 +110,12 @@ export function createLibraryClient({ baseUrl, getToken, fetchImpl = fetch }: Cr
 			return request<AnchorOffsetResponse>('/anchor-offset', {
 				query: params
 			});
+		},
+		setCuration(id: number | string, decision: DecisionInput): Promise<{ doc_id: number; decision: string }> {
+			return request('/curation/' + id, { method: 'PUT', body: { decision } });
+		},
+		getCurationStats(): Promise<CurationStats> {
+			return request<CurationStats>('/curation/stats');
 		}
 	};
 }
