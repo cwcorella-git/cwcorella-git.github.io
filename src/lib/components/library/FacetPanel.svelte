@@ -91,11 +91,16 @@
 	@media (max-width: 480px) {
 		.label { display: none; }
 
-		.panel, .panel.wide {
-			position: fixed;
-			left: 0.75rem; right: 0.75rem;
-			top: auto;
-			min-width: 0; width: auto;
+		/* Narrow: the panel stays absolutely positioned so it scrolls with its trigger
+		   (a fixed panel with top:auto resolves its top ONCE and then detaches on any
+		   scroll). It is anchored right:0 to a trigger that is always on-screen, so it
+		   extends leftward and cannot overflow the right edge; the max-width stops a
+		   wide panel from exceeding the viewport on the left. */
+		.panel,
+		.panel.wide {
+			min-width: 0;
+			width: max-content;
+			max-width: calc(100vw - 1.5rem);
 			max-height: 50vh;
 		}
 	}
