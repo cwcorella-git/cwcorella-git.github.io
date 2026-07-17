@@ -11,7 +11,10 @@
 </script>
 
 <button class="doc-card" data-doc-id={item.id} onclick={() => onOpen()}>
-	<span class="title">{item.title}</span>
+	<span class="title">
+		{#if item.visibility === 'public'}<span class="mine" aria-label="mine (public)" title="public">◉</span>{/if}
+		{item.title}
+	</span>
 	<span class="author">{item.author ?? '—'}</span>
 	<span class="row">
 		<span class="source">{item.source}</span>
@@ -26,7 +29,12 @@
 			<span class="badge">needs formatting</span>
 		{/if}
 	</span>
-	<span class="updated">updated {item.updated_at}</span>
+	{#if item.tags.length > 0}
+		<span class="chips">
+			{#each item.tags.slice(0, 6) as tag (tag)}<span class="chip">{tag}</span>{/each}
+			{#if item.tags.length > 6}<span class="chip-more">+{item.tags.length - 6}</span>{/if}
+		</span>
+	{/if}
 </button>
 
 <style>
@@ -90,12 +98,14 @@
 		opacity: 0.85;
 	}
 
-	.updated {
-		margin-top: auto;
-		font-size: 0.5rem;
-		color: var(--clr-text);
-		opacity: 0.4;
+	.mine { color: var(--clr-text); opacity: 0.85; margin-right: 0.3rem; font-size: 0.7rem; }
+	.chips { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.15rem; }
+	.chip {
+		font-size: 0.5rem; letter-spacing: 0.04em;
+		border: 1px solid rgba(var(--ui-rgb), 0.22);
+		padding: 0.05rem 0.3rem; color: var(--clr-text); opacity: 0.7;
 	}
+	.chip-more { font-size: 0.5rem; opacity: 0.5; align-self: center; }
 
 	.decision {
 		border: 1px solid transparent;

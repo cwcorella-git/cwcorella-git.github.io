@@ -108,8 +108,16 @@ export function createLibraryClient({ baseUrl, getToken, fetchImpl = fetch }: Cr
 	}
 
 	return {
-		listDocuments(query: LibraryQuery = {}): Promise<ListResponse> {
-			return request<ListResponse>('/documents', { query });
+		async listDocuments(query: LibraryQuery = {}): Promise<ListResponse> {
+			// Normalize tags at the API boundary: the deployed library-api may not
+			// have shipped tags-in-rows enrichment yet, so /documents rows can
+			// arrive with no `tags` key even though DocListItem types it non-optional.
+			// Fix here once rather than defensive `?.` guards at every render site.
+			const res = await request<ListResponse>('/documents', { query });
+			for (const it of res.items) {
+				if (it.tags == null) it.tags = [];
+			}
+			return res;
 		},
 		getDocument(id: number | string): Promise<LibraryDoc> {
 			return request<LibraryDoc>('/documents/' + id);

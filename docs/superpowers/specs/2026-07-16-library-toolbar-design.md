@@ -230,9 +230,32 @@ readers do not break.
 
 ### 2. Facets narrow to the active source
 
-`get_facets()` takes an optional `source` param that narrows the **collections**
-and **tags** buckets. **Languages and sources stay global** — those are needed to
-navigate back out of a narrowed view.
+> **Corrected 2026-07-17 — this section was stale.** It originally said `source`
+> narrows collections and tags only. As shipped it narrows **five** dimensions;
+> `visibility`/`needs_formatting` were added with backend change 5 below, and
+> `date_range` was added during implementation (the rail describes the current
+> scope, so under `?source=youtube` it must reflect YouTube's dates). The rule is
+> stated correctly below. `api.ts`'s comment always matched the shipped behavior;
+> it was this document that drifted.
+
+`get_facets()` takes an optional `source` param. **Everything narrows EXCEPT
+`languages` and `sources`**, which stay global on purpose — they are how the UI
+navigates back *out* of a narrowed view, so narrowing them would strand the user
+inside the current source.
+
+| bucket | narrows? |
+|---|---|
+| `collections` | yes |
+| `tags` | yes |
+| `visibility` | yes |
+| `needs_formatting` | yes |
+| `date_range` (min/max year + undated) | yes |
+| `languages` | **no — global** |
+| `sources` | **no — global** |
+
+One measured consequence: youtube is entirely undated, so `?source=youtube`
+returns `min_year: null, max_year: null, undated: 60726` and the date rail
+collapses to a single "undated" anchor.
 
 ### 3. Multi-tag
 
@@ -323,7 +346,8 @@ Follows the existing pattern (`libraryLogic.test.ts`, `api.test.ts`,
 
 **Backend:**
 - `(source, name)` bucket keying, including the same category name under two sources.
-- Source-narrowed facets: collections/tags narrow, languages/sources do not.
+- Source-narrowed facets: collections/tags/visibility/needs_formatting/date_range
+  narrow; languages/sources do not. (See the correction under backend change 2.)
 - `tag=` repeated → AND semantics; single `tag=` still works.
 - `/tags?q=` ordering and limit.
 

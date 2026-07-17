@@ -1,6 +1,6 @@
 # CLAUDE.md — cwcorella-git.github.io
 
-Personal site: reading list, journals, home page. Fully static. Live site at cwcorella.com (Cloudflare Pages); cwcorella-git.github.io is a minimal HTML archive mirror. All writes go through the GitHub REST API from the browser using a session-scoped PAT. No server, ever.
+Personal site: reading list, journals, home page. Fully static. Live site at cwcorella.com (Cloudflare Pages); cwcorella-git.github.io is a minimal HTML archive mirror. All writes go through the GitHub REST API from the browser using a session-scoped PAT. No server — with one acknowledged exception, `/library` (see below).
 
 ## Hard constraints
 
@@ -9,6 +9,25 @@ Personal site: reading list, journals, home page. Fully static. Live site at cwc
 - Open source tools only
 - Decentralized hosting required (IPFS, nsite)
 - Repo stored on GitHub
+
+### The one acknowledged exception: `/library`
+
+**`/library` breaks "no server", knowingly.** It is backed by `library-api`, a FastAPI
+service on the workstation holding ~100k documents in SQLite+FTS5. Nothing else on the
+site does this, and nothing else should.
+
+Why it was accepted: 100k documents (~2.7GB of bodies, plus a similar amount again in the
+FTS index) cannot be prerendered, and the corpus is private. Every other page stays static
+and decentralizable; the constraint above still governs **everything a visitor can reach**.
+
+What keeps the exception contained:
+- `/library` is **admin-gated in full** — `src/routes/library/+page.svelte` bounces
+  non-admins. It is never public, and it is not in the archive mirror.
+- If `library-api` is down, `/library` degrades to an error state. **The public site is
+  unaffected** — it has no runtime dependency on the service.
+
+Do not extend this exception to any public-facing page without deciding to break the
+constraint again, deliberately.
 
 ## Stack
 
@@ -47,9 +66,93 @@ npm test          # vitest
 
 **Links**: `static/docs/private/links-index.enc` — 2,094 encrypted bookmarks, 10 categories. Single encrypted JSON index; no per-entry files.
 
+**Library** (`/library`) — the one server-backed page; see "The one acknowledged exception" above. Admin-gated in full. Detail below under "Library subsystem".
+
 **Theme**: 6 palettes (amber, sky, dusk, neutral, rust, sage). amber/dusk/rust are dark-glass with fixed colors; sky/neutral/sage adapt all panels to time of day via Sky.svelte per-frame CSS var updates.
 
 **tlock time-capsule**: Content key sealed 2026-06-11 to drand Quicknet round 751,863,412 (unlocks 2095-02-13). Stored at `static/docs/private/content-key.tlock`. `archiveState.tryUnlock()` called on page load when `isUnlockDay()`. SettingsPanel has a time capsule section showing seal status; auto-reseals when content key is updated.
+
+## Library subsystem
+
+The largest thing on the site and the only one with a backend. **It spans two repos** — nothing here works without knowing that.
+
+### The two surfaces
+
+| | Where | What |
+|---|---|---|
+| Frontend | this repo — `src/routes/library/`, `src/lib/library/`, `src/lib/components/library/` | The admin-only page |
+| Backend | **`~/Projects/library-api`** (own repo: `cwcorella-git/library-api`) | FastAPI + SQLite/FTS5 over ~100k docs |
+
+**Deploying the backend is not `git push`.** The service runs from `/data/library-api/` on the
+workstation, not from the laptop tree. Two gotchas, both hit in practice:
+
+- The LAN alias times out when off the home network. Go through the Cloudflare tunnel:
+  `ssh ssh.veritablegames.com`.
+- **The workstation has no GitHub key of its own** — `git pull` there fails with
+  "Could not read from remote repository" unless you forward your agent: `ssh -A`.
+
+```bash
+ssh -A ssh.veritablegames.com 'cd /data/library-api && git pull origin main && sudo systemctl restart library-api'
+```
+
+The token lives in `/data/library-api/library-api.env` (root-readable only — `sudo` to read it),
+and the service listens on `127.0.0.1:8087` behind nginx.
+
+**Its CORS origin is the production domain, so `localhost:5173` cannot reach it.** Local dev and
+Playwright verification must mock `/facets`, `/documents`, `/curation/stats`, `/tags`. Mocks
+resolve instantly, which is exactly why they miss latency and failure bugs — see the caution below.
+
+### Ship order: frontend first
+
+The frontend must be able to survive an un-upgraded API (every new field is optional with a
+defined fallback), but the reverse is not automatic: a **new API can break an old frontend**.
+It happened — source-attributed facet buckets introduced duplicate collection names, and the
+deployed page keyed a Svelte 5 `{#each}` on name, which is a hard runtime error.
+**Deploy the frontend guard first, then the API.**
+
+### The corpus, as measured (2026-07-17 — not guesses)
+
+| source | docs | categories |
+|---|---:|---:|
+| youtube | 60,726 | 1 (named `transcript`) |
+| anarchist | 24,594 | 26 |
+| marxist | 12,576 | 8 |
+| user | 2,521 | **0** |
+
+100,417 total. `visibility`: private 97,896 / public 2,521 — **`public` is exactly the `user`
+count**, so visibility is nearly a restatement of source. `needs_formatting`: 317 (0.3%).
+33 languages, but `en` / `en-US` / `en-GB` are **separate buckets**. 65,780 undated (65%);
+youtube is entirely undated. Tags: ~12k distinct, and `/facets` caps its list at **200** by
+design (a full list is a ~400KB response through the tunnel) — `GET /tags?q=` serves the tail.
+
+### Invariants — break these and it fails silently
+
+- **`filtersToParams()` in `src/lib/library/libraryLogic.ts` is the ONE filter→param mapping.**
+  `/documents` and `/anchor-offset` must send identical filters: the rail computes row offsets,
+  so if it filters differently from the list it scrolls to the wrong row with no error. A second
+  copy of this mapping is exactly how that happened.
+- **A collection is a category WITHIN a source**, not a sibling. `library-api`'s `sources.py`
+  sets `collections=[row["category"]]`. Facet buckets are keyed `(source, name)`.
+- **`buildCorpusTree` keeps raw `name` keys** — those are what `source=` sends. Only the
+  *display* is mapped, via `sourceLabel()`. A mapped value reaching a filter sends
+  `source=Anarchist Library` and silently returns nothing.
+- **`/facets` is six aggregates over 100k docs** (~250ms unnarrowed, ~700ms narrowed). Refetch
+  **only** when the corpus source changes. It is guarded by `_facetsEpoch` (newest wins) and is
+  **non-fatal on the refetch path** — a mid-session failure must not set `_status`, because the
+  controls are gated behind `status === 'ready'` and would all unmount, leaving no way to recover.
+
+### Caution when verifying
+
+The live API can't be reached from localhost, so visual checks run against mocks — and mocks
+**resolve instantly**. Two real bugs (a stale-response clobber and a facet-refetch race) survived
+mocked verification precisely because of this. A mocked backend cannot falsify a claim about slow
+or failing requests. Reason about those paths directly, or measure.
+
+### Specs and plans
+
+`docs/superpowers/specs/` and `docs/superpowers/plans/` — 9 specs, 8 plans, all `*library*` or
+`*sp[12]*`. Start with `2026-07-14-library-platform-architecture.md`. **Read a spec's revision
+notes before trusting its body**; several were written before anything had queried the real corpus.
 
 **Archive mirror**: `scripts/build-archive.mjs` generates `archive-build/` — minimal HTML (no SvelteKit, no JS) with home content, reading list, and a download link for `archive.zip`. The zip bundles all `.enc` files from `static/docs/private/` plus `content-key.tlock` and a `README.txt` explaining the decryption chain. GitHub Actions deploys this to GitHub Pages on every push.
 

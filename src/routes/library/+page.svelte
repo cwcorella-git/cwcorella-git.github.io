@@ -9,6 +9,7 @@
 	import LanguageControl from '$lib/components/library/LanguageControl.svelte';
 	import StateControl from '$lib/components/library/StateControl.svelte';
 	import { buildRail } from '$lib/library/railLogic';
+	import { progressText } from '$lib/library/curationLogic';
 
 	// Redirect non-admins — but only AFTER session rehydration, so a hard load /
 	// refresh of /library doesn't bounce a logged-in admin before restoreFromSession runs.
@@ -93,12 +94,14 @@
 					view={libraryState.controls.view}
 					sort={libraryState.controls.sort}
 					queryKey={libraryState.queryKey}
-					stats={libraryState.curationStats}
 					onOpen={(index) => libraryState.openDocByIndex(index)}
 					onVisibleRange={(s, e) => libraryState.ensureWindowsForRange(s, e)}
 					resolveJumpIndex={(seek) => libraryState.jumpToAnchor(seek)}
 					{anchors}
 				/>
+				{#if progressText(libraryState.curationStats)}
+					<p class="decided" aria-live="polite">{progressText(libraryState.curationStats)}</p>
+				{/if}
 			{/if}
 		{/if}
 	</div>
@@ -136,6 +139,12 @@
 	.scope { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; justify-content: flex-end; }
 	.status { font-family: var(--font-ui); font-size: 0.65rem; letter-spacing: 0.08em; color: var(--clr-text); }
 	.status.error { color: var(--clr-danger); }
+	.decided {
+		font-family: var(--font-ui);
+		font-size: 0.62rem; letter-spacing: 0.08em;
+		color: var(--clr-text); opacity: 0.6;
+		margin: 0.75rem 0 0;
+	}
 
 	@media (max-width: 480px) {
 		.page { padding-top: 4.5rem; }
