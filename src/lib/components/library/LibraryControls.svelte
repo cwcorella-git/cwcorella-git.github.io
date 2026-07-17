@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import type { LibraryControls } from '$lib/library/libraryLogic';
+	import { mergeCollectionBuckets } from '$lib/library/libraryLogic';
 	import type { Facets } from '$lib/library/types';
 
 	interface Props {
@@ -83,6 +84,10 @@
 	function fmt(n: number): string {
 		return n.toLocaleString();
 	}
+
+	// Collection buckets are keyed (source, name) upstream, so the same name can
+	// arrive more than once. This dropdown is flat and keys on name.
+	const collectionBuckets = $derived(mergeCollectionBuckets(facets?.collections ?? []));
 </script>
 
 <div class="controls">
@@ -151,7 +156,7 @@
 			aria-label="Filter by collection"
 		>
 			<option value="">All collections</option>
-			{#each facets?.collections ?? [] as bucket (bucket.name)}
+			{#each collectionBuckets as bucket (bucket.name)}
 				<option value={bucket.name}>{bucket.name} ({fmt(bucket.count)})</option>
 			{/each}
 		</select>
