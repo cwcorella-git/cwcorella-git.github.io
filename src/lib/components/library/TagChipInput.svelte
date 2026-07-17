@@ -7,7 +7,7 @@
 		facets: Facets | null;
 		tags: string[];
 		q: string;
-		onTagsChange: (tags: string[]) => void;
+		onTagsChange: (tags: string[], opts?: { clearQ?: boolean }) => void;
 		onQChange: (q: string) => void;
 		searchTags: (q: string) => Promise<FacetBucket[]>;
 	}
@@ -101,7 +101,14 @@
 		// Committing a chip retires whatever the user was typing — cancel the pending
 		// live-search timer so it cannot fire afterward with the now-stale text.
 		clearTimeout(searchTimer);
-		if (!tags.includes(name)) onTagsChange([...tags, name]);
+		if (!tags.includes(name)) {
+			// The chip supersedes the text that found it: committing `philosophy` as a
+			// tag must not leave q=philosophy ANDed with it, which would silently
+			// narrow past what the chip's count advertised.
+			const clearQ = q !== '';
+			if (clearQ) lastSyncedQ = '';
+			onTagsChange([...tags, name], clearQ ? { clearQ: true } : undefined);
+		}
 		text = '';
 		remote = null;
 	}

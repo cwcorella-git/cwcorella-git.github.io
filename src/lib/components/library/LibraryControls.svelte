@@ -39,7 +39,11 @@
 			{facets}
 			tags={controls.filters.tags ?? []}
 			q={controls.q}
-			onTagsChange={(tags) => onChange({ filters: { ...controls.filters, tags } })}
+			onTagsChange={(tags, opts) =>
+				onChange({
+					filters: { ...controls.filters, tags },
+					...(opts?.clearQ ? { q: '' } : {})
+				})}
 			onQChange={(q) => onChange({ q })}
 			searchTags={(q) => libraryState.searchTags(q)}
 		/>
