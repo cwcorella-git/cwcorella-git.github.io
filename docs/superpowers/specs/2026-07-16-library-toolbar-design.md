@@ -1,8 +1,54 @@
 # Library toolbar: disambiguating six filters into four axes — design
 
-**Date:** 2026-07-16
-**Status:** approved (design), pending plan
+**Date:** 2026-07-16 (revised 2026-07-17 against the real corpus)
+**Status:** backend SHIPPED. Frontend design revised — **deferred until `sp2-triage-ui` merges**.
 **Repos:** `cwcorella-git.github.io` (frontend) **and** `library-api` (backend) — two surfaces, one design
+
+## Revision note (2026-07-17) — read this before the frontend plan
+
+The backend half shipped (`library-api` `b1b87f4`, deployed). Doing so let us query the
+**real corpus for the first time**. Three things the original design got wrong:
+
+**1. The corpus cascade is worth much less than this document assumes.** Real distribution:
+
+| source | docs | categories |
+|---|---:|---:|
+| youtube | 60,726 (60%) | **1** — literally named `transcript` |
+| anarchist | 24,594 (24%) | 26 |
+| marxist | 12,576 (13%) | 8 |
+| user | 2,521 (2.5%) | **0** |
+
+The nesting only pays off for anarchist + marxist — **37% of the corpus**. For the other
+63% the cascade is a source list where two entries don't expand and a third expands to a
+single meaningless bucket (`transcript` is a document type, not a category). The cascade is
+still worth building — it kills the empty source×collection pairs and beats a flat 35-item
+list mixing three sources — but it is **not** the centerpiece win this document sold.
+
+**2. No duplicate collection names exist in the real data.** The `(source, name)` keying is
+schema-correct (`collections.name` is UNIQUE, one row reachable from many sources) and the
+test seed exercises it, but production has zero collisions today. The frontend guard
+(`mergeCollectionBuckets`, `e11af06`) was therefore **defensive, not curative** — the
+predicted `each_key_duplicate` break would not actually have fired. Keep the guard; the
+reasoning holds for future data. But the "ship the frontend first" ordering it forced was
+insurance, not a rescue.
+
+**3. Facts that change other parts of the UI:**
+- `visibility`: private 97,896 / public 2,521 — `public` is **exactly** the `user` count.
+  Visibility is a near-perfect proxy for "is it mine", not an independent axis.
+- `needs_formatting`: only **317 docs** (0.3%) need formatting. A filter for 0.3% of the
+  corpus may not deserve equal billing with the rest of the State dropdown.
+- `date_range`: **65,780 undated (65%)** — and 60,726 of those are youtube, which is
+  *entirely* undated (`min_year: null`). Under `?source=youtube` the date rail collapses to
+  a single "undated" anchor.
+- `languages`: 33 languages, but `en` (88,506), `en-US` (1,218) and `en-GB` (854) are
+  **separate buckets**. The language dropdown will show three Englishes. Worth normalizing
+  upstream rather than papering over in the UI.
+
+**4. Scope changed underneath this design.** `sp2-triage-ui` (unmerged, 8 commits) adds a
+**7th** filter — `decision` (undecided/keep/hide/delete) — plus a curation `progress`
+readout, both to `LibraryControls.svelte`. Absorbed below: `decision` becomes a third group
+in the State dropdown rather than a seventh select. **Sequencing decision: SP2 merges
+first, then the toolbar rewrite starts from that base.**
 
 ## Problem
 
@@ -80,7 +126,7 @@ What we explicitly **do not** take:
 |---|---|---|
 | Corpus | `◈ Corpus` | `◈ Anarchist ▸ Egoism` |
 | Language | `文` | `文 English` |
-| State | `⚙ State` | `⚙ private · needs fmt` |
+| State | `⚙ State` | `⚙ undecided · needs fmt` |
 
 **Corpus** replaces both `source` and `collection`. Its panel groups categories
 under their source, indented, with counts from the source-narrowed facet:
@@ -102,23 +148,35 @@ therefore never expands.
 
 **Language** is a `文` glyph; the name appears only when the filter is doing work.
 
-**State** merges `visibility` and `needs_formatting` into one dropdown with two
-independent groups, each an honest list of its states with counts:
+**State** merges `visibility`, `needs_formatting` **and `decision`** into one dropdown with
+three independent groups, each an honest list of its states with counts. Real counts:
 
 ```
   VISIBILITY
     all                    100,417
-    private                 96,216
-    public                   4,201
+    private                 97,896
+    public                   2,521
   ─────────────────────────────────
   FORMATTING
     all                    100,417
-    needs formatting        18,904
-    clean                   81,513
+    needs formatting           317
+    clean                  100,100
+  ─────────────────────────────────
+  DECISION                          ← from SP2; supersedes its 7th "ALL DECISIONS" select
+    all
+    undecided
+    keep
+    hide
+    delete
 ```
 
-(Counts above are illustrative — only the 100,417 total is observed. They come
-from new facet buckets; see backend change 5.)
+Visibility/formatting counts come from backend change 5 (shipped). Decision counts come from
+SP1's existing `GET /curation/stats`, which SP2 already wires up — no new endpoint.
+
+Note what the real numbers say about this control: `public` (2,521) is exactly the `user`
+source count, so Visibility is nearly a restatement of Corpus; and Formatting isolates 317
+documents out of 100k. **Decision is the group that actually earns its place** — it is the
+axis being actively worked. If the State dropdown needs trimming, cut Visibility first.
 
 ### Zone 2 — toolbar (query)
 
@@ -137,6 +195,10 @@ from new facet buckets; see backend change 5.)
   it reads as one control. Deliberately minimal change — the sort control was not
   the problem.
 - **View** becomes an icon toggle (`▤`/`▦`), reclaiming the width of `VIEW: LIST`.
+
+**The curation progress readout** (SP2 puts it in `controls-row`) does not belong in the
+toolbar: it is not a query control, it reports scope. Move it onto the `100,417 documents`
+count line, which is already the place the page states what you are looking at.
 
 ### Narrow mode (< 480px)
 
@@ -214,9 +276,16 @@ is optional and has a defined fallback — the page must never blank out:
 | `GET /tags?q=` returns 404 | Tag panel filters the top-200 facet client-side only; typing an off-list tag still commits as a chip (the `tag=` filter already accepts off-facet values — `query.py:335`). |
 | Repeated `tag=` unsupported | Only the **first** chip filters server-side. Detected by feature-probing the facets payload shape, not by version string. |
 
-The ordering that avoids all of this: **ship `library-api` first**, then the
-frontend. The fallbacks exist for the window between deploys and for local dev
-against a stale API, not as a permanent mode.
+**Ordering — this document originally said "ship `library-api` first". That was wrong**, and
+the table above is why it looked right: it only covers *new frontend, old API*. The reverse
+case — *old frontend, new API* — was missed. The deployed flat collections dropdown keys its
+`{#each}` on `bucket.name`, and `(source, name)` buckets can repeat a name; duplicate keys
+are a hard runtime error in Svelte 5. So the guard shipped first (`e11af06`), then the API
+(`b1b87f4`). As it turned out the real corpus has no duplicate names, so the break would not
+have fired — but the ordering was only knowable by checking, not by assuming.
+
+The fallbacks exist for the window between deploys and for local dev against a stale API,
+not as a permanent mode.
 
 ## Frontend state
 
@@ -229,6 +298,7 @@ filters: {
   tags?: string[];                                     // was: tag?: string
   visibility?: string;
   needs_formatting?: 0 | 1;
+  decision?: Decision;                                 // from SP2 — see revision note
 }
 ```
 
