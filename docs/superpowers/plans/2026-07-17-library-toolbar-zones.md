@@ -16,6 +16,7 @@
 - **No `window.prompt()` / `window.alert()`** anywhere. User feedback goes through `toast` (`$lib/admin/toast.svelte`).
 - **Colour rule:** ONE colour per context — `var(--clr-text)` in light context, `var(--clr-dark-text)` in dark panels. Hierarchy comes from **opacity** (0.45–0.65 dim, 1.0 active), **never** a different shade. Chrome is `rgba(var(--ui-rgb), X)`.
 - **Governing UI rule: the active value is the label.** An unset control shows only its glyph; a set control shows what it is set to. **No control's resting trigger may render "All …"** — that is the entire point of the redesign, and a trigger reading "ALL LANGUAGES"/"ALL TAGS" must be rejected. This constrains **triggers only**. An "all languages" / "all corpora" row *inside an opened panel* is required — it is how you clear the filter — and is not a violation.
+- **Dropdown ARIA is `menu` / `menuitem`, never `listbox`.** The panel rows are `<button>`s that apply a filter and close — they are actions, not a value list. `role="listbox"` would promise `option` children with `aria-selected` and arrow-key roving focus, which these do not have; announcing a listbox and delivering unlabeled buttons is worse than claiming nothing. So: trigger carries `aria-haspopup="menu"`, panel carries `role="menu"`, and **every panel row carries `role="menuitem"`**.
 - The page is **admin-gated in full** (`src/routes/library/+page.svelte:13` bounces non-admins). There is exactly one user. Do not build role-based affordances.
 - `.inner` is `max-width: 760px` — the header row has ~700px for the title plus three controls.
 - Node 20: `source ~/.nvm/nvm.sh && nvm use 20`. Tests: `npx vitest run`. Typecheck: `npm run check` (must stay **0 errors, 0 warnings**).
@@ -779,7 +780,7 @@ Create `src/lib/components/library/FacetPanel.svelte`:
 		class:set={label !== ''}
 		aria-label={ariaLabel}
 		aria-expanded={open}
-		aria-haspopup="listbox"
+		aria-haspopup="menu"
 		onclick={() => onToggle(!open)}
 	>
 		<span class="glyph">{glyph}</span>
@@ -788,7 +789,7 @@ Create `src/lib/components/library/FacetPanel.svelte`:
 	</button>
 
 	{#if open}
-		<div class="panel" class:wide role="listbox" tabindex="-1">
+		<div class="panel" class:wide role="menu" tabindex="-1">
 			{@render children()}
 		</div>
 	{/if}
@@ -918,7 +919,7 @@ Create `src/lib/components/library/CorpusControl.svelte`:
 
 <FacetPanel glyph="◈" {label} ariaLabel="Filter by corpus" {open} onToggle={toggleOpen} wide>
 	{#snippet children()}
-		<button class="row" class:sel={!corpus?.source} onclick={pickAll}>
+		<button class="row" role="menuitem" class:sel={!corpus?.source} onclick={pickAll}>
 			<span>all corpora</span>
 			<span class="c">{fmt(facets?.sources.reduce((n, s) => n + s.count, 0) ?? 0)}</span>
 		</button>
@@ -1039,12 +1040,12 @@ Create `src/lib/components/library/LanguageControl.svelte`:
 
 <FacetPanel glyph="文" label={language ?? ''} ariaLabel="Filter by language" {open} onToggle={(v) => (open = v)}>
 	{#snippet children()}
-		<button class="row" class:sel={!language} onclick={() => pick(undefined)}>
+		<button class="row" role="menuitem" class:sel={!language} onclick={() => pick(undefined)}>
 			<span>all languages</span>
 		</button>
 		<div class="divider"></div>
 		{#each buckets as b (b.name)}
-			<button class="row" class:sel={language === b.name} onclick={() => pick(b.name)}>
+			<button class="row" role="menuitem" class:sel={language === b.name} onclick={() => pick(b.name)}>
 				<span>{b.name}</span>
 				<span class="c">{fmt(b.count)}</span>
 			</button>
@@ -1128,11 +1129,11 @@ Create `src/lib/components/library/StateControl.svelte`:
 <FacetPanel glyph="⚙" {label} ariaLabel="Filter by state" {open} onToggle={(v) => (open = v)} wide>
 	{#snippet children()}
 		<p class="hd">visibility</p>
-		<button class="row" class:sel={!visibility} onclick={() => onChange({ visibility: undefined })}>
+		<button class="row" role="menuitem" class:sel={!visibility} onclick={() => onChange({ visibility: undefined })}>
 			<span>all</span>
 		</button>
 		{#each ['private', 'public'] as v (v)}
-			<button class="row" class:sel={visibility === v} onclick={() => onChange({ visibility: v })}>
+			<button class="row" role="menuitem" class:sel={visibility === v} onclick={() => onChange({ visibility: v })}>
 				<span>{v}</span>
 				<span class="c">{count(facets?.visibility, v)}</span>
 			</button>
@@ -1141,6 +1142,7 @@ Create `src/lib/components/library/StateControl.svelte`:
 		<div class="divider"></div>
 		<p class="hd">formatting</p>
 		<button
+			role="menuitem"
 			class="row"
 			class:sel={needs_formatting === undefined}
 			onclick={() => onChange({ needs_formatting: undefined })}
@@ -1148,6 +1150,7 @@ Create `src/lib/components/library/StateControl.svelte`:
 			<span>all</span>
 		</button>
 		<button
+			role="menuitem"
 			class="row"
 			class:sel={needs_formatting === 1}
 			onclick={() => onChange({ needs_formatting: 1 })}
@@ -1156,6 +1159,7 @@ Create `src/lib/components/library/StateControl.svelte`:
 			<span class="c">{count(facets?.needs_formatting, '1')}</span>
 		</button>
 		<button
+			role="menuitem"
 			class="row"
 			class:sel={needs_formatting === 0}
 			onclick={() => onChange({ needs_formatting: 0 })}
@@ -1166,7 +1170,7 @@ Create `src/lib/components/library/StateControl.svelte`:
 
 		<div class="divider"></div>
 		<p class="hd">decision</p>
-		<button class="row" class:sel={!decision} onclick={() => onChange({ decision: undefined })}>
+		<button class="row" role="menuitem" class:sel={!decision} onclick={() => onChange({ decision: undefined })}>
 			<span>all</span>
 		</button>
 		{#each ['undecided', 'keep', 'hide', 'delete'] as d (d)}
@@ -1427,9 +1431,9 @@ Create `src/lib/components/library/TagChipInput.svelte`:
 	</div>
 
 	{#if open && suggestions.length > 0}
-		<div class="panel" role="listbox">
+		<div class="panel" role="menu">
 			{#each suggestions.slice(0, 12) as b (b.name)}
-				<button class="row" onclick={() => addTag(b.name)}>
+				<button class="row" role="menuitem" onclick={() => addTag(b.name)}>
 					<span>{b.name}</span>
 					<span class="c">{fmt(b.count)}</span>
 				</button>
