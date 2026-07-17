@@ -16,10 +16,10 @@ export interface DocListItem {
 	needs_formatting: boolean;
 	updated_at: string;
 	decision: Decision | null; // null = undecided
+	tags: string[];
 }
 
 export interface LibraryDoc extends DocListItem {
-	tags: string[];
 	collections: string[];
 	body: string;
 }

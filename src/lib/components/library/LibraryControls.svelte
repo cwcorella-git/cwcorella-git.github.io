@@ -16,7 +16,7 @@
 		{ value: 'title', label: 'Title' },
 		{ value: 'author', label: 'Author' },
 		{ value: 'publication_date', label: 'Date published' },
-		{ value: 'updated_at', label: 'Updated' }
+		{ value: 'word_count', label: 'Word count' }
 	];
 
 	// ── sort / direction ─────────────────────────────────────────────────
