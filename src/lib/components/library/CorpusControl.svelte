@@ -32,6 +32,10 @@
 	function pickSource(name: string) {
 		// Selecting a source clears any category — categories belong to one source.
 		onChange({ source: name });
+		open = false;
+	}
+
+	function toggleExpanded(name: string) {
 		expanded = expanded === name ? null : name;
 	}
 
@@ -54,21 +58,29 @@
 		<div class="divider"></div>
 
 		{#each tree as src (src.name)}
-			<button
-				class="row"
-				role="menuitem"
-				class:sel={corpus?.source === src.name && !corpus?.collection}
-				aria-expanded={expanded === src.name}
-				onclick={() => pickSource(src.name)}
-			>
-				<span>
-					<!-- A source with no categories never expands; user has 2,521 docs
-					     and zero collections. Show no caret rather than a dead one. -->
-					{#if src.categories.length}{expanded === src.name ? '▾' : '▸'}{:else}&nbsp;&nbsp;{/if}
-					{src.name}
-				</span>
-				<span class="c">{fmt(src.count)}</span>
-			</button>
+			<div class="row-group">
+				{#if src.categories.length}
+					<button
+						class="caret"
+						aria-expanded={expanded === src.name}
+						aria-label={expanded === src.name ? `collapse ${src.name}` : `expand ${src.name}`}
+						onclick={() => toggleExpanded(src.name)}
+					>
+						{expanded === src.name ? '▾' : '▸'}
+					</button>
+				{:else}
+					<span class="caret-spacer"></span>
+				{/if}
+				<button
+					class="row"
+					role="menuitem"
+					class:sel={corpus?.source === src.name && !corpus?.collection}
+					onclick={() => pickSource(src.name)}
+				>
+					<span>{src.name}</span>
+					<span class="c">{fmt(src.count)}</span>
+				</button>
+			</div>
 
 			{#if expanded === src.name}
 				{#each src.categories as cat (cat.name)}
@@ -100,4 +112,18 @@
 	.row.nest { padding-left: 1.6rem; }
 	.c { opacity: 0.5; font-variant-numeric: tabular-nums; }
 	.divider { height: 1px; background: rgba(var(--ui-rgb), 0.16); margin: 0.3rem 0; }
+
+	.row-group { display: flex; align-items: stretch; width: 100%; }
+	.caret,
+	.caret-spacer {
+		flex: none; width: 0.9rem; display: flex; align-items: center; justify-content: center;
+	}
+	.caret {
+		background: none; border: none; cursor: pointer;
+		color: var(--clr-text); opacity: 0.5;
+		font-family: var(--font-ui); font-size: 0.6rem;
+		padding: 0.25rem 0; transition: opacity 0.12s;
+	}
+	.caret:hover { opacity: 1; }
+	.row-group .row { padding-left: 0; }
 </style>
