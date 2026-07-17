@@ -43,6 +43,7 @@
 		aria-label={ariaLabel}
 		aria-expanded={open}
 		aria-haspopup="menu"
+		title={label || restLabel || ariaLabel}
 		onclick={() => onToggle(!open)}
 	>
 		<span class="glyph">{glyph}</span>
@@ -77,6 +78,17 @@
 	/* Set = the filter is doing work. Hierarchy via opacity, never a second colour. */
 	.trigger.set { opacity: 1; border-color: rgba(var(--ui-rgb), 0.55); }
 	.chev { opacity: 0.6; }
+
+	/* A SET label is a value and can be long — the worst real one is
+	   "Anarchist Library ▸ Anarcho-syndicalism". Four set controls otherwise
+	   overflow 760px and .scope wraps, which puts the height variance back.
+	   Full value stays in the trigger's title. */
+	.label {
+		max-width: 11rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
 
 	.panel {
 		position: absolute; top: calc(100% + 0.3rem); right: 0; z-index: 20;

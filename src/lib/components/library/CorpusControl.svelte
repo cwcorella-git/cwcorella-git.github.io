@@ -52,7 +52,7 @@
 <FacetPanel
 	glyph="◈"
 	{label}
-	restLabel="Corpus"
+	restLabel="Source"
 	ariaLabel="Filter by corpus"
 	{open}
 	onToggle={toggleOpen}
