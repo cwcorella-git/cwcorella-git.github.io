@@ -38,6 +38,11 @@ export interface Facets {
 	sources: FacetBucket[];
 	collections: FacetBucket[];
 	tags: FacetBucket[];
+	// Optional: an un-upgraded API omits them, and the State dropdown then renders
+	// without counts rather than crashing. needs_formatting names are the STRINGS
+	// '0' and '1' — every bucket name is a string.
+	visibility?: FacetBucket[];
+	needs_formatting?: FacetBucket[];
 	// Optional: an older backend won't send it. Drives the date rail's decade buckets.
 	date_range?: {
 		min_year: number | null;
