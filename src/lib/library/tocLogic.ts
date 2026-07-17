@@ -30,3 +30,13 @@ export function activeLabel(
 	if (i === -1) return null;
 	return `${numbers[i]}. ${entries[i].text}`;
 }
+
+export function pillLabel(
+	entries: TocEntry[],
+	numbers: string[],
+	activeAnchor: string | null
+): { glyph: string; text: string } {
+	if (entries.length === 0) return { glyph: 'ⓘ', text: 'Info' };
+	const label = activeLabel(entries, numbers, activeAnchor);
+	return { glyph: '§', text: label ?? 'On this page' };
+}

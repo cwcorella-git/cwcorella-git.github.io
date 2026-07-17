@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { tocNumber, condenseMeta, activeLabel } from './tocLogic';
+import { tocNumber, condenseMeta, activeLabel, pillLabel } from './tocLogic';
 import type { TocEntry } from '$lib/admin/markdown';
 
 const e = (text: string, level: 1 | 2 | 3 = 2): TocEntry => ({
@@ -54,5 +54,30 @@ describe('activeLabel', () => {
 	it('returns null when activeAnchor matches no entry', () => {
 		const entries = [e('Intro')];
 		expect(activeLabel(entries, tocNumber(entries), 'nope')).toBeNull();
+	});
+});
+
+describe('pillLabel', () => {
+	const entries = [
+		{ level: 1 as const, text: 'Introduction', anchor: 'introduction' },
+		{ level: 2 as const, text: 'Method', anchor: 'method' },
+		{ level: 2 as const, text: 'Results', anchor: 'results' }
+	];
+	const numbers = ['1', '2', '3'];
+
+	it('returns the Info glyph and label when there are no headings', () => {
+		expect(pillLabel([], [], null)).toEqual({ glyph: 'ⓘ', text: 'Info' });
+	});
+
+	it('returns the live section label when a section is active', () => {
+		expect(pillLabel(entries, numbers, 'method')).toEqual({ glyph: '§', text: '2. Method' });
+	});
+
+	it('falls back to "On this page" when headings exist but none is active', () => {
+		expect(pillLabel(entries, numbers, null)).toEqual({ glyph: '§', text: 'On this page' });
+	});
+
+	it('falls back to "On this page" when the active anchor is not in the entries', () => {
+		expect(pillLabel(entries, numbers, 'nonexistent')).toEqual({ glyph: '§', text: 'On this page' });
 	});
 });
