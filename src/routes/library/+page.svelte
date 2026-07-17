@@ -7,6 +7,7 @@
 	import DocReader from '$lib/components/library/DocReader.svelte';
 	import CorpusControl from '$lib/components/library/CorpusControl.svelte';
 	import LanguageControl from '$lib/components/library/LanguageControl.svelte';
+	import DecisionControl from '$lib/components/library/DecisionControl.svelte';
 	import StateControl from '$lib/components/library/StateControl.svelte';
 	import { buildRail } from '$lib/library/railLogic';
 	import { progressText } from '$lib/library/curationLogic';
@@ -56,12 +57,18 @@
 								filters: { ...libraryState.controls.filters, language }
 							})}
 					/>
+					<DecisionControl
+						stats={libraryState.curationStats}
+						decision={libraryState.controls.filters.decision}
+						onChange={(patch) =>
+							libraryState.applyControls({
+								filters: { ...libraryState.controls.filters, ...patch }
+							})}
+					/>
 					<StateControl
 						facets={libraryState.facets}
-						stats={libraryState.curationStats}
 						visibility={libraryState.controls.filters.visibility}
 						needs_formatting={libraryState.controls.filters.needs_formatting}
-						decision={libraryState.controls.filters.decision}
 						onChange={(patch) =>
 							libraryState.applyControls({
 								filters: { ...libraryState.controls.filters, ...patch }
