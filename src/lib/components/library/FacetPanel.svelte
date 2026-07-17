@@ -90,5 +90,13 @@
 	   border so you can still tell something is filtered, just not what. */
 	@media (max-width: 480px) {
 		.label { display: none; }
+
+		.panel, .panel.wide {
+			position: fixed;
+			left: 0.75rem; right: 0.75rem;
+			top: auto;
+			min-width: 0; width: auto;
+			max-height: 50vh;
+		}
 	}
 </style>

@@ -140,5 +140,7 @@
 	@media (max-width: 480px) {
 		.page { padding-top: 4.5rem; }
 		.inner { padding: 1.5rem 1.25rem 4rem; }
+		.heading-row { gap: 0.5rem; margin-bottom: 1.25rem; }
+		.scope { gap: 0.3rem; flex-wrap: nowrap; }
 	}
 </style>
