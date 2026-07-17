@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { filterTagBuckets } from '$lib/library/tagPanelLogic';
 	import type { Facets, FacetBucket } from '$lib/library/types';
 
@@ -13,11 +14,12 @@
 
 	const { facets, tags, q, onTagsChange, onQChange, searchTags }: Props = $props();
 
-	let text = $state('');
+	let text = $state(untrack(() => q));
 	let open = $state(false);
 	let remote = $state<FacetBucket[] | null>(null);
 	let root: HTMLDivElement | undefined = $state();
 	let debounce: ReturnType<typeof setTimeout> | undefined;
+	let generation = 0;
 
 	// Local matches over the top-200 facet — no network for the common case.
 	const local = $derived(filterTagBuckets(facets?.tags ?? [], text, tags));
@@ -25,21 +27,35 @@
 	// local results when there are any; remote only fills the tail.
 	const suggestions = $derived(local.length > 0 ? local : (remote ?? []));
 
+	// Keep the local input in sync if q changes from outside (e.g. a future
+	// "clear all" action) without fighting the user's typing.
+	let lastSyncedQ = untrack(() => q);
+	$effect(() => {
+		if (q !== lastSyncedQ) {
+			lastSyncedQ = q;
+			text = q;
+		}
+	});
+
 	// Debounced remote lookup. Only fires when the local top-200 filter came up empty
 	// and there is a non-empty query — the common case never hits the network. Clears
-	// its pending timer on teardown/re-run so a stale timer can never resolve after
-	// the query has already changed underneath it.
+	// its pending timer on teardown/re-run, but a timer that already fired cannot be
+	// recalled — so every scheduled lookup is tagged with a generation token and a
+	// response only lands if it is still the newest, otherwise a slow earlier query
+	// could resolve after a newer one and overwrite the panel with stale results.
 	$effect(() => {
 		const needle = text.trim();
 		if (needle === '' || local.length > 0) {
 			remote = null;
 			return;
 		}
+		const mine = ++generation;
 		const timer = setTimeout(async () => {
 			try {
-				remote = await searchTags(needle);
+				const res = await searchTags(needle);
+				if (mine === generation) remote = res;
 			} catch {
-				remote = []; // an un-upgraded API has no /tags; degrade to local-only
+				if (mine === generation) remote = []; // un-upgraded API has no /tags; degrade to local-only
 			}
 		}, 200);
 		return () => clearTimeout(timer);
@@ -78,10 +94,13 @@
 		}
 		if (e.key === 'Enter') {
 			e.preventDefault();
-			// Enter commits the top suggestion if there is one; otherwise the typed
-			// text becomes the search query. Off-facet tags are reachable by picking
-			// them from the panel, which /tags?q= populates.
-			if (suggestions.length > 0) addTag(suggestions[0].name);
+			// Enter commits a chip only when the typed text is an exact (case-insensitive)
+			// match for a suggestion's name — otherwise it's ambiguous whether the user
+			// meant a tag or a full-text search, so we run the search instead. Non-exact
+			// tags are still reachable by clicking them in the panel.
+			const needle = text.trim().toLowerCase();
+			const exact = suggestions.find((s) => s.name.toLowerCase() === needle);
+			if (exact) addTag(exact.name);
 			else onQChange(text.trim());
 		}
 	}
