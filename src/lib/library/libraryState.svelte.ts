@@ -11,7 +11,15 @@ import {
 	evictWindows,
 	resolveAnchorIndex
 } from './windowLogic';
-import type { DocListItem, LibraryDoc, Facets, AnchorOffsetParams } from './types';
+import { toggleDecision, clampIndex } from './curationLogic';
+import type {
+	DocListItem,
+	LibraryDoc,
+	Facets,
+	AnchorOffsetParams,
+	Decision,
+	CurationStats
+} from './types';
 
 const baseUrl = env.PUBLIC_LIBRARY_API_URL || 'https://library-api.cwcorella.com';
 const client = createLibraryClient({ baseUrl, getToken: () => adminState.libraryToken });
@@ -25,6 +33,8 @@ let _status = $state<Status>('idle');
 let _errorDetail = $state('');
 let _openDoc = $state<LibraryDoc | null>(null);
 let _openDocStatus = $state<OpenDocStatus>('idle');
+let _openIndex = $state<number | null>(null);
+let _curationStats = $state<CurationStats | null>(null);
 
 let _total = $state<number | null>(null);
 let _version = $state(0); // bumped whenever the row cache changes
@@ -132,6 +142,9 @@ export const libraryState = {
 	get queryKey() { return _queryKey; },
 	get openDoc() { return _openDoc; },
 	get openDocStatus() { return _openDocStatus; },
+	get hasPrev() { return _openIndex !== null && _openIndex > 0; },
+	get hasNext() { return _openIndex !== null && _total !== null && _openIndex < _total - 1; },
+	get curationStats() { return _curationStats; },
 
 	rowAt(index: number): DocListItem | undefined {
 		void _version; // subscribe: re-reads when the cache changes
@@ -141,7 +154,7 @@ export const libraryState = {
 	async init() {
 		if (_status !== 'idle') return;
 		_status = 'loading';
-		await Promise.all([_newQuery(), this.loadFacets()]);
+		await Promise.all([_newQuery(), this.loadFacets(), this.loadCurationStats()]);
 	},
 
 	async loadFacets() {
@@ -207,9 +220,79 @@ export const libraryState = {
 		}
 	},
 
+	async openDocByIndex(index: number) {
+		const clamped = clampIndex(index, _total);
+		if (clamped === null) return;
+		_openIndex = clamped;
+		let id = _rowCache.get(clamped)?.id;
+		if (id === undefined) {
+			// Row not cached (e.g. prev/next stepped past a window edge): fetch just
+			// this row in the current order to learn its id.
+			try {
+				const resp = await client.listDocuments(toQuery(_controls, clamped, 1));
+				id = resp.items[0]?.id;
+			} catch (e) {
+				_openDocStatus = 'error';
+				_mapError(e);
+				return;
+			}
+		}
+		if (id === undefined) return;
+		await this.openDocById(id);
+	},
+
+	openPrevDoc() {
+		if (_openIndex !== null && _openIndex > 0) return this.openDocByIndex(_openIndex - 1);
+	},
+	openNextDoc() {
+		if (_openIndex !== null && _total !== null && _openIndex < _total - 1) {
+			return this.openDocByIndex(_openIndex + 1);
+		}
+	},
+
+	async loadCurationStats() {
+		try {
+			_curationStats = await client.getCurationStats();
+		} catch {
+			/* stats are best-effort; a failure shouldn't break the reader */
+		}
+	},
+
+	async setDecision(clicked: Decision) {
+		const doc = _openDoc;
+		if (!doc) return;
+		const target = toggleDecision(doc.decision, clicked); // keep|hide|delete|undecided
+		const nextVal: Decision | null = target === 'undecided' ? null : target;
+		const prevVal = doc.decision;
+		const idx = _openIndex;
+
+		// Optimistic: update the open doc + its cached row (no requery -> no yank).
+		_openDoc = { ...doc, decision: nextVal };
+		if (idx !== null) {
+			const cached = _rowCache.get(idx);
+			if (cached) _rowCache.set(idx, { ...cached, decision: nextVal });
+			_version++;
+		}
+
+		try {
+			await client.setCuration(doc.id, target);
+			await this.loadCurationStats();
+		} catch (e) {
+			// Roll back only if the same doc is still open (user may have navigated).
+			if (_openDoc && _openDoc.id === doc.id) _openDoc = { ..._openDoc, decision: prevVal };
+			if (idx !== null) {
+				const c2 = _rowCache.get(idx);
+				if (c2 && c2.id === doc.id) _rowCache.set(idx, { ...c2, decision: prevVal });
+				_version++;
+			}
+			_mapError(e);
+		}
+	},
+
 	closeDoc() {
 		_docEpoch++;
 		_openDoc = null;
 		_openDocStatus = 'idle';
+		_openIndex = null;
 	}
 };
