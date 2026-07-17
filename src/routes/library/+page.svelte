@@ -115,6 +115,11 @@
 	.page {
 		min-height: 100vh;
 		padding-top: 4rem;
+		/* One height for every toolbar control. Declared here, not in each component:
+		   custom properties inherit through the DOM, and Svelte's style scoping does
+		   not block that. Heights were previously derived from font + padding, so they
+		   disagreed. 1.75rem, not VG's 2rem: their capsule wraps ~14px type, ours 9.6px. */
+		--ctl-h: 1.75rem;
 	}
 	.inner {
 		position: relative; z-index: 1;

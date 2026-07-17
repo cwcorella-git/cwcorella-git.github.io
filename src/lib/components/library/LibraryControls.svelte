@@ -78,18 +78,25 @@
 		display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
 	}
 
-	.capsule { display: inline-flex; border: 1px solid rgba(var(--ui-rgb), 0.28); flex-shrink: 0; }
+	.capsule {
+		display: inline-flex; align-items: center;
+		height: var(--ctl-h, 1.75rem);
+		border: 1px solid rgba(var(--ui-rgb), 0.28); flex-shrink: 0;
+	}
 	.cap-sel, .cap-btn {
+		height: 100%;
 		background: none; border: none; color: var(--clr-text);
 		font-family: var(--font-ui);
 		font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase;
-		padding: 0.3rem 0.5rem; cursor: pointer;
+		padding: 0 0.5rem; cursor: pointer;
 	}
-	.cap-btn { border-left: 1px solid rgba(var(--ui-rgb), 0.28); padding: 0.3rem 0.4rem; }
+	.cap-btn { border-left: 1px solid rgba(var(--ui-rgb), 0.28); padding: 0 0.4rem; }
 	.view-toggle {
+		height: var(--ctl-h, 1.75rem);
 		background: none; border: 1px solid rgba(var(--ui-rgb), 0.28);
-		color: var(--clr-text); font-size: 0.7rem;
-		padding: 0.3rem 0.5rem; cursor: pointer; flex-shrink: 0;
+		color: var(--clr-text);
+		font-size: 0.6rem; /* was 0.7rem — the sole reason this control rendered taller */
+		padding: 0 0.5rem; cursor: pointer; flex-shrink: 0;
 	}
 	.capsule:hover, .view-toggle:hover { border-color: rgba(var(--ui-rgb), 0.45); }
 

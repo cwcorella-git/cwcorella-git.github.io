@@ -67,7 +67,9 @@
 		color: var(--clr-text);
 		font-family: var(--font-ui);
 		font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase;
-		padding: 0.3rem 0.5rem; cursor: pointer; transition: all 0.15s;
+		height: var(--ctl-h, 1.75rem);
+		padding: 0 0.5rem; /* horizontal only — vertical padding is what derived the height */
+		cursor: pointer; transition: all 0.15s;
 		white-space: nowrap; opacity: 0.72;
 	}
 	.trigger:hover { border-color: rgba(var(--ui-rgb), 0.45); opacity: 1; }
