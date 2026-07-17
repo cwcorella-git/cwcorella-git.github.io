@@ -137,3 +137,18 @@ describe('toQuery', () => {
 		expect(q).toHaveProperty('needs_formatting', 1);
 	});
 });
+
+describe('decision filter composition', () => {
+	it('toQuery passes an applied decision filter through', () => {
+		const c = { ...defaultControls(), filters: { decision: 'undecided' as const } };
+		expect(toQuery(c, 0, 50).decision).toBe('undecided');
+	});
+	it('an unset decision filter is omitted from the query', () => {
+		expect(toQuery(defaultControls(), 0, 50).decision).toBeUndefined();
+	});
+	it('changing decision changes the query key', () => {
+		const a = defaultControls();
+		const b = { ...a, filters: { decision: 'keep' as const } };
+		expect(computeQueryKey(a)).not.toBe(computeQueryKey(b));
+	});
+});

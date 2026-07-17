@@ -91,6 +91,7 @@ describe('createLibraryClient', () => {
 			visibility: 'public',
 			needs_formatting: false,
 			updated_at: '2026-01-01',
+			decision: null,
 			tags: [],
 			collections: [],
 			body: 'body text'
@@ -182,5 +183,37 @@ describe('createLibraryClient', () => {
 			expect((e as ApiError).status).toBe(502);
 			expect((e as ApiError).detail).toBeUndefined();
 		}
+	});
+});
+
+describe('curation writes', () => {
+	it('setCuration PUTs /curation/{id} with a JSON body and bearer header', async () => {
+		const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, { doc_id: 7, decision: 'keep' }));
+		const client = createLibraryClient({ baseUrl: BASE_URL, getToken: () => TOKEN, fetchImpl });
+		const res = await client.setCuration(7, 'keep');
+		expect(res).toEqual({ doc_id: 7, decision: 'keep' });
+		const [url, options] = fetchImpl.mock.calls[0];
+		expect(url).toBe(BASE_URL + '/curation/7');
+		expect(options.method).toBe('PUT');
+		expect(options.headers['Content-Type']).toBe('application/json');
+		expect(JSON.parse(options.body)).toEqual({ decision: 'keep' });
+		expect(options.headers.Authorization).toBe('Bearer ' + TOKEN);
+	});
+
+	it('getCurationStats GETs /curation/stats', async () => {
+		const stats = { keep: 1, hide: 0, delete: 0, decided: 1, total: 10, undecided: 9 };
+		const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, stats));
+		const client = createLibraryClient({ baseUrl: BASE_URL, getToken: () => TOKEN, fetchImpl });
+		expect(await client.getCurationStats()).toEqual(stats);
+		const [url, options] = fetchImpl.mock.calls[0];
+		expect(url).toBe(BASE_URL + '/curation/stats');
+		expect(options.method ?? 'GET').toBe('GET');
+		expect(options.body).toBeUndefined();
+	});
+
+	it('setCuration maps 404 to ApiError', async () => {
+		const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(404, { detail: 'document not found' }));
+		const client = createLibraryClient({ baseUrl: BASE_URL, getToken: () => TOKEN, fetchImpl });
+		await expect(client.setCuration(999, 'keep')).rejects.toBeInstanceOf(ApiError);
 	});
 });
