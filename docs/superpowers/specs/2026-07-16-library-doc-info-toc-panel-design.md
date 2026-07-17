@@ -28,11 +28,12 @@ Move the per-document metadata out of the prose body into a dedicated
    sticky panel on the right holding (a) a **Document info** card and (b) an
    **On this page** TOC whose current heading highlights as you scroll and jumps
    on click.
-2. **Narrow / half-screen (< ~900px):** the sidebar is replaced by a **slim bar**
-   pinned to the top of the reader showing the *live* current section; tapping it
-   expands a compact combined panel (TOC + metadata + tags); tapping a heading or
-   the bar collapses it. Reading area stays full-width; nothing overlays the
-   prose until the reader asks.
+2. **Narrow / half-screen (< ~900px):** the sidebar is replaced by a **floating
+   pill** (bottom-right, glass-styled) that opens a **compact tabbed sheet**.
+   The reading area stays full-width; nothing overlays the prose until tapped.
+   (This supersedes the original *slim bar* treatment — see "Narrow-mode revision"
+   below. The slim bar took too much vertical space; the pill+sheet is the
+   improvement over both it and veritablegames.com's info-dropping wiki layout.)
 
 No backend changes. The TOC data and scroll anchors already exist.
 
@@ -123,11 +124,57 @@ Two containers, CSS-toggled by breakpoint:
 
 - **`.sidebar`** (shown ≥ breakpoint): a heading "On this page" + `{@render
   tocList()}`, then a divider + "Document info" + `{@render infoRows()}`.
-- **`.slim`** (shown < breakpoint): a sticky bar. Collapsed: `▸` + the live
-  active section label (from `activeAnchor` → its `TocEntry.text`, prefixed with
-  its ordinal; falls back to `condenseMeta(doc)` when there are no headings) +
-  `▾` chevron + `ⓘ`. Expanded (`expanded`): `{@render tocList()}` then
-  `{@render infoRows()}`. Toggled by clicking the bar; `Escape` collapses.
+- **`.narrow`** (shown < breakpoint): a **floating pill** + **tabbed sheet** —
+  see "Narrow-mode revision" below.
+
+## Narrow-mode revision (2026-07-16)
+
+The original `.slim` sticky bar is replaced. It consumed a fixed strip of
+vertical reading space and, expanded, pushed the prose down — the same
+space complaint the user raised about veritablegames.com's mobile
+bottom-sheet. The replacement is a **floating pill → compact tabbed sheet**
+(user-selected). It surfaces **both** the TOC and the info panel in narrow
+mode — improving on the wiki, whose info sidecard is desktop-only.
+
+### Floating pill
+
+- Fixed, bottom-right of the reader (`position: fixed`, inside the modal
+  z-context), glass-styled to match the reader chrome.
+- Label is derived by a new pure helper `pillLabel(entries, numbers,
+  activeAnchor)` returning `{ glyph, text }`:
+  - **No headings** (`entries.length === 0`): `{ glyph: 'ⓘ', text: 'Info' }`.
+  - **Active section present**: `{ glyph: '§', text: '<ordinal>. <heading>' }`
+    (the live "where am I" cue; e.g. `§ 2. Method`).
+  - **Headings but none active yet**: `{ glyph: '§', text: 'On this page' }`.
+- The text is single-line, ellipsised, so the pill can't grow unbounded.
+- `aria-expanded` reflects sheet state; `aria-label` is stable
+  ("Table of contents and document info").
+
+### Tabbed sheet
+
+- Opens anchored **above** the pill (bottom-right), NOT a full-width
+  bottom-sheet. `max-width: ~320px`, `max-height: ~60vh`, internal
+  `overflow-y: auto`. This is the deliberate space win over the slim bar.
+- **Two tabs** when the doc has headings: **On this page** (default,
+  `{@render tocList()}`) and **Info** (`{@render infoRows()}`). `activeTab
+  = $state<'toc' | 'info'>('toc')`. Tabs use `role="tab"`/`role="tabpanel"`
+  with `aria-selected`; the visible panel is the selected tab only.
+- **No headings**: the tab strip is omitted; the sheet renders `infoRows()`
+  directly (and the pill already reads `ⓘ Info`).
+- Tapping a TOC heading calls `onJump` **and** closes the sheet (`expanded =
+  false`). Tapping the pill toggles; tapping the backdrop/outside closes.
+
+### Escape handling (supersedes the prior dead-code bug)
+
+The earlier build's slim-bar `onkeydown` was dead code: `DocReader`'s global
+`<svelte:window onkeydown>` closes the whole reader on Escape and shadowed it.
+Here, when the sheet is **open**, `DocInfoPanel` registers a **capture-phase**
+`window` keydown listener that, on Escape, closes the sheet and calls
+`stopPropagation()` — running before `DocReader`'s bubble-phase handler, so
+Escape closes the *sheet* first. With the sheet closed, no capture listener is
+registered and Escape closes the reader as before. The listener is added/removed
+via an `$effect` keyed on `expanded`; cleanup on close/destroy. No shared state
+between the two components is required.
 
 ### `tocLogic.ts` (new, pure — unit-tested)
 
@@ -136,9 +183,13 @@ Two containers, CSS-toggled by breakpoint:
 - `condenseMeta(doc): string` — joins the present, meaningful metadata into a
   one-line summary for the collapsed bar, e.g. `author · 2019 · en`. Skips
   missing/`—`/empty fields; joins with ` · `; returns `''` if nothing.
-- `activeLabel(entries, numbers, activeAnchor): string | null` — the collapsed
-  bar's text: the active entry's `"<ordinal> <text>"`, or `null` if no active
-  entry (caller then uses `condenseMeta`).
+- `activeLabel(entries, numbers, activeAnchor): string | null` — the active
+  entry's `"<ordinal>. <text>"`, or `null` if no active entry. (Retained; used
+  by the desktop sidebar highlight logic and composed by `pillLabel`.)
+- `pillLabel(entries, numbers, activeAnchor): { glyph: string; text: string }`
+  — the floating-pill label (see "Narrow-mode revision"): `ⓘ Info` when no
+  headings, `§ <ordinal>. <text>` when a section is active, `§ On this page`
+  otherwise. Pure; unit-tested across all three branches.
 
 Keeping the observer/DOM logic in the component and the string/number logic pure
 means the tricky parts (numbering, condensing, active-label selection) are
