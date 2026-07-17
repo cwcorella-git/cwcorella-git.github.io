@@ -27,6 +27,10 @@
 	}
 </script>
 
+<!-- No restLabel on purpose: 文 rests as a bare glyph, so FacetPanel's
+     title={label || restLabel || ariaLabel} must fall through to ariaLabel —
+     that tooltip is the only thing that explains what the glyph means. Adding a
+     restLabel here would silently remove it. -->
 <FacetPanel glyph="文" label={language ?? ''} ariaLabel="Filter by language" {open} onToggle={(v) => (open = v)}>
 	{#snippet children()}
 		<button class="row" role="menuitem" class:sel={!language} onclick={() => pick(undefined)}>

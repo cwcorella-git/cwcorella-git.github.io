@@ -52,15 +52,15 @@
 <FacetPanel
 	glyph="◈"
 	{label}
-	restLabel="Corpus"
-	ariaLabel="Filter by corpus"
+	restLabel="Source"
+	ariaLabel="Filter by source"
 	{open}
 	onToggle={toggleOpen}
 	wide
 >
 	{#snippet children()}
 		<button class="row" role="menuitem" class:sel={!corpus?.source} onclick={pickAll}>
-			<span>all corpora</span>
+			<span>all sources</span>
 			<span class="c">{fmt(facets?.sources.reduce((n, s) => n + s.count, 0) ?? 0)}</span>
 		</button>
 		<div class="divider"></div>

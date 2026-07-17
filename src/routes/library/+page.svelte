@@ -7,6 +7,7 @@
 	import DocReader from '$lib/components/library/DocReader.svelte';
 	import CorpusControl from '$lib/components/library/CorpusControl.svelte';
 	import LanguageControl from '$lib/components/library/LanguageControl.svelte';
+	import DecisionControl from '$lib/components/library/DecisionControl.svelte';
 	import StateControl from '$lib/components/library/StateControl.svelte';
 	import { buildRail } from '$lib/library/railLogic';
 	import { progressText } from '$lib/library/curationLogic';
@@ -56,12 +57,18 @@
 								filters: { ...libraryState.controls.filters, language }
 							})}
 					/>
+					<DecisionControl
+						stats={libraryState.curationStats}
+						decision={libraryState.controls.filters.decision}
+						onChange={(patch) =>
+							libraryState.applyControls({
+								filters: { ...libraryState.controls.filters, ...patch }
+							})}
+					/>
 					<StateControl
 						facets={libraryState.facets}
-						stats={libraryState.curationStats}
 						visibility={libraryState.controls.filters.visibility}
 						needs_formatting={libraryState.controls.filters.needs_formatting}
-						decision={libraryState.controls.filters.decision}
 						onChange={(patch) =>
 							libraryState.applyControls({
 								filters: { ...libraryState.controls.filters, ...patch }
@@ -115,6 +122,11 @@
 	.page {
 		min-height: 100vh;
 		padding-top: 4rem;
+		/* One height for every toolbar control. Declared here, not in each component:
+		   custom properties inherit through the DOM, and Svelte's style scoping does
+		   not block that. Heights were previously derived from font + padding, so they
+		   disagreed. 1.75rem, not VG's 2rem: their capsule wraps ~14px type, ours 9.6px. */
+		--ctl-h: 1.75rem;
 	}
 	.inner {
 		position: relative; z-index: 1;

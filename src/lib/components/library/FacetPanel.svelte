@@ -43,6 +43,7 @@
 		aria-label={ariaLabel}
 		aria-expanded={open}
 		aria-haspopup="menu"
+		title={label || restLabel || ariaLabel}
 		onclick={() => onToggle(!open)}
 	>
 		<span class="glyph">{glyph}</span>
@@ -67,7 +68,9 @@
 		color: var(--clr-text);
 		font-family: var(--font-ui);
 		font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase;
-		padding: 0.3rem 0.5rem; cursor: pointer; transition: all 0.15s;
+		height: var(--ctl-h, 1.75rem);
+		padding: 0 0.5rem; /* horizontal only — vertical padding is what derived the height */
+		cursor: pointer; transition: all 0.15s;
 		white-space: nowrap; opacity: 0.72;
 	}
 	.trigger:hover { border-color: rgba(var(--ui-rgb), 0.45); opacity: 1; }
@@ -75,6 +78,17 @@
 	/* Set = the filter is doing work. Hierarchy via opacity, never a second colour. */
 	.trigger.set { opacity: 1; border-color: rgba(var(--ui-rgb), 0.55); }
 	.chev { opacity: 0.6; }
+
+	/* A SET label is a value and can be long — the worst real one is
+	   "Anarchist Library ▸ Anarcho-syndicalism". Four set controls otherwise
+	   overflow 760px and .scope wraps, which puts the height variance back.
+	   Full value stays in the trigger's title. */
+	.label {
+		max-width: 11rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
 
 	.panel {
 		position: absolute; top: calc(100% + 0.3rem); right: 0; z-index: 20;

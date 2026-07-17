@@ -1,21 +1,15 @@
 <script lang="ts">
 	import FacetPanel from './FacetPanel.svelte';
-	import type { Facets, DecisionInput, CurationStats } from '$lib/library/types';
+	import type { Facets } from '$lib/library/types';
 
 	interface Props {
 		facets: Facets | null;
-		stats: CurationStats | null;
 		visibility: string | undefined;
 		needs_formatting: 0 | 1 | undefined;
-		decision: DecisionInput | undefined;
-		onChange: (patch: {
-			visibility?: string;
-			needs_formatting?: 0 | 1;
-			decision?: DecisionInput;
-		}) => void;
+		onChange: (patch: { visibility?: string; needs_formatting?: 0 | 1 }) => void;
 	}
 
-	const { facets, stats, visibility, needs_formatting, decision, onChange }: Props = $props();
+	const { facets, visibility, needs_formatting, onChange }: Props = $props();
 
 	let open = $state(false);
 
@@ -23,8 +17,7 @@
 	const label = $derived(
 		[
 			visibility,
-			needs_formatting === undefined ? undefined : needs_formatting === 1 ? 'needs fmt' : 'clean',
-			decision
+			needs_formatting === undefined ? undefined : needs_formatting === 1 ? 'needs fmt' : 'clean'
 		]
 			.filter(Boolean)
 			.join(' · ')
@@ -36,17 +29,6 @@
 		// rather than a wrong one.
 		return b ? b.count.toLocaleString() : '';
 	}
-
-	const decisionCounts = $derived<Record<string, string>>(
-		stats
-			? {
-					undecided: stats.undecided.toLocaleString(),
-					keep: stats.keep.toLocaleString(),
-					hide: stats.hide.toLocaleString(),
-					delete: stats.delete.toLocaleString()
-				}
-			: {}
-	);
 </script>
 
 <FacetPanel
@@ -98,23 +80,6 @@
 			<span>clean</span>
 			<span class="c">{count(facets?.needs_formatting, '0')}</span>
 		</button>
-
-		<div class="divider"></div>
-		<p class="hd">decision</p>
-		<button class="row" role="menuitem" class:sel={!decision} onclick={() => onChange({ decision: undefined })}>
-			<span>all</span>
-		</button>
-		{#each ['undecided', 'keep', 'hide', 'delete'] as d (d)}
-			<button
-				class="row"
-				role="menuitem"
-				class:sel={decision === d}
-				onclick={() => onChange({ decision: d as DecisionInput })}
-			>
-				<span>{d}</span>
-				<span class="c">{decisionCounts[d] ?? ''}</span>
-			</button>
-		{/each}
 	{/snippet}
 </FacetPanel>
 
