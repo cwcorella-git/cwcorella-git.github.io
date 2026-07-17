@@ -23,7 +23,7 @@ export interface LibraryControls {
 		language?: string;
 		source?: string;
 		collection?: string;
-		tag?: string;
+		tags?: string[];
 		visibility?: string;
 		needs_formatting?: 0 | 1;
 		decision?: import('./types').DecisionInput;
@@ -31,8 +31,9 @@ export interface LibraryControls {
 	view: 'list' | 'grid';
 }
 
-/** Whether a filter value counts as "applied". 0 is a real value, not empty. */
+/** Whether a filter value counts as "applied". 0 is a real value; [] is not. */
 function isAppliedFilterValue(value: unknown): boolean {
+	if (Array.isArray(value)) return value.length > 0;
 	return value !== undefined && value !== '';
 }
 
@@ -43,6 +44,9 @@ export function defaultControls(): LibraryControls {
 export function computeQueryKey(c: LibraryControls): string {
 	const filterEntries = Object.entries(c.filters)
 		.filter(([, value]) => isAppliedFilterValue(value))
+		// Tags are ANDed, so chip order is not part of the query's identity. Without
+		// this, reordering chips invalidates every cached window for no reason.
+		.map(([key, value]) => [key, Array.isArray(value) ? [...value].sort() : value])
 		.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
 
 	return JSON.stringify({
@@ -65,9 +69,11 @@ export function toQuery(c: LibraryControls, offset: number, limit: number): Libr
 	}
 
 	for (const [key, value] of Object.entries(c.filters)) {
-		if (isAppliedFilterValue(value)) {
-			(query as Record<string, unknown>)[key] = value;
-		}
+		if (!isAppliedFilterValue(value)) continue;
+		// filters.tags is the chip set; the HTTP param is `tag`, repeated once per
+		// chip (serializeQuery expands the array). The API ANDs them.
+		const param = key === 'tags' ? 'tag' : key;
+		(query as Record<string, unknown>)[param] = value;
 	}
 
 	return query;

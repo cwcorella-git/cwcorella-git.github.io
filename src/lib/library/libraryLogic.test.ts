@@ -103,7 +103,7 @@ describe('computeQueryKey', () => {
 		const c4: LibraryControls = { ...c, filters: { collection: 'x' } };
 		expect(computeQueryKey(c)).not.toBe(computeQueryKey(c4));
 
-		const c5: LibraryControls = { ...c, filters: { tag: 'y' } };
+		const c5: LibraryControls = { ...c, filters: { tags: ['y'] } };
 		expect(computeQueryKey(c)).not.toBe(computeQueryKey(c5));
 
 		const c6: LibraryControls = { ...c, filters: { visibility: 'private' } };
@@ -122,11 +122,11 @@ describe('computeQueryKey', () => {
 	it('is independent of filter key insertion order', () => {
 		const c1: LibraryControls = {
 			...defaultControls(),
-			filters: { language: 'en', source: 'gutenberg', tag: 'fiction' }
+			filters: { language: 'en', source: 'gutenberg', tags: ['fiction'] }
 		};
 		const c2: LibraryControls = {
 			...defaultControls(),
-			filters: { tag: 'fiction', language: 'en', source: 'gutenberg' }
+			filters: { tags: ['fiction'], language: 'en', source: 'gutenberg' }
 		};
 		expect(computeQueryKey(c1)).toBe(computeQueryKey(c2));
 	});
@@ -189,6 +189,41 @@ describe('toQuery', () => {
 		};
 		const q = toQuery(c, 0, 50);
 		expect(q).toHaveProperty('needs_formatting', 1);
+	});
+});
+
+describe('toQuery tags', () => {
+	it('maps filters.tags to the repeated `tag` param', () => {
+		const c = { ...defaultControls(), filters: { tags: ['theory', 'economics'] } };
+		expect(toQuery(c, 0, 50).tag).toEqual(['theory', 'economics']);
+	});
+
+	it('omits tag entirely when the chip set is empty', () => {
+		const c = { ...defaultControls(), filters: { tags: [] } };
+		expect('tag' in toQuery(c, 0, 50)).toBe(false);
+	});
+
+	it('omits tag when tags is absent', () => {
+		expect('tag' in toQuery(defaultControls(), 0, 50)).toBe(false);
+	});
+});
+
+describe('computeQueryKey tags', () => {
+	it('treats different chip sets as different queries', () => {
+		const a = { ...defaultControls(), filters: { tags: ['theory'] } };
+		const b = { ...defaultControls(), filters: { tags: ['theory', 'economics'] } };
+		expect(computeQueryKey(a)).not.toBe(computeQueryKey(b));
+	});
+
+	it('treats an empty chip set as no filter', () => {
+		const empty = { ...defaultControls(), filters: { tags: [] } };
+		expect(computeQueryKey(empty)).toBe(computeQueryKey(defaultControls()));
+	});
+
+	it('is order-independent — same chips in any order is the same query', () => {
+		const a = { ...defaultControls(), filters: { tags: ['theory', 'economics'] } };
+		const b = { ...defaultControls(), filters: { tags: ['economics', 'theory'] } };
+		expect(computeQueryKey(a)).toBe(computeQueryKey(b));
 	});
 });
 

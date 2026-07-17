@@ -183,8 +183,11 @@
 
 		<select
 			class="ctrl-select"
-			value={controls.filters.tag ?? ''}
-			onchange={(e) => setFilter('tag', (e.target as HTMLSelectElement).value)}
+			value={controls.filters.tags?.[0] ?? ''}
+			onchange={(e) => {
+				const v = (e.target as HTMLSelectElement).value;
+				onChange({ filters: { ...controls.filters, tags: v === '' ? [] : [v] } });
+			}}
 			aria-label="Filter by tag"
 		>
 			<option value="">All tags</option>
