@@ -342,7 +342,19 @@ the same query and must not invalidate cached windows."
 - Test: `src/lib/library/libraryLogic.test.ts`
 
 **Interfaces:**
-- Produces: `filters.corpus?: { source?: string; collection?: string }` **replaces** `filters.source` and `filters.collection`. `toQuery` flattens it back to the flat `source=` / `collection=` params the API takes. `CorpusFilter` is exported from `types.ts`.
+- Consumes: `filtersToParams(filters)` from `libraryLogic.ts` — the single source of truth for the filter→param mapping, shared by `/documents` and `/anchor-offset`.
+- Produces: `filters.corpus?: { source?: string; collection?: string }` **replaces** `filters.source` and `filters.collection`. `filtersToParams` flattens it back to the flat `source=` / `collection=` params the API takes. `CorpusFilter` is exported from `types.ts`.
+
+> **Add a parity test.** Task 2 added `filtersToParams` precisely because a second copy of this mapping made the jump rail filter differently from the list. Corpus is a *nested object* — the exact shape a raw spread would mangle into `corpus=[object Object]` — so prove the rail gets it too:
+>
+> ```ts
+> 	it('flattens corpus for the rail too — it must not diverge from the list', () => {
+> 		expect(filtersToParams({ corpus: { source: 'marxist', collection: 'classics' } })).toEqual({
+> 			source: 'marxist',
+> 			collection: 'classics'
+> 		});
+> 	});
+> ```
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -428,23 +440,39 @@ function isAppliedFilterValue(value: unknown): boolean {
 }
 ```
 
-In `toQuery`, flatten corpus before the generic loop:
+Flatten corpus inside **`filtersToParams`** — NOT inside `toQuery`. Task 2 extracted the
+filter→param mapping into `filtersToParams(filters)`, which is now the single source of
+truth used by **both** `/documents` (via `toQuery`) and `/anchor-offset` (via
+`_appliedFilters` in `libraryState.svelte.ts`). Putting the corpus mapping anywhere else
+re-creates the divergence that made the jump rail scroll to the wrong row:
 
 ```ts
-	for (const [key, value] of Object.entries(c.filters)) {
+export function filtersToParams(filters: LibraryControls['filters']): Record<string, unknown> {
+	const out: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(filters)) {
 		if (!isAppliedFilterValue(value)) continue;
 		// corpus is one UI control over two API params: a collection is a category
 		// WITHIN a source. The API still takes them flat.
 		if (key === 'corpus') {
 			const { source, collection } = value as import('./types').CorpusFilter;
-			if (source) query.source = source;
-			if (collection) query.collection = collection;
+			if (source) out.source = source;
+			if (collection) out.collection = collection;
 			continue;
 		}
+		// filters.tags is the chip set; the HTTP param is `tag`, repeated once per
+		// chip (serializeQuery expands the array). The API ANDs them.
 		const param = key === 'tags' ? 'tag' : key;
-		(query as Record<string, unknown>)[param] = value;
+		out[param] = value;
 	}
+	return out;
+}
 ```
+
+`toQuery` needs no change — it already returns `Object.assign(query, filtersToParams(c.filters))`.
+
+Add to `AnchorOffsetParams` in `types.ts`: nothing. It already declares flat `source?: string`
+and `collection?: string`, which is exactly what `filtersToParams` now emits — so the rail
+gets the corpus filter for free, and the `filtersToParams`-parity test from Task 2 covers it.
 
 - [ ] **Step 4: Point the existing two selects at corpus**
 
