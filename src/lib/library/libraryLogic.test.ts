@@ -4,7 +4,8 @@ import {
 	toQuery,
 	computeQueryKey,
 	controlsChanged,
-	mergeCollectionBuckets
+	mergeCollectionBuckets,
+	filtersToParams
 } from './libraryLogic';
 import type { LibraryControls } from './libraryLogic';
 
@@ -224,6 +225,44 @@ describe('computeQueryKey tags', () => {
 		const a = { ...defaultControls(), filters: { tags: ['theory', 'economics'] } };
 		const b = { ...defaultControls(), filters: { tags: ['economics', 'theory'] } };
 		expect(computeQueryKey(a)).toBe(computeQueryKey(b));
+	});
+});
+
+describe('filtersToParams', () => {
+	it('maps tags onto the repeated tag param', () => {
+		expect(filtersToParams({ tags: ['theory', 'economics'] })).toEqual({
+			tag: ['theory', 'economics']
+		});
+	});
+
+	it('omits an empty chip set', () => {
+		expect(filtersToParams({ tags: [] })).toEqual({});
+	});
+
+	it('keeps needs_formatting: 0 — clean is a real filter', () => {
+		expect(filtersToParams({ needs_formatting: 0 })).toEqual({ needs_formatting: 0 });
+	});
+
+	it('passes scalar filters through unchanged', () => {
+		expect(filtersToParams({ language: 'en', visibility: 'private' })).toEqual({
+			language: 'en',
+			visibility: 'private'
+		});
+	});
+
+	it('returns {} for no filters', () => {
+		expect(filtersToParams({})).toEqual({});
+	});
+
+	it('produces the same params the list query sends — the rail cannot diverge', () => {
+		// If this ever fails, /anchor-offset and /documents are filtering differently
+		// and the jump rail is scrolling to the wrong row.
+		const filters = { tags: ['theory'], language: 'en', needs_formatting: 0 as const };
+		const q = toQuery({ ...defaultControls(), filters }, 0, 50);
+		const params = filtersToParams(filters);
+		for (const [k, v] of Object.entries(params)) {
+			expect((q as Record<string, unknown>)[k]).toEqual(v);
+		}
 	});
 });
 

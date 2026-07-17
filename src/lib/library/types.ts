@@ -74,9 +74,10 @@ export interface AnchorOffsetParams {
 	language?: string;
 	source?: string;
 	collection?: string;
-	tag?: string;
+	tag?: string[];
 	visibility?: string;
 	needs_formatting?: 0 | 1;
+	decision?: DecisionInput;
 }
 
 export interface AnchorOffsetResponse {

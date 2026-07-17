@@ -61,20 +61,28 @@ export function controlsChanged(prev: LibraryControls, next: LibraryControls): b
 	return computeQueryKey(prev) !== computeQueryKey(next);
 }
 
-export function toQuery(c: LibraryControls, offset: number, limit: number): LibraryQuery {
-	const query: LibraryQuery = { sort: c.sort, dir: c.dir, limit, offset };
-
-	if (c.q !== '') {
-		query.q = c.q;
-	}
-
-	for (const [key, value] of Object.entries(c.filters)) {
+/**
+ * Map controls.filters onto API query params.
+ *
+ * The single source of truth for this mapping. /documents and /anchor-offset MUST
+ * send identical filters — the rail computes row offsets, so if it filters
+ * differently from the list it silently scrolls to the wrong row. Two copies of
+ * this logic is how that happens, so there is exactly one.
+ */
+export function filtersToParams(filters: LibraryControls['filters']): Record<string, unknown> {
+	const out: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(filters)) {
 		if (!isAppliedFilterValue(value)) continue;
 		// filters.tags is the chip set; the HTTP param is `tag`, repeated once per
 		// chip (serializeQuery expands the array). The API ANDs them.
 		const param = key === 'tags' ? 'tag' : key;
-		(query as Record<string, unknown>)[param] = value;
+		out[param] = value;
 	}
+	return out;
+}
 
-	return query;
+export function toQuery(c: LibraryControls, offset: number, limit: number): LibraryQuery {
+	const query: LibraryQuery = { sort: c.sort, dir: c.dir, limit, offset };
+	if (c.q !== '') query.q = c.q;
+	return Object.assign(query, filtersToParams(c.filters));
 }

@@ -1,7 +1,13 @@
 import { env } from '$env/dynamic/public';
 import { adminState } from '$lib/admin/state.svelte';
 import { createLibraryClient, AuthError, OfflineError, ApiError } from './api';
-import { defaultControls, toQuery, computeQueryKey, controlsChanged } from './libraryLogic';
+import {
+	defaultControls,
+	toQuery,
+	computeQueryKey,
+	controlsChanged,
+	filtersToParams
+} from './libraryLogic';
 import type { LibraryControls } from './libraryLogic';
 import {
 	LRU_CAP,
@@ -81,11 +87,9 @@ function _resetData() {
 }
 
 function _appliedFilters(): Partial<AnchorOffsetParams> {
-	const out: Record<string, unknown> = {};
-	for (const [k, v] of Object.entries(_controls.filters)) {
-		if (v !== undefined && v !== '') out[k] = v;
-	}
-	return out as Partial<AnchorOffsetParams>;
+	// Same mapping as the list query — see filtersToParams. The rail MUST filter
+	// identically to /documents or its offsets point at the wrong rows.
+	return filtersToParams(_controls.filters) as Partial<AnchorOffsetParams>;
 }
 
 function _evict() {
