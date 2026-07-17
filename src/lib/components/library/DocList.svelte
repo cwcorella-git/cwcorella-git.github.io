@@ -3,9 +3,8 @@
 	import DocRow from './DocRow.svelte';
 	import DocCard from './DocCard.svelte';
 	import JumpRail from './JumpRail.svelte';
-	import type { DocListItem, CurationStats } from '$lib/library/types';
+	import type { DocListItem } from '$lib/library/types';
 	import { anchorLabelForRow, type RailAnchor } from '$lib/library/railLogic';
-	import { progressText } from '$lib/library/curationLogic';
 
 	interface Props {
 		total: number | null;
@@ -13,7 +12,6 @@
 		view: 'list' | 'grid';
 		sort: string;
 		queryKey: string;
-		stats: CurationStats | null;
 		onOpen: (index: number) => void;
 		onVisibleRange: (start: number, end: number) => void;
 		resolveJumpIndex: (seek: string | null) => Promise<number>;
@@ -26,7 +24,6 @@
 		view,
 		sort,
 		queryKey,
-		stats,
 		onOpen,
 		onVisibleRange,
 		resolveJumpIndex,
@@ -94,7 +91,7 @@
 <div class="doc-list-wrap">
 	{#if total !== null}
 		<p class="count">
-			{total} documents{#if progressText(stats)}{' · '}{progressText(stats)}{/if}
+			{total} documents
 		</p>
 	{/if}
 	<div class="list-and-rail">
