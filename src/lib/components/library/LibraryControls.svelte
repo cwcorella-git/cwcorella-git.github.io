@@ -13,6 +13,8 @@
 
 	const { controls, facets, stats, onChange }: Props = $props();
 
+	const progress = $derived(progressText(stats));
+
 	const SORT_OPTIONS: { value: string; label: string }[] = [
 		{ value: 'title', label: 'Title' },
 		{ value: 'author', label: 'Author' },
@@ -132,8 +134,8 @@
 			view: {controls.view}
 		</button>
 
-		{#if progressText(stats)}
-			<span class="progress" aria-live="polite">{progressText(stats)}</span>
+		{#if progress}
+			<span class="progress" aria-live="polite">{progress}</span>
 		{/if}
 	</div>
 

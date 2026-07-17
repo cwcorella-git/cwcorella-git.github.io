@@ -230,6 +230,7 @@ export const libraryState = {
 			// this row in the current order to learn its id.
 			try {
 				const resp = await client.listDocuments(toQuery(_controls, clamped, 1));
+				if (_openIndex !== clamped) return; // a newer open superseded this one
 				id = resp.items[0]?.id;
 			} catch (e) {
 				_openDocStatus = 'error';
