@@ -46,6 +46,7 @@
 			<LibraryControls
 				controls={libraryState.controls}
 				facets={libraryState.facets}
+				stats={libraryState.curationStats}
 				onChange={(p) => libraryState.applyControls(p)}
 			/>
 			{#if libraryState.total === 0}

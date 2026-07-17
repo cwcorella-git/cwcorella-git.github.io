@@ -1,15 +1,17 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import type { LibraryControls } from '$lib/library/libraryLogic';
-	import type { Facets } from '$lib/library/types';
+	import type { Facets, CurationStats } from '$lib/library/types';
+	import { progressText } from '$lib/library/curationLogic';
 
 	interface Props {
 		controls: LibraryControls;
 		facets: Facets | null;
+		stats: CurationStats | null;
 		onChange: (patch: Partial<LibraryControls>) => void;
 	}
 
-	const { controls, facets, onChange }: Props = $props();
+	const { controls, facets, stats, onChange }: Props = $props();
 
 	const SORT_OPTIONS: { value: string; label: string }[] = [
 		{ value: 'title', label: 'Title' },
@@ -129,6 +131,10 @@
 		>
 			view: {controls.view}
 		</button>
+
+		{#if progressText(stats)}
+			<span class="progress" aria-live="polite">{progressText(stats)}</span>
+		{/if}
 	</div>
 
 	<div class="filters-row">
@@ -203,6 +209,19 @@
 			<option value="1">needs formatting</option>
 			<option value="0">clean</option>
 		</select>
+
+		<select
+			class="ctrl-select"
+			value={controls.filters.decision ?? ''}
+			onchange={(e) => setFilter('decision', (e.target as HTMLSelectElement).value)}
+			aria-label="Filter by curation decision"
+		>
+			<option value="">All decisions</option>
+			<option value="undecided">Undecided</option>
+			<option value="keep">Keep</option>
+			<option value="hide">Hide</option>
+			<option value="delete">Delete</option>
+		</select>
 	</div>
 </div>
 
@@ -251,6 +270,16 @@
 	}
 	.ctrl-select:hover { border-color: rgba(var(--ui-rgb), 0.45); }
 	.ctrl-select:focus { outline: none; border-color: rgba(var(--ui-rgb), 0.45); }
+
+	.progress {
+		font-family: var(--font-ui);
+		font-size: 0.58rem;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--clr-text);
+		opacity: 0.6;
+		white-space: nowrap;
+	}
 
 	.dir-toggle,
 	.view-toggle {
