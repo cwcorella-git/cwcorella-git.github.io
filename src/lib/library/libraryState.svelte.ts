@@ -163,10 +163,14 @@ export const libraryState = {
 
 	async loadFacets() {
 		try {
-			_facets = await client.getFacets();
+			_facets = await client.getFacets(_controls.filters.corpus?.source);
 		} catch (e) {
 			_mapError(e);
 		}
+	},
+
+	searchTags(q: string) {
+		return client.searchTags(q);
 	},
 
 	applyControls(patch: Partial<LibraryControls>) {
@@ -176,6 +180,9 @@ export const libraryState = {
 		if (controlsChanged(prev, next)) {
 			_queryKey = computeQueryKey(next);
 			void _newQuery();
+		}
+		if (patch.filters && patch.filters.corpus?.source !== prev.filters.corpus?.source) {
+			void this.loadFacets();
 		}
 	},
 
