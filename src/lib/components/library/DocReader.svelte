@@ -19,6 +19,19 @@
 		close();
 	}
 
+	// Lock page (body) scroll while the reader is open — otherwise the page's
+	// own scrollbar sits at the viewport edge behind the modal's .doc-scroll
+	// scrollbar, and the two read as one overlapping bar.
+	$effect(() => {
+		const open = libraryState.openDoc !== null || libraryState.openDocStatus === 'loading';
+		if (!open) return;
+		const prev = document.body.style.overflow;
+		document.body.style.overflow = 'hidden';
+		return () => {
+			document.body.style.overflow = prev;
+		};
+	});
+
 	const bodyHtml = $derived(
 		libraryState.openDoc?.body ? renderMarkdown(libraryState.openDoc.body) : ''
 	);
@@ -164,6 +177,7 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		gap: 0.9rem;
 		padding: 1rem 2rem;
 		border-bottom: 1px solid rgba(var(--ui-rgb), 0.20);
 		flex-shrink: 0;
