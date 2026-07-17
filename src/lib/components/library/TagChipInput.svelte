@@ -42,14 +42,17 @@
 	// its pending timer on teardown/re-run, but a timer that already fired cannot be
 	// recalled — so every scheduled lookup is tagged with a generation token and a
 	// response only lands if it is still the newest, otherwise a slow earlier query
-	// could resolve after a newer one and overwrite the panel with stale results.
+	// could resolve after a newer one and overwrite the panel with stale results. The
+	// token is bumped unconditionally at the top of the effect, before the early-return
+	// guard, so every effect re-run invalidates any in-flight lookup — including re-runs
+	// that schedule nothing (e.g. the input was cleared out from under a pending request).
 	$effect(() => {
+		const mine = ++generation;
 		const needle = text.trim();
 		if (needle === '' || local.length > 0) {
 			remote = null;
 			return;
 		}
-		const mine = ++generation;
 		const timer = setTimeout(async () => {
 			try {
 				const res = await searchTags(needle);
