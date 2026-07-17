@@ -23,6 +23,10 @@ export interface LibraryDoc extends DocListItem {
 export interface FacetBucket {
 	name: string;
 	count: number;
+	// Only collection buckets carry this: they are keyed (source, name) so a corpus
+	// control can nest categories under their source. Optional — an un-upgraded API
+	// omits it, and no other facet dimension has it.
+	source?: string;
 }
 
 export interface Facets {
