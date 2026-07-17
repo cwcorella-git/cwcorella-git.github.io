@@ -21,8 +21,7 @@ export interface LibraryControls {
 	filters: {
 		// '' / undefined = not applied
 		language?: string;
-		source?: string;
-		collection?: string;
+		corpus?: import('./types').CorpusFilter;
 		tags?: string[];
 		visibility?: string;
 		needs_formatting?: 0 | 1;
@@ -31,9 +30,12 @@ export interface LibraryControls {
 	view: 'list' | 'grid';
 }
 
-/** Whether a filter value counts as "applied". 0 is a real value; [] is not. */
+/** Whether a filter value counts as "applied". 0 is a real value; [] and {} are not. */
 function isAppliedFilterValue(value: unknown): boolean {
 	if (Array.isArray(value)) return value.length > 0;
+	if (value !== null && typeof value === 'object') {
+		return Object.values(value).some((v) => v !== undefined && v !== '');
+	}
 	return value !== undefined && value !== '';
 }
 
@@ -73,6 +75,14 @@ export function filtersToParams(filters: LibraryControls['filters']): Record<str
 	const out: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(filters)) {
 		if (!isAppliedFilterValue(value)) continue;
+		// corpus is one UI control over two API params: a collection is a category
+		// WITHIN a source. The API still takes them flat.
+		if (key === 'corpus') {
+			const { source, collection } = value as import('./types').CorpusFilter;
+			if (source) out.source = source;
+			if (collection) out.collection = collection;
+			continue;
+		}
 		// filters.tags is the chip set; the HTTP param is `tag`, repeated once per
 		// chip (serializeQuery expands the array). The API ANDs them.
 		const param = key === 'tags' ? 'tag' : key;

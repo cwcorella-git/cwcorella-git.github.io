@@ -51,6 +51,12 @@ export interface Facets {
 	};
 }
 
+/** The corpus axis: a collection is a category WITHIN a source, not a sibling of it. */
+export interface CorpusFilter {
+	source?: string;
+	collection?: string;
+}
+
 export interface LibraryQuery {
 	sort?: string;
 	dir?: 'asc' | 'desc';

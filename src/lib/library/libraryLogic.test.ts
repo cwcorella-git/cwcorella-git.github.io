@@ -98,10 +98,10 @@ describe('computeQueryKey', () => {
 		const c2: LibraryControls = { ...c, filters: { language: 'en' } };
 		expect(computeQueryKey(c)).not.toBe(computeQueryKey(c2));
 
-		const c3: LibraryControls = { ...c, filters: { source: 'gutenberg' } };
+		const c3: LibraryControls = { ...c, filters: { corpus: { source: 'gutenberg' } } };
 		expect(computeQueryKey(c)).not.toBe(computeQueryKey(c3));
 
-		const c4: LibraryControls = { ...c, filters: { collection: 'x' } };
+		const c4: LibraryControls = { ...c, filters: { corpus: { collection: 'x' } } };
 		expect(computeQueryKey(c)).not.toBe(computeQueryKey(c4));
 
 		const c5: LibraryControls = { ...c, filters: { tags: ['y'] } };
@@ -123,11 +123,11 @@ describe('computeQueryKey', () => {
 	it('is independent of filter key insertion order', () => {
 		const c1: LibraryControls = {
 			...defaultControls(),
-			filters: { language: 'en', source: 'gutenberg', tags: ['fiction'] }
+			filters: { language: 'en', corpus: { source: 'gutenberg' }, tags: ['fiction'] }
 		};
 		const c2: LibraryControls = {
 			...defaultControls(),
-			filters: { tags: ['fiction'], language: 'en', source: 'gutenberg' }
+			filters: { tags: ['fiction'], language: 'en', corpus: { source: 'gutenberg' } }
 		};
 		expect(computeQueryKey(c1)).toBe(computeQueryKey(c2));
 	});
@@ -167,7 +167,7 @@ describe('toQuery', () => {
 		expect(toQuery(defaultControls(), 0, 200).offset).toBe(0);
 	});
 	it('carries q and applied filters, omits empty ones', () => {
-		const c = { ...defaultControls(), q: 'bread', filters: { language: 'en', source: '' } };
+		const c = { ...defaultControls(), q: 'bread', filters: { language: 'en', corpus: {} } };
 		const q = toQuery(c, 0, 50);
 		expect(q.q).toBe('bread');
 		expect(q.language).toBe('en');
@@ -263,6 +263,55 @@ describe('filtersToParams', () => {
 		for (const [k, v] of Object.entries(params)) {
 			expect((q as Record<string, unknown>)[k]).toEqual(v);
 		}
+	});
+
+	it('flattens corpus for the rail too — it must not diverge from the list', () => {
+		expect(filtersToParams({ corpus: { source: 'marxist', collection: 'classics' } })).toEqual({
+			source: 'marxist',
+			collection: 'classics'
+		});
+	});
+});
+
+describe('toQuery corpus', () => {
+	it('flattens corpus to the flat source/collection params', () => {
+		const c = { ...defaultControls(), filters: { corpus: { source: 'marxist', collection: 'classics' } } };
+		const q = toQuery(c, 0, 50);
+		expect(q.source).toBe('marxist');
+		expect(q.collection).toBe('classics');
+		expect('corpus' in q).toBe(false);
+	});
+
+	it('sends source alone when no category is chosen', () => {
+		const c = { ...defaultControls(), filters: { corpus: { source: 'youtube' } } };
+		const q = toQuery(c, 0, 50);
+		expect(q.source).toBe('youtube');
+		expect('collection' in q).toBe(false);
+	});
+
+	it('omits both when corpus is empty', () => {
+		const c = { ...defaultControls(), filters: { corpus: {} } };
+		const q = toQuery(c, 0, 50);
+		expect('source' in q).toBe(false);
+		expect('collection' in q).toBe(false);
+	});
+
+	it('omits both when corpus is absent', () => {
+		const q = toQuery(defaultControls(), 0, 50);
+		expect('source' in q).toBe(false);
+	});
+});
+
+describe('computeQueryKey corpus', () => {
+	it('distinguishes different corpus selections', () => {
+		const a = { ...defaultControls(), filters: { corpus: { source: 'marxist' } } };
+		const b = { ...defaultControls(), filters: { corpus: { source: 'youtube' } } };
+		expect(computeQueryKey(a)).not.toBe(computeQueryKey(b));
+	});
+
+	it('treats an empty corpus object as no filter', () => {
+		const empty = { ...defaultControls(), filters: { corpus: {} } };
+		expect(computeQueryKey(empty)).toBe(computeQueryKey(defaultControls()));
 	});
 });
 

@@ -159,8 +159,16 @@
 
 		<select
 			class="ctrl-select"
-			value={controls.filters.collection ?? ''}
-			onchange={(e) => setFilter('collection', (e.target as HTMLSelectElement).value)}
+			value={controls.filters.corpus?.collection ?? ''}
+			onchange={(e) => {
+				const v = (e.target as HTMLSelectElement).value;
+				onChange({
+					filters: {
+						...controls.filters,
+						corpus: { ...controls.filters.corpus, collection: v === '' ? undefined : v }
+					}
+				});
+			}}
 			aria-label="Filter by collection"
 		>
 			<option value="">All collections</option>
@@ -171,8 +179,12 @@
 
 		<select
 			class="ctrl-select"
-			value={controls.filters.source ?? ''}
-			onchange={(e) => setFilter('source', (e.target as HTMLSelectElement).value)}
+			value={controls.filters.corpus?.source ?? ''}
+			onchange={(e) => {
+				const v = (e.target as HTMLSelectElement).value;
+				// Changing source drops the category — categories belong to one source.
+				onChange({ filters: { ...controls.filters, corpus: v === '' ? {} : { source: v } } });
+			}}
 			aria-label="Filter by source"
 		>
 			<option value="">All sources</option>
