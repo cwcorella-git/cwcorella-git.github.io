@@ -28,6 +28,8 @@
 			: {}
 	);
 
+	// Closes on pick: decision is a single axis, so one click is the whole
+	// interaction. StateControl deliberately stays open — it holds two groups.
 	function pick(v: DecisionInput | undefined) {
 		// Explicit undefined clears the group when the parent spreads the patch.
 		onChange({ decision: v });
