@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { TocEntry } from '$lib/admin/markdown';
 	import type { LibraryDoc } from '$lib/library/types';
-	import { tocNumber, condenseMeta, activeLabel } from '$lib/library/tocLogic';
+	import { tocNumber, pillLabel } from '$lib/library/tocLogic';
 
 	interface Props {
 		toc: TocEntry[];
@@ -13,9 +13,10 @@
 	const { toc, activeAnchor, doc, onJump }: Props = $props();
 
 	let expanded = $state(false);
+	let activeTab = $state<'toc' | 'info'>('toc');
 
 	const numbers = $derived(tocNumber(toc));
-	const barLabel = $derived(activeLabel(toc, numbers, activeAnchor) ?? condenseMeta(doc));
+	const pill = $derived(pillLabel(toc, numbers, activeAnchor));
 	const minLevel = $derived(toc.length ? Math.min(...toc.map((t) => t.level)) : 1);
 
 	function jump(anchor: string) {
@@ -25,7 +26,26 @@
 
 	function toggle() {
 		expanded = !expanded;
+		if (expanded && toc.length === 0) activeTab = 'info';
 	}
+
+	function close() {
+		expanded = false;
+	}
+
+	// Escape closes the sheet before DocReader's global Escape closes the reader.
+	// Capture phase runs before DocReader's bubble-phase svelte:window handler.
+	$effect(() => {
+		if (!expanded) return;
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') {
+				e.stopPropagation();
+				close();
+			}
+		};
+		window.addEventListener('keydown', onKey, true);
+		return () => window.removeEventListener('keydown', onKey, true);
+	});
 </script>
 
 {#snippet infoRows()}
@@ -88,20 +108,53 @@
 	{@render infoRows()}
 </aside>
 
-<!-- Narrow slim bar (< 900px) -->
-<div class="slim">
-	<button class="slim-bar" onclick={toggle} aria-expanded={expanded}>
-		<span class="caret">{expanded ? '▾' : '▸'}</span>
-		<span class="slim-label">{expanded ? 'On this page' : barLabel}</span>
-		<span class="info-glyph" aria-hidden="true">ⓘ</span>
-	</button>
+<!-- Narrow floating pill + tabbed sheet (< 900px) -->
+<div class="narrow">
 	{#if expanded}
-		<div class="slim-panel">
-			{@render tocList()}
-			{#if toc.length > 0}<hr class="divider" />{/if}
-			{@render infoRows()}
+		<button
+			type="button"
+			class="sheet-scrim"
+			aria-label="Close"
+			onclick={close}
+		></button>
+		<div class="sheet" role="dialog" aria-modal="false" aria-label="Contents and document info">
+			{#if toc.length > 0}
+				<div class="tabs" role="tablist" aria-label="Panel">
+					<button
+						type="button"
+						role="tab"
+						class="tab"
+						class:selected={activeTab === 'toc'}
+						aria-selected={activeTab === 'toc'}
+						onclick={() => (activeTab = 'toc')}
+					>On this page</button>
+					<button
+						type="button"
+						role="tab"
+						class="tab"
+						class:selected={activeTab === 'info'}
+						aria-selected={activeTab === 'info'}
+						onclick={() => (activeTab = 'info')}
+					>Info</button>
+				</div>
+				<div class="sheet-body" role="tabpanel">
+					{#if activeTab === 'toc'}
+						{@render tocList()}
+					{:else}
+						{@render infoRows()}
+					{/if}
+				</div>
+			{:else}
+				<div class="sheet-body">
+					{@render infoRows()}
+				</div>
+			{/if}
 		</div>
 	{/if}
+	<button class="pill" onclick={toggle} aria-expanded={expanded} aria-label="Table of contents and document info">
+		<span class="pill-glyph" aria-hidden="true">{pill.glyph}</span>
+		<span class="pill-text">{pill.text}</span>
+	</button>
 </div>
 
 <style>
@@ -111,7 +164,7 @@
 	}
 	@media (min-width: 900px) {
 		.sidebar { display: block; }
-		.slim { display: none; }
+		.narrow { display: none; }
 	}
 
 	.panel-title {
@@ -192,23 +245,26 @@
 	}
 	.chip-collection { opacity: 0.9; }
 
-	/* Slim bar */
-	.slim {
-		position: sticky;
-		top: 0;
-		z-index: 2;
+	/* Narrow floating pill + tabbed sheet */
+	.narrow { display: contents; }
+	@media (min-width: 900px) {
+		.narrow { display: none; }
+	}
+
+	.pill {
+		position: fixed;
+		bottom: 1.25rem;
+		right: 1.25rem;
+		z-index: 310;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		max-width: min(70vw, 320px);
 		background: var(--glass-bg-heavy);
 		backdrop-filter: var(--glass-blur-heavy);
 		-webkit-backdrop-filter: var(--glass-blur-heavy);
-		border-bottom: 1px solid rgba(var(--ui-rgb), 0.18);
-	}
-	.slim-bar {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		width: 100%;
-		background: none;
-		border: none;
+		border: 1px solid rgba(var(--ui-rgb), 0.28);
+		border-radius: 999px;
 		padding: 0.5rem 0.9rem;
 		font-family: var(--font-ui);
 		font-size: 0.66rem;
@@ -216,12 +272,57 @@
 		color: var(--clr-text);
 		cursor: pointer;
 	}
-	.slim-bar .caret { opacity: 0.7; }
-	.slim-label { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.85; }
-	.info-glyph { opacity: 0.55; }
-	.slim-panel {
-		padding: 0.3rem 0.9rem 0.9rem;
-		max-height: 55vh;
+	.pill-glyph { opacity: 0.6; }
+	.pill-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.9; }
+
+	.sheet-scrim {
+		position: fixed;
+		inset: 0;
+		z-index: 309;
+		background: transparent;
+		border: none;
+		padding: 0;
+		cursor: default;
+	}
+
+	.sheet {
+		position: fixed;
+		right: 1.25rem;
+		bottom: 4rem;
+		z-index: 311;
+		width: min(86vw, 320px);
+		max-height: 60vh;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+		background: var(--glass-bg-heavy);
+		backdrop-filter: var(--glass-blur-heavy);
+		-webkit-backdrop-filter: var(--glass-blur-heavy);
+		border: 1px solid rgba(var(--ui-rgb), 0.28);
+		border-radius: 0.5rem;
+	}
+	.tabs {
+		display: flex;
+		flex-shrink: 0;
+		border-bottom: 1px solid rgba(var(--ui-rgb), 0.18);
+	}
+	.tab {
+		flex: 1;
+		background: none;
+		border: none;
+		padding: 0.55rem 0.6rem;
+		font-family: var(--font-ui);
+		font-size: 0.58rem;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--clr-text);
+		opacity: 0.5;
+		cursor: pointer;
+		transition: opacity 0.15s;
+	}
+	.tab.selected { opacity: 1; box-shadow: inset 0 -2px 0 var(--clr-text); }
+	.sheet-body {
+		padding: 0.7rem 0.9rem 0.9rem;
 		overflow-y: auto;
 	}
 </style>
