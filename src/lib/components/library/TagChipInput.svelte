@@ -21,6 +21,30 @@
 	let debounce: ReturnType<typeof setTimeout> | undefined;
 	let generation = 0;
 
+	// Live search: typing fires onQChange 260ms after the user stops, so results
+	// update as-you-type without a network call per keystroke. Separate from the
+	// remote tag-lookup debounce below (200ms, its own `generation` token) — the two
+	// debounce independent things and must not share a timer.
+	const SEARCH_DEBOUNCE_MS = 260;
+	let searchTimer: ReturnType<typeof setTimeout> | undefined;
+
+	function scheduleSearch() {
+		clearTimeout(searchTimer);
+		searchTimer = setTimeout(() => {
+			const value = text.trim();
+			// Set lastSyncedQ before calling onQChange, same as the prop-sync effect
+			// below expects: when the parent's q prop comes back around as this same
+			// value, the effect sees q === lastSyncedQ and leaves `text` alone instead
+			// of clobbering whatever the user has typed since.
+			lastSyncedQ = value;
+			onQChange(value);
+		}, SEARCH_DEBOUNCE_MS);
+	}
+
+	$effect(() => {
+		return () => clearTimeout(searchTimer);
+	});
+
 	// Local matches over the top-200 facet — no network for the common case.
 	const local = $derived(filterTagBuckets(facets?.tags ?? [], text, tags));
 	// Past the 200-cap the facet cannot answer, so fall back to the server. Prefer
@@ -74,6 +98,9 @@
 	});
 
 	function addTag(name: string) {
+		// Committing a chip retires whatever the user was typing — cancel the pending
+		// live-search timer so it cannot fire afterward with the now-stale text.
+		clearTimeout(searchTimer);
 		if (!tags.includes(name)) onTagsChange([...tags, name]);
 		text = '';
 		remote = null;
@@ -81,6 +108,14 @@
 
 	function removeTag(name: string) {
 		onTagsChange(tags.filter((t) => t !== name));
+	}
+
+	function clearSearch() {
+		// A stale debounce firing after this would resurrect the just-cleared query.
+		clearTimeout(searchTimer);
+		text = '';
+		lastSyncedQ = '';
+		onQChange('');
 	}
 
 	function onKeydown(e: KeyboardEvent) {
@@ -100,11 +135,19 @@
 			// Enter commits a chip only when the typed text is an exact (case-insensitive)
 			// match for a suggestion's name — otherwise it's ambiguous whether the user
 			// meant a tag or a full-text search, so we run the search instead. Non-exact
-			// tags are still reachable by clicking them in the panel.
+			// tags are still reachable by clicking them in the panel. Either branch
+			// supersedes the debounced live search, so cancel any pending timer —
+			// otherwise it could fire later with the pre-Enter text.
+			clearTimeout(searchTimer);
 			const needle = text.trim().toLowerCase();
 			const exact = suggestions.find((s) => s.name.toLowerCase() === needle);
-			if (exact) addTag(exact.name);
-			else onQChange(text.trim());
+			if (exact) {
+				addTag(exact.name);
+			} else {
+				const value = text.trim();
+				lastSyncedQ = value;
+				onQChange(value);
+			}
 		}
 	}
 
@@ -125,6 +168,7 @@
 			class="input"
 			placeholder={tags.length ? 'add tag…' : 'search library…'}
 			bind:value={text}
+			oninput={scheduleSearch}
 			onfocus={() => (open = true)}
 			onkeydown={onKeydown}
 			aria-label="Search library or filter by tag"
@@ -132,7 +176,7 @@
 			spellcheck="false"
 		/>
 		{#if q}
-			<button class="x clear" aria-label="clear search" onclick={() => onQChange('')}>×</button>
+			<button class="x clear" aria-label="clear search" onclick={clearSearch}>×</button>
 		{/if}
 	</div>
 

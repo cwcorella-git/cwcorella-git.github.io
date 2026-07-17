@@ -49,7 +49,15 @@
 	);
 </script>
 
-<FacetPanel glyph="⚙" {label} ariaLabel="Filter by state" {open} onToggle={(v) => (open = v)} wide>
+<FacetPanel
+	glyph="⚙"
+	{label}
+	restLabel="State"
+	ariaLabel="Filter by state"
+	{open}
+	onToggle={(v) => (open = v)}
+	wide
+>
 	{#snippet children()}
 		<p class="hd">visibility</p>
 		<button class="row" role="menuitem" class:sel={!visibility} onclick={() => onChange({ visibility: undefined })}>

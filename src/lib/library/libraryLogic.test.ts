@@ -1,61 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import {
-	defaultControls,
-	toQuery,
-	computeQueryKey,
-	controlsChanged,
-	mergeCollectionBuckets,
-	filtersToParams
-} from './libraryLogic';
+import { defaultControls, toQuery, computeQueryKey, controlsChanged, filtersToParams } from './libraryLogic';
 import type { LibraryControls } from './libraryLogic';
-
-describe('mergeCollectionBuckets', () => {
-	it('merges same-named buckets from different sources, summing counts', () => {
-		// The API keys collection buckets on (source, name), so `classics` arrives
-		// twice. The flat dropdown keys its {#each} on name alone — duplicates
-		// would throw each_key_duplicate.
-		expect(
-			mergeCollectionBuckets([
-				{ name: 'classics', source: 'anarchist', count: 3 },
-				{ name: 'interviews', source: 'youtube', count: 2 },
-				{ name: 'classics', source: 'user', count: 2 }
-			])
-		).toEqual([
-			{ name: 'classics', count: 5 },
-			{ name: 'interviews', count: 2 }
-		]);
-	});
-
-	it('produces no duplicate names, whatever the input', () => {
-		const merged = mergeCollectionBuckets([
-			{ name: 'a', source: 'x', count: 1 },
-			{ name: 'a', source: 'y', count: 1 },
-			{ name: 'a', source: 'z', count: 1 }
-		]);
-		expect(merged).toHaveLength(1);
-		expect(new Set(merged.map((b) => b.name)).size).toBe(merged.length);
-	});
-
-	it('sorts by count desc then name, matching the pre-attribution API order', () => {
-		expect(
-			mergeCollectionBuckets([
-				{ name: 'zebra', source: 'x', count: 9 },
-				{ name: 'apple', source: 'x', count: 9 },
-				{ name: 'many', source: 'x', count: 50 }
-			]).map((b) => b.name)
-		).toEqual(['many', 'apple', 'zebra']);
-	});
-
-	it('tolerates buckets with no source (an un-upgraded API)', () => {
-		expect(mergeCollectionBuckets([{ name: 'solo', count: 4 }])).toEqual([
-			{ name: 'solo', count: 4 }
-		]);
-	});
-
-	it('returns an empty array for empty input', () => {
-		expect(mergeCollectionBuckets([])).toEqual([]);
-	});
-});
 
 describe('defaultControls', () => {
 	it('returns the expected defaults', () => {

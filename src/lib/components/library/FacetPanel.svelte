@@ -3,7 +3,8 @@
 
 	interface Props {
 		glyph: string;
-		label: string; // '' = unset → glyph only, no .set styling
+		label: string; // '' = unset → glyph only (+ restLabel if given), no .set styling
+		restLabel?: string; // shown when label === '' — the control's name, not a value
 		ariaLabel: string;
 		open: boolean;
 		onToggle: (open: boolean) => void;
@@ -11,7 +12,8 @@
 		wide?: boolean;
 	}
 
-	const { glyph, label, ariaLabel, open, onToggle, children, wide = false }: Props = $props();
+	const { glyph, label, restLabel, ariaLabel, open, onToggle, children, wide = false }: Props =
+		$props();
 
 	let root: HTMLDivElement | undefined = $state();
 
@@ -44,7 +46,7 @@
 		onclick={() => onToggle(!open)}
 	>
 		<span class="glyph">{glyph}</span>
-		{#if label}<span class="label">{label}</span>{/if}
+		{#if label}<span class="label">{label}</span>{:else if restLabel}<span class="label">{restLabel}</span>{/if}
 		<span class="chev" aria-hidden="true">⌄</span>
 	</button>
 
@@ -93,9 +95,12 @@
 
 		/* Narrow: the panel stays absolutely positioned so it scrolls with its trigger
 		   (a fixed panel with top:auto resolves its top ONCE and then detaches on any
-		   scroll). It is anchored right:0 to a trigger that is always on-screen, so it
-		   extends leftward and cannot overflow the right edge; the max-width stops a
-		   wide panel from exceeding the viewport on the left. */
+		   scroll). It is anchored right:0 to its own trigger, which is always on-screen,
+		   so it extends leftward from a known-good point — but how much room it has
+		   before the left edge varies with the trigger's position. width: max-content
+		   lets a long row size the panel to its content, and the max-width caps that
+		   growth so it cannot push past the viewport's left edge regardless of where
+		   the trigger sits. */
 		.panel,
 		.panel.wide {
 			min-width: 0;

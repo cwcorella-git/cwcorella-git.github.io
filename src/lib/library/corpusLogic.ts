@@ -43,8 +43,23 @@ export function buildCorpusTree(facets: Facets | null): CorpusSource[] {
 		.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }
 
+// The API's source keys are slugs; these are what they are called. Only the four
+// sources in sources.py exist, so an unknown key falls back to the raw slug rather
+// than being hidden.
+const SOURCE_LABELS: Record<string, string> = {
+	anarchist: 'Anarchist Library',
+	marxist: 'Marxists.org',
+	user: 'User Library',
+	youtube: 'YouTube'
+};
+
+export function sourceLabel(source: string): string {
+	return SOURCE_LABELS[source] ?? source;
+}
+
 /** The corpus trigger's label. Empty when unset — the trigger shows its glyph alone. */
 export function corpusLabel(corpus: CorpusFilter | undefined): string {
 	if (!corpus?.source) return '';
-	return corpus.collection ? `${corpus.source} ▸ ${corpus.collection}` : corpus.source;
+	const source = sourceLabel(corpus.source);
+	return corpus.collection ? `${source} ▸ ${corpus.collection}` : source;
 }

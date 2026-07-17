@@ -1,6 +1,6 @@
 <script lang="ts">
 	import FacetPanel from './FacetPanel.svelte';
-	import { buildCorpusTree, corpusLabel } from '$lib/library/corpusLogic';
+	import { buildCorpusTree, corpusLabel, sourceLabel } from '$lib/library/corpusLogic';
 	import type { Facets, CorpusFilter } from '$lib/library/types';
 
 	interface Props {
@@ -49,7 +49,15 @@
 	}
 </script>
 
-<FacetPanel glyph="◈" {label} ariaLabel="Filter by corpus" {open} onToggle={toggleOpen} wide>
+<FacetPanel
+	glyph="◈"
+	{label}
+	restLabel="Corpus"
+	ariaLabel="Filter by corpus"
+	{open}
+	onToggle={toggleOpen}
+	wide
+>
 	{#snippet children()}
 		<button class="row" role="menuitem" class:sel={!corpus?.source} onclick={pickAll}>
 			<span>all corpora</span>
@@ -77,7 +85,7 @@
 					class:sel={corpus?.source === src.name && !corpus?.collection}
 					onclick={() => pickSource(src.name)}
 				>
-					<span>{src.name}</span>
+					<span>{sourceLabel(src.name)}</span>
 					<span class="c">{fmt(src.count)}</span>
 				</button>
 			</div>

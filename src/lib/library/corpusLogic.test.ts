@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildCorpusTree, corpusLabel } from './corpusLogic';
+import { buildCorpusTree, corpusLabel, sourceLabel } from './corpusLogic';
 import type { Facets } from './types';
 
 const facets = (over: Partial<Facets> = {}): Facets => ({
@@ -66,15 +66,30 @@ describe('corpusLabel', () => {
 		expect(corpusLabel({})).toBe('');
 	});
 
-	it('shows the source alone', () => {
-		expect(corpusLabel({ source: 'anarchist' })).toBe('anarchist');
+	it('shows the source alone, as its display label', () => {
+		expect(corpusLabel({ source: 'anarchist' })).toBe('Anarchist Library');
 	});
 
-	it('shows source ▸ category', () => {
-		expect(corpusLabel({ source: 'anarchist', collection: 'Egoism' })).toBe('anarchist ▸ Egoism');
+	it('shows source ▸ category, with the source as its display label', () => {
+		expect(corpusLabel({ source: 'anarchist', collection: 'Egoism' })).toBe(
+			'Anarchist Library ▸ Egoism'
+		);
 	});
 
 	it('ignores a category with no source', () => {
 		expect(corpusLabel({ collection: 'Egoism' })).toBe('');
+	});
+});
+
+describe('sourceLabel', () => {
+	it('maps known source slugs to their display names', () => {
+		expect(sourceLabel('anarchist')).toBe('Anarchist Library');
+		expect(sourceLabel('marxist')).toBe('Marxists.org');
+		expect(sourceLabel('user')).toBe('User Library');
+		expect(sourceLabel('youtube')).toBe('YouTube');
+	});
+
+	it('falls back to the raw slug for an unknown source', () => {
+		expect(sourceLabel('unknown-src')).toBe('unknown-src');
 	});
 });

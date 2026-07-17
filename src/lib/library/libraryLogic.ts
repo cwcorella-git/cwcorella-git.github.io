@@ -1,18 +1,4 @@
-import type { LibraryQuery, FacetBucket } from './types';
-
-// The facets API keys collection buckets on (source, name) so a corpus control can
-// nest categories under the source they belong to — `classics` arrives once for
-// `user` and once for `marxist`. This dropdown is flat and keys its {#each} on
-// `bucket.name`, and duplicate keys are a hard error in Svelte 5. Merging same-named
-// buckets reproduces exactly what the API returned before source attribution.
-// Delete this once the corpus cascade replaces the flat collections dropdown.
-export function mergeCollectionBuckets(buckets: FacetBucket[]): FacetBucket[] {
-	const byName = new Map<string, number>();
-	for (const b of buckets) byName.set(b.name, (byName.get(b.name) ?? 0) + b.count);
-	return [...byName]
-		.map(([name, count]) => ({ name, count }))
-		.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
-}
+import type { LibraryQuery } from './types';
 
 export interface LibraryControls {
 	sort: string; // one of B2's 4: title|author|publication_date|updated_at
