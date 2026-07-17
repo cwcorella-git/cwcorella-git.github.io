@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
 	import type { LibraryControls } from '$lib/library/libraryLogic';
 	import type { Facets } from '$lib/library/types';
 	import TagChipInput from './TagChipInput.svelte';

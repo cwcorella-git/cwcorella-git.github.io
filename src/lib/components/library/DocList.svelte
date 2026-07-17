@@ -94,7 +94,7 @@
 <div class="doc-list-wrap">
 	{#if total !== null}
 		<p class="count">
-			{total} documents{#if progressText(stats)} · {progressText(stats)}{/if}
+			{total} documents{#if progressText(stats)}{' · '}{progressText(stats)}{/if}
 		</p>
 	{/if}
 	<div class="list-and-rail">
