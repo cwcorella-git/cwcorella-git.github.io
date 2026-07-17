@@ -1,20 +1,24 @@
 <script lang="ts">
 	import type { DocListItem } from '$lib/library/types';
+	import { badgeLabel } from '$lib/library/curationLogic';
 
 	interface Props {
 		item: DocListItem;
-		onOpen: (id: number | string) => void;
+		onOpen: () => void;
 	}
 
 	const { item, onOpen }: Props = $props();
 </script>
 
-<button class="doc-card" data-doc-id={item.id} onclick={() => onOpen(item.id)}>
+<button class="doc-card" data-doc-id={item.id} onclick={() => onOpen()}>
 	<span class="title">{item.title}</span>
 	<span class="author">{item.author ?? '—'}</span>
 	<span class="row">
 		<span class="source">{item.source}</span>
 		<span class="date">{item.publication_date ?? '—'}</span>
+		{#if item.decision}
+			<span class="decision decision-{item.decision}">{badgeLabel(item.decision)}</span>
+		{/if}
 	</span>
 	<span class="row">
 		<span class="words">{item.word_count.toLocaleString()}w</span>
@@ -92,4 +96,15 @@
 		color: var(--clr-text);
 		opacity: 0.4;
 	}
+
+	.decision {
+		border: 1px solid transparent;
+		padding: 0.05rem 0.3rem;
+		text-transform: uppercase;
+		font-size: 0.5rem;
+		letter-spacing: 0.06em;
+	}
+	.decision-keep { color: var(--clr-text); border-color: rgba(var(--ui-rgb), 0.5); opacity: 1; }
+	.decision-hide { opacity: 0.5; border-color: rgba(var(--ui-rgb), 0.25); }
+	.decision-delete { color: var(--clr-danger); border-color: var(--clr-danger); }
 </style>

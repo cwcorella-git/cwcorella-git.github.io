@@ -12,7 +12,7 @@
 		view: 'list' | 'grid';
 		sort: string;
 		queryKey: string;
-		onOpen: (id: number | string) => void;
+		onOpen: (index: number) => void;
 		onVisibleRange: (start: number, end: number) => void;
 		resolveJumpIndex: (seek: string | null) => Promise<number>;
 		anchors: RailAnchor[];
@@ -104,9 +104,9 @@
 				{@const row = rowAt(index)}
 				{#if row}
 					{#if view === 'grid'}
-						<div class="grid-cell"><DocCard item={row} {onOpen} /></div>
+						<div class="grid-cell"><DocCard item={row} onOpen={() => onOpen(index)} /></div>
 					{:else}
-						<DocRow item={row} {onOpen} />
+						<DocRow item={row} onOpen={() => onOpen(index)} />
 					{/if}
 				{:else}
 					<div class="skeleton" aria-hidden="true"></div>
