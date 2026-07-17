@@ -15,7 +15,7 @@
 - **Svelte 5 runes only** — `$state`, `$derived`, `$effect`, `$props`. No Svelte 4 reactivity (`export let`, `$:`).
 - **No `window.prompt()` / `window.alert()`** anywhere. User feedback goes through `toast` (`$lib/admin/toast.svelte`).
 - **Colour rule:** ONE colour per context — `var(--clr-text)` in light context, `var(--clr-dark-text)` in dark panels. Hierarchy comes from **opacity** (0.45–0.65 dim, 1.0 active), **never** a different shade. Chrome is `rgba(var(--ui-rgb), X)`.
-- **Governing UI rule: the active value is the label.** An unset control shows only its glyph; a set control shows what it is set to. **Nothing may render the string "All …".** This is the entire point of the redesign — a reviewer should reject any control that renders "All languages"/"All tags"/etc.
+- **Governing UI rule: the active value is the label.** An unset control shows only its glyph; a set control shows what it is set to. **No control's resting trigger may render "All …"** — that is the entire point of the redesign, and a trigger reading "ALL LANGUAGES"/"ALL TAGS" must be rejected. This constrains **triggers only**. An "all languages" / "all corpora" row *inside an opened panel* is required — it is how you clear the filter — and is not a violation.
 - The page is **admin-gated in full** (`src/routes/library/+page.svelte:13` bounces non-admins). There is exactly one user. Do not build role-based affordances.
 - `.inner` is `max-width: 760px` — the header row has ~700px for the title plus three controls.
 - Node 20: `source ~/.nvm/nvm.sh && nvm use 20`. Tests: `npx vitest run`. Typecheck: `npm run check` (must stay **0 errors, 0 warnings**).
