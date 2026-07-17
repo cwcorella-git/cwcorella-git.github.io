@@ -5,6 +5,9 @@
 	import DocList from '$lib/components/library/DocList.svelte';
 	import LibraryControls from '$lib/components/library/LibraryControls.svelte';
 	import DocReader from '$lib/components/library/DocReader.svelte';
+	import CorpusControl from '$lib/components/library/CorpusControl.svelte';
+	import LanguageControl from '$lib/components/library/LanguageControl.svelte';
+	import StateControl from '$lib/components/library/StateControl.svelte';
 	import { buildRail } from '$lib/library/railLogic';
 
 	// Redirect non-admins — but only AFTER session rehydration, so a hard load /
@@ -32,7 +35,40 @@
 
 <div class="page">
 	<div class="inner">
-		<h1 class="heading">library</h1>
+		<div class="heading-row">
+			<h1 class="heading">library</h1>
+			{#if libraryState.status === 'ready'}
+				<div class="scope">
+					<CorpusControl
+						facets={libraryState.facets}
+						corpus={libraryState.controls.filters.corpus}
+						onChange={(corpus) =>
+							libraryState.applyControls({
+								filters: { ...libraryState.controls.filters, corpus }
+							})}
+					/>
+					<LanguageControl
+						facets={libraryState.facets}
+						language={libraryState.controls.filters.language}
+						onChange={(language) =>
+							libraryState.applyControls({
+								filters: { ...libraryState.controls.filters, language }
+							})}
+					/>
+					<StateControl
+						facets={libraryState.facets}
+						stats={libraryState.curationStats}
+						visibility={libraryState.controls.filters.visibility}
+						needs_formatting={libraryState.controls.filters.needs_formatting}
+						decision={libraryState.controls.filters.decision}
+						onChange={(patch) =>
+							libraryState.applyControls({
+								filters: { ...libraryState.controls.filters, ...patch }
+							})}
+					/>
+				</div>
+			{/if}
+		</div>
 
 		{#if libraryState.status === 'loading'}
 			<p class="status">loading library…</p>
@@ -46,7 +82,6 @@
 			<LibraryControls
 				controls={libraryState.controls}
 				facets={libraryState.facets}
-				stats={libraryState.curationStats}
 				onChange={(p) => libraryState.applyControls(p)}
 			/>
 			{#if libraryState.total === 0}
@@ -58,6 +93,7 @@
 					view={libraryState.controls.view}
 					sort={libraryState.controls.sort}
 					queryKey={libraryState.queryKey}
+					stats={libraryState.curationStats}
 					onOpen={(index) => libraryState.openDocByIndex(index)}
 					onVisibleRange={(s, e) => libraryState.ensureWindowsForRange(s, e)}
 					resolveJumpIndex={(seek) => libraryState.jumpToAnchor(seek)}
@@ -87,17 +123,24 @@
 		border: 1px solid var(--glass-border);
 		will-change: background, border-color;
 	}
+	.heading-row {
+		display: flex; align-items: center; justify-content: space-between;
+		gap: 1rem; margin-bottom: 2rem;
+	}
 	.heading {
 		font-family: var(--font-ui);
 		font-size: 0.75rem; letter-spacing: 0.14em; text-transform: uppercase;
 		color: var(--clr-text);
-		margin: 0 0 2rem;
+		margin: 0;
 	}
+	.scope { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; justify-content: flex-end; }
 	.status { font-family: var(--font-ui); font-size: 0.65rem; letter-spacing: 0.08em; color: var(--clr-text); }
 	.status.error { color: var(--clr-danger); }
 
 	@media (max-width: 480px) {
 		.page { padding-top: 4.5rem; }
 		.inner { padding: 1.5rem 1.25rem 4rem; }
+		.heading-row { gap: 0.5rem; margin-bottom: 1.25rem; }
+		.scope { gap: 0.3rem; flex-wrap: nowrap; }
 	}
 </style>

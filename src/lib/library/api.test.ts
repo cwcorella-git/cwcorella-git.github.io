@@ -33,6 +33,32 @@ describe('serializeQuery', () => {
 	});
 });
 
+describe('serializeQuery arrays', () => {
+	it('emits one param per array element', () => {
+		expect(serializeQuery({ tag: ['a', 'b'] })).toBe('tag=a&tag=b');
+	});
+
+	it('emits a single param for a one-element array', () => {
+		expect(serializeQuery({ tag: ['a'] })).toBe('tag=a');
+	});
+
+	it('omits an empty array entirely', () => {
+		expect(serializeQuery({ tag: [], sort: 'title' })).toBe('sort=title');
+	});
+
+	it('skips empty strings inside an array', () => {
+		expect(serializeQuery({ tag: ['a', '', 'b'] })).toBe('tag=a&tag=b');
+	});
+
+	it('still serializes scalars unchanged', () => {
+		expect(serializeQuery({ sort: 'title', dir: 'asc' })).toBe('sort=title&dir=asc');
+	});
+
+	it('keeps 0 — it is a real value, not empty', () => {
+		expect(serializeQuery({ needs_formatting: 0 })).toBe('needs_formatting=0');
+	});
+});
+
 describe('createLibraryClient', () => {
 	it('sends Authorization Bearer header and credentials:"omit" on listDocuments', async () => {
 		const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, { items: [], next_cursor: null, total: 0 }));

@@ -1,7 +1,13 @@
 import { env } from '$env/dynamic/public';
 import { adminState } from '$lib/admin/state.svelte';
 import { createLibraryClient, AuthError, OfflineError, ApiError } from './api';
-import { defaultControls, toQuery, computeQueryKey, controlsChanged } from './libraryLogic';
+import {
+	defaultControls,
+	toQuery,
+	computeQueryKey,
+	controlsChanged,
+	filtersToParams
+} from './libraryLogic';
 import type { LibraryControls } from './libraryLogic';
 import {
 	LRU_CAP,
@@ -50,6 +56,7 @@ let _activeWindows: number[] = [];
 // so two orderings never mix (the reliability contract).
 let _queryEpoch = 0;
 let _docEpoch = 0;
+let _facetsEpoch = 0;
 
 // Debounced range coalescing for scroll.
 let _debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -81,11 +88,9 @@ function _resetData() {
 }
 
 function _appliedFilters(): Partial<AnchorOffsetParams> {
-	const out: Record<string, unknown> = {};
-	for (const [k, v] of Object.entries(_controls.filters)) {
-		if (v !== undefined && v !== '') out[k] = v;
-	}
-	return out as Partial<AnchorOffsetParams>;
+	// Same mapping as the list query — see filtersToParams. The rail MUST filter
+	// identically to /documents or its offsets point at the wrong rows.
+	return filtersToParams(_controls.filters) as Partial<AnchorOffsetParams>;
 }
 
 function _evict() {
@@ -154,15 +159,29 @@ export const libraryState = {
 	async init() {
 		if (_status !== 'idle') return;
 		_status = 'loading';
-		await Promise.all([_newQuery(), this.loadFacets(), this.loadCurationStats()]);
+		await Promise.all([_newQuery(), this.loadFacets({ fatal: true }), this.loadCurationStats()]);
 	},
 
-	async loadFacets() {
+	async loadFacets(opts: { fatal?: boolean } = {}) {
+		const { fatal = false } = opts;
+		const epoch = ++_facetsEpoch;
 		try {
-			_facets = await client.getFacets();
+			const facets = await client.getFacets(_controls.filters.corpus?.source);
+			if (epoch !== _facetsEpoch) return; // superseded — discard
+			_facets = facets;
 		} catch (e) {
-			_mapError(e);
+			if (epoch !== _facetsEpoch) return;
+			if (fatal) {
+				_mapError(e);
+			}
+			// else: non-fatal refetch (e.g. mid-session source change) — swallow the
+			// error and keep the previous _facets; stale categories beat a destroyed
+			// page. Mirrors loadCurationStats' best-effort handling.
 		}
+	},
+
+	searchTags(q: string) {
+		return client.searchTags(q);
 	},
 
 	applyControls(patch: Partial<LibraryControls>) {
@@ -172,6 +191,9 @@ export const libraryState = {
 		if (controlsChanged(prev, next)) {
 			_queryKey = computeQueryKey(next);
 			void _newQuery();
+		}
+		if (patch.filters && patch.filters.corpus?.source !== prev.filters.corpus?.source) {
+			void this.loadFacets();
 		}
 	},
 
