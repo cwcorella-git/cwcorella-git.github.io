@@ -40,7 +40,7 @@
 		class:set={label !== ''}
 		aria-label={ariaLabel}
 		aria-expanded={open}
-		aria-haspopup="listbox"
+		aria-haspopup="menu"
 		onclick={() => onToggle(!open)}
 	>
 		<span class="glyph">{glyph}</span>
@@ -49,7 +49,7 @@
 	</button>
 
 	{#if open}
-		<div class="panel" class:wide role="listbox" tabindex="-1">
+		<div class="panel" class:wide role="menu" tabindex="-1">
 			{@render children()}
 		</div>
 	{/if}
