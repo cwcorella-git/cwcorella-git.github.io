@@ -1,7 +1,7 @@
 import type { LibraryQuery } from './types';
 
 export interface LibraryControls {
-	sort: string; // one of B2's 4: title|author|publication_date|updated_at
+	sort: string; // title|author|publication_date|word_count offered in the dropdown; updated_at is a valid backend value but not offered
 	dir: 'asc' | 'desc';
 	q: string; // search text ('' = none)
 	filters: {
