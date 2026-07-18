@@ -18,13 +18,16 @@ import {
 	resolveAnchorIndex
 } from './windowLogic';
 import { toggleDecision, clampIndex } from './curationLogic';
+import { draftToPayload, computeCounts } from './editLogic';
+import type { EditDraft } from './editLogic';
 import type {
 	DocListItem,
 	LibraryDoc,
 	Facets,
 	AnchorOffsetParams,
 	Decision,
-	CurationStats
+	CurationStats,
+	DocVersion
 } from './types';
 
 const baseUrl = env.PUBLIC_LIBRARY_API_URL || 'https://library-api.cwcorella.com';
@@ -41,6 +44,8 @@ let _openDoc = $state<LibraryDoc | null>(null);
 let _openDocStatus = $state<OpenDocStatus>('idle');
 let _openIndex = $state<number | null>(null);
 let _curationStats = $state<CurationStats | null>(null);
+let _editMode = $state(false);
+let _versions = $state<DocVersion[]>([]);
 
 let _total = $state<number | null>(null);
 let _version = $state(0); // bumped whenever the row cache changes
@@ -150,6 +155,8 @@ export const libraryState = {
 	get hasPrev() { return _openIndex !== null && _openIndex > 0; },
 	get hasNext() { return _openIndex !== null && _total !== null && _openIndex < _total - 1; },
 	get curationStats() { return _curationStats; },
+	get editMode() { return _editMode; },
+	get versions() { return _versions; },
 
 	rowAt(index: number): DocListItem | undefined {
 		void _version; // subscribe: re-reads when the cache changes
@@ -312,10 +319,48 @@ export const libraryState = {
 		}
 	},
 
+	startEdit() { _editMode = true; },
+	cancelEdit() { _editMode = false; },
+
+	async saveEdit(draft: EditDraft): Promise<boolean> {
+		const doc = _openDoc;
+		if (!doc) return false;
+		const counts = computeCounts(draft.body);
+		const prev = doc;
+		_openDoc = { ...doc, body: draft.body, title: draft.title, tags: [...draft.tags],
+			needs_formatting: draft.needs_formatting, ...counts, edited: true };
+		try {
+			const merged = await client.saveBody(doc.id, draftToPayload(draft));
+			if (_openDoc && _openDoc.id === doc.id) _openDoc = merged;
+			_editMode = false;
+			return true;
+		} catch (e) {
+			if (_openDoc && _openDoc.id === doc.id) _openDoc = prev;   // roll back; stay in edit mode
+			_mapError(e);
+			throw e;   // let the component toast
+		}
+	},
+
+	async loadVersions() {
+		const doc = _openDoc;
+		if (!doc) return;
+		try { _versions = await client.getVersions(doc.id); }
+		catch { _versions = []; }
+	},
+
+	async revert(target: { version_id: number } | { original: true }): Promise<void> {
+		const doc = _openDoc;
+		if (!doc) return;
+		const merged = await client.revertDoc(doc.id, target);   // throws -> component toasts
+		if (_openDoc && _openDoc.id === doc.id) _openDoc = merged;
+	},
+
 	closeDoc() {
 		_docEpoch++;
 		_openDoc = null;
 		_openDocStatus = 'idle';
 		_openIndex = null;
+		_editMode = false;
+		_versions = [];
 	}
 };
