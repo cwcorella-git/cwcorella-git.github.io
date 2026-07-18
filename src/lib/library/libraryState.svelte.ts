@@ -366,3 +366,5 @@ export const libraryState = {
 		_versions = [];
 	}
 };
+
+export const libraryClient = client;
