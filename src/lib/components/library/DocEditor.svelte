@@ -19,7 +19,8 @@
 	const previewHtml = $derived(mode === 'preview' ? renderMarkdown(draft.body) : '');
 
 	function wrap(before: string, after: string) {
-		const el = textareaEl as HTMLTextAreaElement;
+		const el = textareaEl;
+		if (!el) return;
 		const start = el.selectionStart, end = el.selectionEnd;
 		const selected = draft.body.slice(start, end);
 		const replacement = before + (selected || 'text') + after;
@@ -30,7 +31,8 @@
 		});
 	}
 	function prefixLine(prefix: string) {
-		const el = textareaEl as HTMLTextAreaElement;
+		const el = textareaEl;
+		if (!el) return;
 		const start = el.selectionStart;
 		const lineStart = draft.body.slice(0, start).lastIndexOf('\n') + 1;
 		draft.body = draft.body.slice(0, lineStart) + prefix + draft.body.slice(lineStart);
@@ -44,14 +46,16 @@
 
 <div class="doc-editor">
 	<div class="toolbar">
-		<button type="button" onclick={() => wrap('**', '**')} title="Bold">B</button>
-		<button type="button" class="italic" onclick={() => wrap('*', '*')} title="Italic">I</button>
-		<button type="button" onclick={() => wrap('~~', '~~')} title="Strikethrough">S</button>
-		<div class="sep"></div>
-		<button type="button" onclick={() => prefixLine('## ')} title="Heading">H</button>
-		<button type="button" onclick={() => prefixLine('- ')} title="Bullet list">•</button>
-		<button type="button" onclick={() => prefixLine('1. ')} title="Numbered list">1.</button>
-		<button type="button" onclick={() => wrap('[', '](url)')} title="Link">🔗</button>
+		{#if mode === 'write'}
+			<button type="button" onclick={() => wrap('**', '**')} title="Bold">B</button>
+			<button type="button" class="italic" onclick={() => wrap('*', '*')} title="Italic">I</button>
+			<button type="button" onclick={() => wrap('~~', '~~')} title="Strikethrough">S</button>
+			<div class="sep"></div>
+			<button type="button" onclick={() => prefixLine('## ')} title="Heading">H</button>
+			<button type="button" onclick={() => prefixLine('- ')} title="Bullet list">•</button>
+			<button type="button" onclick={() => prefixLine('1. ')} title="Numbered list">1.</button>
+			<button type="button" onclick={() => wrap('[', '](url)')} title="Link">🔗</button>
+		{/if}
 		<div class="spacer"></div>
 		<button type="button" class:active={mode === 'write'} onclick={() => (mode = 'write')}>Write</button>
 		<button type="button" class:active={mode === 'preview'} onclick={() => (mode = 'preview')}>Preview</button>
