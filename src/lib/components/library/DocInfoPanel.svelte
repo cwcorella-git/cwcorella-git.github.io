@@ -1,19 +1,27 @@
 <script lang="ts">
 	import type { TocEntry } from '$lib/admin/markdown';
-	import type { LibraryDoc } from '$lib/library/types';
+	import type { LibraryDoc, DocVersion } from '$lib/library/types';
 	import { tocNumber, pillLabel } from '$lib/library/tocLogic';
+	import VersionsPanel from './VersionsPanel.svelte';
 
 	interface Props {
 		toc: TocEntry[];
 		activeAnchor: string | null;
 		doc: LibraryDoc;
 		onJump: (anchor: string) => void;
+		versions?: DocVersion[];
+		onRestore?: (id: number) => void;
+		onRestoreOriginal?: () => void;
 	}
 
-	const { toc, activeAnchor, doc, onJump }: Props = $props();
+	const { toc, activeAnchor, doc, onJump, versions, onRestore, onRestoreOriginal }: Props = $props();
 
 	let expanded = $state(false);
-	let activeTab = $state<'toc' | 'info'>('toc');
+	let activeTab = $state<'toc' | 'info' | 'versions'>('toc');
+	let desktopTab = $state<'info' | 'versions'>('info');
+
+	const showVersions = $derived(!!doc.edited || !!(versions && versions.length > 0));
+	const noop = () => {};
 
 	const numbers = $derived(tocNumber(toc));
 	const pill = $derived(pillLabel(toc, numbers, activeAnchor));
@@ -104,8 +112,40 @@
 		{@render tocList()}
 		<hr class="divider" />
 	{/if}
-	<h3 class="panel-title">Document info</h3>
-	{@render infoRows()}
+	{#if showVersions}
+		<div class="tabs sidebar-tabs" role="tablist" aria-label="Info panel">
+			<button
+				type="button"
+				role="tab"
+				class="tab"
+				class:selected={desktopTab === 'info'}
+				aria-selected={desktopTab === 'info'}
+				onclick={() => (desktopTab = 'info')}
+			>Info</button>
+			<button
+				type="button"
+				role="tab"
+				class="tab"
+				class:selected={desktopTab === 'versions'}
+				aria-selected={desktopTab === 'versions'}
+				onclick={() => (desktopTab = 'versions')}
+			>Versions</button>
+		</div>
+		{#if desktopTab === 'versions'}
+			<VersionsPanel
+				versions={versions ?? []}
+				onRestore={onRestore ?? noop}
+				onRestoreOriginal={onRestoreOriginal ?? noop}
+				edited={!!doc.edited}
+			/>
+		{:else}
+			<h3 class="panel-title">Document info</h3>
+			{@render infoRows()}
+		{/if}
+	{:else}
+		<h3 class="panel-title">Document info</h3>
+		{@render infoRows()}
+	{/if}
 </aside>
 
 <!-- Narrow floating pill + tabbed sheet (< 900px) -->
@@ -118,16 +158,18 @@
 			onclick={close}
 		></button>
 		<div class="sheet" role="dialog" aria-modal="false" aria-label="Contents and document info">
-			{#if toc.length > 0}
+			{#if toc.length > 0 || showVersions}
 				<div class="tabs" role="tablist" aria-label="Panel">
-					<button
-						type="button"
-						role="tab"
-						class="tab"
-						class:selected={activeTab === 'toc'}
-						aria-selected={activeTab === 'toc'}
-						onclick={() => (activeTab = 'toc')}
-					>On this page</button>
+					{#if toc.length > 0}
+						<button
+							type="button"
+							role="tab"
+							class="tab"
+							class:selected={activeTab === 'toc'}
+							aria-selected={activeTab === 'toc'}
+							onclick={() => (activeTab = 'toc')}
+						>On this page</button>
+					{/if}
 					<button
 						type="button"
 						role="tab"
@@ -136,10 +178,27 @@
 						aria-selected={activeTab === 'info'}
 						onclick={() => (activeTab = 'info')}
 					>Info</button>
+					{#if showVersions}
+						<button
+							type="button"
+							role="tab"
+							class="tab"
+							class:selected={activeTab === 'versions'}
+							aria-selected={activeTab === 'versions'}
+							onclick={() => (activeTab = 'versions')}
+						>Versions</button>
+					{/if}
 				</div>
 				<div class="sheet-body" role="tabpanel">
 					{#if activeTab === 'toc'}
 						{@render tocList()}
+					{:else if activeTab === 'versions'}
+						<VersionsPanel
+							versions={versions ?? []}
+							onRestore={onRestore ?? noop}
+							onRestoreOriginal={onRestoreOriginal ?? noop}
+							edited={!!doc.edited}
+						/>
 					{:else}
 						{@render infoRows()}
 					{/if}
@@ -324,5 +383,10 @@
 	.sheet-body {
 		padding: 0.7rem 0.9rem 0.9rem;
 		overflow-y: auto;
+	}
+
+	.sidebar-tabs {
+		margin-bottom: 0.6rem;
+		border: 1px solid rgba(var(--ui-rgb), 0.18);
 	}
 </style>

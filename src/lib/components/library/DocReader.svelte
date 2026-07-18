@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { renderMarkdown, extractToc } from '$lib/admin/markdown';
-	import { libraryState } from '$lib/library/libraryState.svelte';
+	import { libraryState, libraryClient } from '$lib/library/libraryState.svelte';
 	import type { Decision } from '$lib/library/types';
+	import type { EditDraft } from '$lib/library/editLogic';
+	import { toast } from '$lib/admin/toast.svelte';
 	import DocInfoPanel from './DocInfoPanel.svelte';
+	import DocEditor from './DocEditor.svelte';
 
 	const DECISIONS: Decision[] = ['keep', 'hide', 'delete'];
 	function decide(d: Decision) { libraryState.setDecision(d); }
@@ -12,7 +15,62 @@
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') close();
+		if (e.key !== 'Escape') return;
+		if (libraryState.editMode) {
+			libraryState.cancelEdit();
+		} else {
+			close();
+		}
+	}
+
+	function startEditing() {
+		libraryState.startEdit();
+		void libraryState.loadVersions();
+	}
+
+	async function handleSave(draft: EditDraft) {
+		try {
+			await libraryState.saveEdit(draft);
+			toast.success('saved');
+			void libraryState.loadVersions();
+		} catch {
+			toast.error('save failed — your text is kept');
+		}
+	}
+
+	async function handleRestore(id: number) {
+		try {
+			await libraryState.revert({ version_id: id });
+			toast.success('restored');
+			void libraryState.loadVersions();
+		} catch {
+			toast.error('restore failed');
+		}
+	}
+
+	async function handleRestoreOriginal() {
+		try {
+			await libraryState.revert({ original: true });
+			toast.success('restored original');
+			void libraryState.loadVersions();
+		} catch {
+			toast.error('restore failed');
+		}
+	}
+
+	async function handleDownload(doc: { id: number; slug: string }) {
+		try {
+			const md = await libraryClient.downloadMarkdown(doc.id);
+			const blob = new Blob([md], { type: 'text/markdown' });
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = doc.slug + '.md';
+			a.click();
+			URL.revokeObjectURL(url);
+		} catch {
+			toast.error('download failed');
+		}
 	}
 
 	function handleBackdropClick() {
@@ -118,6 +176,12 @@
 					>{d}</button>
 				{/each}
 			</div>
+			{#if libraryState.openDoc}
+				<button class="dl-btn" onclick={() => handleDownload(libraryState.openDoc!)}>↓ .md</button>
+			{/if}
+			{#if libraryState.openDoc && !libraryState.editMode}
+				<button class="edit-btn" onclick={startEditing}>edit</button>
+			{/if}
 			<button class="close-btn" onclick={close} aria-label="Close">×</button>
 		</div>
 
@@ -135,17 +199,29 @@
 				{@const doc = libraryState.openDoc}
 				<div class="doc-scroll" bind:this={scrollEl}>
 					<div class="reader-grid">
-						<DocInfoPanel {toc} {activeAnchor} {doc} onJump={handleJump} />
+						<DocInfoPanel
+							{toc}
+							{activeAnchor}
+							{doc}
+							onJump={handleJump}
+							versions={libraryState.versions}
+							onRestore={handleRestore}
+							onRestoreOriginal={handleRestoreOriginal}
+						/>
 						<div class="prose-col">
-							<h2 class="doc-heading">{doc.title}</h2>
-							<div class="doc-body" bind:this={bodyEl}>
-								{#if doc.body && doc.body.trim().length > 0}
-									<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-									{@html bodyHtml}
-								{:else}
-									<p class="empty-note">(no body)</p>
-								{/if}
-							</div>
+							{#if libraryState.editMode}
+								<DocEditor {doc} onCancel={() => libraryState.cancelEdit()} onSave={handleSave} />
+							{:else}
+								<h2 class="doc-heading">{doc.title}</h2>
+								<div class="doc-body" bind:this={bodyEl}>
+									{#if doc.body && doc.body.trim().length > 0}
+										<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+										{@html bodyHtml}
+									{:else}
+										<p class="empty-note">(no body)</p>
+									{/if}
+								</div>
+							{/if}
 						</div>
 					</div>
 				</div>
@@ -197,7 +273,7 @@
 	}
 
 	.nav-group, .decide-group { display: flex; gap: 0.3rem; }
-	.nav-btn, .decide-btn {
+	.nav-btn, .decide-btn, .edit-btn, .dl-btn {
 		background: none;
 		border: 1px solid rgba(var(--ui-rgb), 0.28);
 		color: var(--clr-text);
@@ -206,7 +282,7 @@
 		padding: 0.2rem 0.5rem; cursor: pointer; transition: all 0.15s;
 	}
 	.nav-btn:disabled { opacity: 0.3; cursor: default; }
-	.decide-btn:hover { border-color: rgba(var(--ui-rgb), 0.45); }
+	.decide-btn:hover, .edit-btn:hover, .dl-btn:hover { border-color: rgba(var(--ui-rgb), 0.45); }
 	.decide-btn.active { border-color: var(--clr-text); opacity: 1; }
 	.decide-delete.active { color: var(--clr-danger); border-color: var(--clr-danger); }
 

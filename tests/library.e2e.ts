@@ -172,4 +172,45 @@ test.describe('library reader + pagination + filters', () => {
 		expect(afterCountText).not.toEqual(countText);
 		expect(afterFirstId).not.toEqual(beforeFirstId);
 	});
+
+	test('edit flow: edit, preview, save, versions, restore original', async ({ page }) => {
+		await activateAdminAndSetToken(page);
+		await gotoLibrarySpa(page);
+		await expect(page.getByRole('heading', { name: 'library' })).toBeVisible();
+
+		// Open the first document. Any row works for this flow — the marker text
+		// is unique per run, and restore-original at the end leaves it unchanged.
+		const firstRow = page.locator('[data-doc-id]').first();
+		await firstRow.click();
+		await expect(page.locator('.doc-heading')).toBeVisible({ timeout: 10_000 });
+
+		// 1. Enter edit mode.
+		await page.getByRole('button', { name: 'edit' }).click();
+		const textarea = page.locator('.doc-editor textarea');
+		await expect(textarea).toBeVisible();
+
+		// 2. Type a distinctive marker into the body.
+		const marker = `e2e-edit-marker-${Date.now()}`;
+		await textarea.fill(`${marker}\n\nEdited body text.`);
+
+		// 3. Preview renders the edited markdown.
+		await page.getByRole('button', { name: 'Preview' }).click();
+		await expect(page.locator('.doc-editor .preview')).toContainText(marker);
+
+		// 4. Save — reader shows the edited body.
+		await page.getByRole('button', { name: 'save' }).click();
+		await expect(page.locator('.doc-body')).toContainText(marker, { timeout: 10_000 });
+
+		// 5. Versions tab shows at least one saved version now that the doc is edited.
+		// This spec runs at the default (desktop, >=900px) viewport, so the sidebar
+		// tab bar is what's visible — the narrow floating-pill sheet is untested here.
+		const versionsTab = page.getByRole('tab', { name: 'Versions' });
+		await expect(versionsTab).toBeVisible();
+		await versionsTab.click();
+		await expect(page.locator('.versions li')).toHaveCount(1, { timeout: 5_000 });
+
+		// 6. Restore original — body reverts (marker disappears).
+		await page.getByRole('button', { name: 'restore original' }).click();
+		await expect(page.locator('.doc-body')).not.toContainText(marker, { timeout: 10_000 });
+	});
 });
