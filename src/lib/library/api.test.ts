@@ -243,3 +243,40 @@ describe('curation writes', () => {
 		await expect(client.setCuration(999, 'keep')).rejects.toBeInstanceOf(ApiError);
 	});
 });
+
+describe('edit methods', () => {
+	it('saveBody PUTs body to /documents/{id}/body', async () => {
+		const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, { id: 7, body: 'b', edited: true }));
+		const client = createLibraryClient({ baseUrl: BASE_URL, getToken: () => TOKEN, fetchImpl });
+		await client.saveBody(7, { body: 'b', title: 'T', needs_formatting: null, tags: ['x'] });
+		const [url, options] = fetchImpl.mock.calls[0];
+		expect(url).toBe(BASE_URL + '/documents/7/body');
+		expect(options.method).toBe('PUT');
+		expect(JSON.parse(options.body)).toEqual({ body: 'b', title: 'T', needs_formatting: null, tags: ['x'] });
+	});
+
+	it('getVersions unwraps {versions}', async () => {
+		const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, { versions: [{ version_id: 3, title: null, created_at: 't' }] }));
+		const client = createLibraryClient({ baseUrl: BASE_URL, getToken: () => TOKEN, fetchImpl });
+		expect(await client.getVersions(7)).toEqual([{ version_id: 3, title: null, created_at: 't' }]);
+	});
+
+	it('revertDoc POSTs the target', async () => {
+		const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, { id: 7, edited: false }));
+		const client = createLibraryClient({ baseUrl: BASE_URL, getToken: () => TOKEN, fetchImpl });
+		await client.revertDoc(7, { original: true });
+		const [url, options] = fetchImpl.mock.calls[0];
+		expect(url).toBe(BASE_URL + '/documents/7/revert');
+		expect(options.method).toBe('POST');
+		expect(JSON.parse(options.body)).toEqual({ original: true });
+	});
+
+	it('downloadMarkdown returns raw text with auth header', async () => {
+		const fetchImpl = vi.fn().mockResolvedValue({ ok: true, status: 200, text: () => Promise.resolve('# md') });
+		const client = createLibraryClient({ baseUrl: BASE_URL, getToken: () => TOKEN, fetchImpl });
+		expect(await client.downloadMarkdown(7)).toBe('# md');
+		const [url, options] = fetchImpl.mock.calls[0];
+		expect(url).toBe(BASE_URL + '/documents/7/download');
+		expect(options.headers.Authorization).toBe('Bearer ' + TOKEN);
+	});
+});

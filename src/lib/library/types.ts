@@ -17,6 +17,20 @@ export interface DocListItem {
 	updated_at: string;
 	decision: Decision | null; // null = undecided
 	tags: string[];
+	edited?: boolean;
+}
+
+export interface DocVersion {
+	version_id: number;
+	created_at: string;
+	title: string | null;
+}
+
+export interface EditPayload {
+	body: string;
+	title?: string | null;
+	needs_formatting?: number | null;
+	tags: string[];
 }
 
 export interface LibraryDoc extends DocListItem {

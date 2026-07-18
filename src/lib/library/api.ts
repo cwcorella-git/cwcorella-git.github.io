@@ -7,7 +7,9 @@ import type {
 	AnchorOffsetParams,
 	AnchorOffsetResponse,
 	DecisionInput,
-	CurationStats
+	CurationStats,
+	DocVersion,
+	EditPayload
 } from './types';
 
 export class AuthError extends Error {
@@ -143,6 +145,23 @@ export function createLibraryClient({ baseUrl, getToken, fetchImpl = fetch }: Cr
 		},
 		getCurationStats(): Promise<CurationStats> {
 			return request<CurationStats>('/curation/stats');
+		},
+		saveBody(id: number | string, payload: EditPayload): Promise<LibraryDoc> {
+			return request<LibraryDoc>('/documents/' + id + '/body', { method: 'PUT', body: payload });
+		},
+		async getVersions(id: number | string): Promise<DocVersion[]> {
+			const res = await request<{ versions: DocVersion[] }>('/documents/' + id + '/versions');
+			return res.versions;
+		},
+		revertDoc(id: number | string, target: { version_id: number } | { original: true }): Promise<LibraryDoc> {
+			return request<LibraryDoc>('/documents/' + id + '/revert', { method: 'POST', body: target });
+		},
+		async downloadMarkdown(id: number | string): Promise<string> {
+			const url = baseUrl.replace(/\/$/, '') + '/documents/' + id + '/download';
+			const res = await fetchImpl(url, { headers: { Authorization: 'Bearer ' + getToken() }, credentials: 'omit' });
+			if (res.status === 401) throw new AuthError();
+			if (!res.ok) throw new ApiError(res.status);
+			return res.text();
 		}
 	};
 }
