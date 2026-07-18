@@ -331,8 +331,10 @@ export const libraryState = {
 			needs_formatting: draft.needs_formatting, ...counts, edited: true };
 		try {
 			const merged = await client.saveBody(doc.id, draftToPayload(draft));
-			if (_openDoc && _openDoc.id === doc.id) _openDoc = merged;
-			_editMode = false;
+			if (_openDoc && _openDoc.id === doc.id) {
+				_openDoc = merged;
+				_editMode = false;
+			}
 			return true;
 		} catch (e) {
 			if (_openDoc && _openDoc.id === doc.id) _openDoc = prev;   // roll back; stay in edit mode
