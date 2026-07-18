@@ -15,7 +15,12 @@
 		} catch { if (gen === generation) suggestions = []; }
 	}
 	let timer: ReturnType<typeof setTimeout>;
-	$effect(() => { const t = q; clearTimeout(timer); timer = setTimeout(() => search(t), 200); });
+	$effect(() => {
+		const t = q;
+		clearTimeout(timer);
+		timer = setTimeout(() => search(t), 200);
+		return () => clearTimeout(timer);
+	});
 
 	function add(name: string) {
 		const n = name.trim();

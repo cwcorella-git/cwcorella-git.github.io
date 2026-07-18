@@ -338,7 +338,6 @@ export const libraryState = {
 			return true;
 		} catch (e) {
 			if (_openDoc && _openDoc.id === doc.id) _openDoc = prev;   // roll back; stay in edit mode
-			_mapError(e);
 			throw e;   // let the component toast
 		}
 	},
