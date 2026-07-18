@@ -90,3 +90,43 @@ being actively worked. If State ever needs trimming, cut Visibility first.
   against duplicate `{#each}` keys when facet buckets became `(source, name)`-keyed. That
   dropdown no longer exists and the cascade keys within a source, so the collision is
   structurally unreachable. **Deleted.** It was always interim; its own comment said so.
+
+---
+
+## Document-editing follow-ups (2026-07-17, non-blocking)
+
+Surfaced by task/whole-branch reviews during the document-editing feature
+(`edits.db` overlay). All Minor; recorded here because `.superpowers/sdd` is
+gitignored scratch.
+
+1. **Edit-endpoint tests leak FTS writes into the session-scoped `library.db`.**
+   `tests/test_api_edits.py` / `test_edits_fts.py` reindex `documents_fts` on the
+   shared seeded DB; only each file's LAST test restores original text via a
+   trailing revert. Safe under deterministic, non-parallel pytest ordering, but a
+   future `pytest-randomly` or `-p xdist` would silently corrupt `test_api_query.py`.
+   Fix shape: a function-scoped fixture that snapshots/restores `documents_fts`
+   (or a per-test DB copy) for the edit-endpoint tests. (library-api repo.)
+
+2. **`test_edits_readmerge_unit` list tests duplicate `app.py`'s merge loop** rather
+   than importing `list_documents`. The shared `apply_overlay_fields`/`overlays_for_ids`
+   helpers are imported (the real invariant carriers), but the loop shape is hand-synced.
+   Optional: extract the list-merge loop into a testable function in `edits.py`.
+
+3. **`downloadMarkdown` bypasses `request()`** (`src/lib/library/api.ts`), so a network
+   failure throws a raw error instead of `OfflineError` like every other client method.
+   The UI catches broadly and toasts "download failed", so no unhandled rejection —
+   cosmetic error-type inconsistency. Also: the `getVersions` client test asserts the
+   return value only, not URL/method.
+
+4. **`EditDraft.title` is typed `string`** (`src/lib/library/editLogic.ts`) but a base
+   doc can have `title === null`; `docToDraft` passes it through. No wire break
+   (`EditBody.title` is `str | None`, and the backend only overrides title when truthy),
+   only a type inaccuracy. Consider typing it `string | null` (not `?? ''`, which would
+   make an untouched null title read as "changed").
+
+5. **Narrow-sheet `DocInfoPanel` can strand on the Versions view.** The narrow content
+   switch renders `VersionsPanel` whenever `activeTab === 'versions'`, independent of
+   `showVersions` (which gates the tab *button*). After a restore-original round-trip
+   `showVersions` flips false but `activeTab` stays `'versions'`, leaving a stale/empty
+   Versions view with no tab selected. Narrow-viewport only, no crash. Fix: reset
+   `activeTab` to `'info'` when `showVersions` becomes false.
