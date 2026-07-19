@@ -386,7 +386,7 @@ export const libraryState = {
 		const counts = computeCounts(draft.body);
 		const prev = doc;
 		_openDoc = { ...doc, body: draft.body, title: draft.title, tags: [...draft.tags],
-			needs_formatting: draft.needs_formatting, ...counts, edited: true };
+			...counts, edited: true };
 		try {
 			const merged = await client.saveBody(doc.id, draftToPayload(draft));
 			if (_openDoc && _openDoc.id === doc.id) {
