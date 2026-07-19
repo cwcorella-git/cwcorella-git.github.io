@@ -68,8 +68,6 @@
 		<div class="preview doc-body">{@html previewHtml}</div>
 	{/if}
 
-	<label class="fmt-flag"><input type="checkbox" bind:checked={draft.needs_formatting} /> needs formatting</label>
-
 	<TagEditor tags={draft.tags} onChange={(t) => (draft.tags = t)} />
 
 	<div class="actions">
@@ -91,7 +89,6 @@
 		border: 1px solid rgba(var(--ui-rgb), 0.22); color: var(--clr-text);
 		font-family: var(--font-prose); font-size: 0.95rem; line-height: 1.8; padding: 1rem; }
 	.preview { min-height: 50vh; }
-	.fmt-flag { margin-top: 0.75rem; font-family: var(--font-ui); font-size: 0.72rem; color: var(--clr-text); display: flex; gap: 0.4rem; align-items: center; }
 	.actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }
 	.actions button { background: none; border: 1px solid rgba(var(--ui-rgb), 0.3); color: var(--clr-text);
 		font-family: var(--font-ui); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.3rem 0.8rem; cursor: pointer; }

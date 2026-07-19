@@ -43,6 +43,14 @@
 			return;
 		}
 
+		if (action.kind === 'mark') {
+			// Deliberately no advance: marking happens while reading, often alongside
+			// a decision, so advancing here would fight the user.
+			if (action.flag === 'visibility') void libraryState.toggleVisibility();
+			else void libraryState.toggleNeedsFormatting();
+			return;
+		}
+
 		// Decide and advance. Deliberately NOT awaited: the write is optimistic, so
 		// advancing immediately is what makes one-keystroke triage feel instant.
 		void libraryState.setDecision(action.decision);
@@ -202,6 +210,20 @@
 					>{d}</button>
 				{/each}
 			</div>
+			<div class="mark-group" role="group" aria-label="Document marks">
+				<button
+					class="mark-btn"
+					class:active={libraryState.openDoc?.visibility === 'public'}
+					aria-pressed={libraryState.openDoc?.visibility === 'public'}
+					onclick={() => libraryState.toggleVisibility()}
+				>{libraryState.openDoc?.visibility === 'public' ? 'public' : 'private'}</button>
+				<button
+					class="mark-btn"
+					class:active={!!libraryState.openDoc?.needs_formatting}
+					aria-pressed={!!libraryState.openDoc?.needs_formatting}
+					onclick={() => libraryState.toggleNeedsFormatting()}
+				>{libraryState.openDoc?.needs_formatting ? 'needs fmt' : 'clean'}</button>
+			</div>
 			{#if libraryState.openDoc}
 				<button class="dl-btn" onclick={() => handleDownload(libraryState.openDoc!)}>↓ .md</button>
 			{/if}
@@ -298,8 +320,8 @@
 		padding: 0 1rem;
 	}
 
-	.nav-group, .decide-group { display: flex; gap: 0.3rem; }
-	.nav-btn, .decide-btn, .edit-btn, .dl-btn {
+	.nav-group, .decide-group, .mark-group { display: flex; gap: 0.3rem; }
+	.nav-btn, .decide-btn, .mark-btn, .edit-btn, .dl-btn {
 		background: none;
 		border: 1px solid rgba(var(--ui-rgb), 0.28);
 		color: var(--clr-text);
@@ -308,8 +330,8 @@
 		padding: 0.2rem 0.5rem; cursor: pointer; transition: all 0.15s;
 	}
 	.nav-btn:disabled { opacity: 0.3; cursor: default; }
-	.decide-btn:hover, .edit-btn:hover, .dl-btn:hover { border-color: rgba(var(--ui-rgb), 0.45); }
-	.decide-btn.active { border-color: var(--clr-text); opacity: 1; }
+	.decide-btn:hover, .mark-btn:hover, .edit-btn:hover, .dl-btn:hover { border-color: rgba(var(--ui-rgb), 0.45); }
+	.decide-btn.active, .mark-btn.active { border-color: var(--clr-text); opacity: 1; }
 	.decide-delete.active { color: var(--clr-danger); border-color: var(--clr-danger); }
 
 	.close-btn {

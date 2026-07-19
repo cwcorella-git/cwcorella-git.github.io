@@ -143,6 +143,9 @@ export function createLibraryClient({ baseUrl, getToken, fetchImpl = fetch }: Cr
 		setCuration(id: number | string, decision: DecisionInput): Promise<{ doc_id: number; decision: string }> {
 			return request('/curation/' + id, { method: 'PUT', body: { decision } });
 		},
+		setFlags(id: number | string, flags: { visibility?: string; needs_formatting?: 0 | 1 }): Promise<LibraryDoc> {
+			return request('/documents/' + id + '/flags', { method: 'PUT', body: flags });
+		},
 		getCurationStats(): Promise<CurationStats> {
 			return request<CurationStats>('/curation/stats');
 		},

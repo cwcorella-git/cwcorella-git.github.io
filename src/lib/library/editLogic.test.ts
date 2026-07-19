@@ -30,11 +30,17 @@ describe('draftChanged', () => {
 		d.tags = ['a', 'c'];
 		expect(draftChanged(doc(), d)).toBe(true);
 	});
+	it('ignores needs_formatting — it is no longer part of the draft', () => {
+		const baseDoc = doc({ needs_formatting: false });
+		const draft = docToDraft(baseDoc);
+		expect('needs_formatting' in draft).toBe(false);
+		expect(draftChanged(baseDoc, draft)).toBe(false);
+	});
 });
 
 describe('draftToPayload', () => {
-	it('maps needs_formatting bool->int and passes tags/body/title', () => {
-		const d = docToDraft(doc({ needs_formatting: true }));
-		expect(draftToPayload(d)).toEqual({ body: 'hi there', title: 'T', needs_formatting: 1, tags: ['a', 'b'] });
+	it('passes tags/body/title without needs_formatting', () => {
+		const d = docToDraft(doc());
+		expect(draftToPayload(d)).toEqual({ body: 'hi there', title: 'T', tags: ['a', 'b'] });
 	});
 });

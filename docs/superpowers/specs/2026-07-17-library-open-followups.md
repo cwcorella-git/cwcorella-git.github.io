@@ -185,3 +185,71 @@ gitignored scratch.
 The gating logic lives in `src/lib/library/keyLogic.ts`, **not** in `DocReader.svelte`.
 That is deliberate: the load-window guard above is the difference between correct triage
 and silent data corruption, and in the component it had no test harness. Keep it pure.
+
+---
+
+## Visibility-axis follow-ups (2026-07-18, non-blocking)
+
+From task and whole-branch reviews of the visibility-axis work (backend
+`visibility-axis`, frontend `visibility-axis-ui`). Recorded here because
+`.superpowers/sdd` is gitignored scratch.
+
+### 1. Filters and facets ignore the overlay — the marks are not reviewable
+
+**The most consequential item here.** `query.py` filters and facets against
+`library.db.documents` directly; the overlay is applied only to already-selected rows.
+So a document marked public shows "public" in its row but is excluded by
+`visibility=public`, and the facet count never moves.
+
+After the migration forces everything private, the visibility facet reads 100% private
+permanently, and there is no in-UI way to review what you have marked before running
+bootstrap→publish. The marks themselves are correct — `publish.py` resolves them through
+the overlay — they are just invisible to the review tools.
+
+**Workaround until fixed:** `publish.py --dry-run` reports exactly what would be
+published. **Fix shape:** join the attached overlay into the filter and count queries, or
+maintain a derived index. Not trivial: `/facets` is six aggregates over 100k docs.
+
+### 2. Smaller items
+
+- `_effective_visibility` (`vg_visibility.py`) tests the override for truthiness while
+  `apply_flag_fields` (`edits.py`) uses `is not None`. They differ only for `""`, which
+  the `Literal` makes unreachable — but these are two halves of one rule and should read
+  identically.
+- `edit_flags`-wins precedence for `needs_formatting` is tested on the detail path only;
+  the list path applies it untested.
+- `.mark-group` renders when no document is open, showing a stale "private"/"clean".
+  Matches the existing `.decide-group` pattern, so pre-existing rather than new.
+- Mark buttons derive their accessible name from state *and* carry `aria-pressed`
+  ("public, pressed"), where the decide buttons use static names. Slightly ambiguous.
+- No negative test for `needs_formatting` outside `{0,1}` (relies on `Literal[0,1]`);
+  no test for a combined `visibility`+`needs_formatting` write in one call.
+- `shape_user_row`'s own `is_public` handling remains untested (pre-existing).
+- `_version++` in `_setFlags` bumps only inside the cache-hit branch, where `setDecision`
+  bumps whenever `idx !== null`. Arguably more correct; just inconsistent.
+- The SQLite variable limit is **not reproducible on this machine** — Ubuntu's build
+  raises `SQLITE_MAX_VARIABLE_NUMBER` to 250,000. The chunking guard is therefore
+  asserted at the source via a recording proxy rather than by a red-to-green scale test.
+  On a stock SQLite build the scale tests would carry real value.
+
+### Closed during this work — recorded so it is not re-reported
+
+- **The plan fed `source_id`s into `doc_id`-keyed lookups.** `curation_join.grouped_source_ids()`
+  returns `source_id`s, but the plan's publish code passed them to `flags_for_ids()` and
+  `documents.id`. Where the two differ — the normal case — that reads a *different
+  document's* visibility, so a `public` mark on one document could publish another,
+  private one. Caught by the implementer, replaced with a per-document join, pinned by
+  `test_flags_are_keyed_by_doc_id_not_source_id`. Verified not to spread: no other task
+  uses `grouped_source_ids`, and `vg_purge.py`'s use of it is correct.
+- **`hide` stopped retracting.** The conjunctive rule's candidate set was `keep` only, so
+  `keep`→`hide` produced no write and left a document public until bootstrap ran — while
+  `keep`→`private` *was* driven false. Retraction worked on one axis and silently failed
+  on the other. `hide` now actively drives `is_public=false`.
+- **`plan_publish` would have raised above ~32k kept documents** (one SQL variable per
+  id), at exactly the scale the feature exists for. Chunked at 900, along with
+  `overlays_for_ids` and `overlay_tags_for_ids`, which had the same latent limit.
+- **A `delete`-marked document stays public until `purge.py` runs** — structurally the
+  same gap as a cleared decision. Now stated in `publish_decisions`'s docstring.
+- **The migration CLI diverged from its siblings** (`--confirm` alone vs
+  `--dry-run`/`--confirm`). Aligned, since the documented procedure runs all of them
+  back-to-back and muscle memory is a real hazard there.

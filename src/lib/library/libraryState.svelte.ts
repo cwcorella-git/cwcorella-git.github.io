@@ -31,6 +31,13 @@ import type {
 	DocVersion
 } from './types';
 
+function revertKeysToValues(patch: { visibility?: string; needs_formatting?: 0 | 1 }): Partial<LibraryDoc> {
+	const out: Partial<LibraryDoc> = {};
+	if (patch.visibility !== undefined) out.visibility = patch.visibility;
+	if (patch.needs_formatting !== undefined) out.needs_formatting = patch.needs_formatting === 1;
+	return out;
+}
+
 const baseUrl = env.PUBLIC_LIBRARY_API_URL || 'https://library-api.cwcorella.com';
 const client = createLibraryClient({ baseUrl, getToken: () => adminState.libraryToken });
 
@@ -328,6 +335,48 @@ export const libraryState = {
 		}
 	},
 
+	async _setFlags(patch: { visibility?: string; needs_formatting?: 0 | 1 }, revert: Partial<LibraryDoc>) {
+		const doc = _openDoc;
+		if (!doc) return;
+		const idx = _openIndex;
+
+		// Optimistic, mirroring setDecision: update the open doc + its cached row.
+		_openDoc = { ...doc, ...revertKeysToValues(patch) };
+		if (idx !== null) {
+			const cached = _rowCache.get(idx);
+			if (cached && cached.id === doc.id) {
+				_rowCache.set(idx, { ...cached, ...revertKeysToValues(patch) });
+				_version++;
+			}
+		}
+
+		try {
+			await client.setFlags(doc.id, patch);
+		} catch {
+			// Toast, never _mapError: page-level status unmounts the controls.
+			if (_openDoc && _openDoc.id === doc.id) _openDoc = { ..._openDoc, ...revert };
+			if (idx !== null) {
+				const c2 = _rowCache.get(idx);
+				if (c2 && c2.id === doc.id) { _rowCache.set(idx, { ...c2, ...revert }); _version++; }
+			}
+			toast.error('could not save mark');
+		}
+	},
+
+	toggleVisibility() {
+		const doc = _openDoc;
+		if (!doc) return Promise.resolve();
+		const next = doc.visibility === 'public' ? 'private' : 'public';
+		return this._setFlags({ visibility: next }, { visibility: doc.visibility });
+	},
+
+	toggleNeedsFormatting() {
+		const doc = _openDoc;
+		if (!doc) return Promise.resolve();
+		const next = doc.needs_formatting ? 0 : 1;
+		return this._setFlags({ needs_formatting: next }, { needs_formatting: doc.needs_formatting });
+	},
+
 	startEdit() { _editMode = true; },
 	cancelEdit() { _editMode = false; },
 
@@ -337,7 +386,7 @@ export const libraryState = {
 		const counts = computeCounts(draft.body);
 		const prev = doc;
 		_openDoc = { ...doc, body: draft.body, title: draft.title, tags: [...draft.tags],
-			needs_formatting: draft.needs_formatting, ...counts, edited: true };
+			...counts, edited: true };
 		try {
 			const merged = await client.saveBody(doc.id, draftToPayload(draft));
 			if (_openDoc && _openDoc.id === doc.id) {
