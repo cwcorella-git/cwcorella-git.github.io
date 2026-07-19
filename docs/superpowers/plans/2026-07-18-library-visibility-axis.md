@@ -1340,16 +1340,27 @@ git commit -m "feat(library): P and F mark keys, non-advancing"
 In order, after both phases merge:
 
 1. **Deploy the frontend first.** It degrades to a toast if `/documents/{id}/flags` 404s.
-2. **Deploy the API:**
+2. **Deploy the API:** — **DONE 2026-07-19.** Service active, `PUT /documents/{id}/flags`
+   registered, flags round-trip verified against the live service (write → overlay
+   resolution → `library.db` untouched → no version snapshot → 422 on a bad value →
+   clean fallback on revert).
    ```bash
    ssh -A ssh.veritablegames.com 'cd /data/library-api && git pull origin main && sudo systemctl restart library-api'
    ```
-3. **Dry-run the migration**, then apply:
+3. **Create `publish.env`** — **BLOCKER, added 2026-07-19.** `/data/library-api/publish.env`
+   does not exist, so `publish.py --dry-run` exits rather than connecting. That is the only
+   tool that can review marks, because filters and facets do not see the overlay. **Do this
+   before step 5, not after** — otherwise the blackout runs with no way to verify recovery.
+   Template: `deploy/publish.env.example`. The DSN must be hand-supplied via `sudo`.
+4. **Dry-run the migration**, then apply:
    ```bash
    python scripts/migrate_visibility_private.py --db /data/library-api/library.db --edits-db /data/library-api/edits.db
    # review the counts, then re-run with --confirm
    ```
-4. **Curate.** Every document needs **both** marks to be published: `keep` *and* `public`. Current curation is 15 delete / 0 keep / 0 hide, so at this moment **zero documents qualify**.
-5. **Only then** run `bootstrap.py` and `publish.py` back-to-back. Running them before step 4 takes VG's public library to zero and leaves it there until the marking is done.
+5. **Curate.** Every document needs **both** marks to be published: `keep` *and* `public`. Curation measured 2026-07-19 is 114 delete / 0 keep / 0 hide, so at this moment **zero documents qualify**.
+6. **Only then** run `bootstrap.py` and `publish.py` back-to-back. Running them before step 5 takes VG's public library to zero and leaves it there until the marking is done.
+
+**Note:** the API is token-gated on reads as well as writes. Any manual verification needs
+the token from `/data/library-api/library-api.env` (root-readable).
 
 `bootstrap.py --restore --confirm` reverses step 5 from its snapshot.

@@ -205,8 +205,10 @@ bootstrap→publish back-to-back.** A document needs both marks to survive the f
 private and comes back one mark at a time. All 2,521 currently-public user docs go dark.
 
 And under the conjunctive rule the recovery is **two marks per document**, not one — a
-doc must be both `keep` and `public`. Current curation state is 15 delete / 0 keep /
-0 hide, so at the moment of the flip **zero documents qualify for publication**. Running
+doc must be both `keep` and `public`. Curation state measured 2026-07-19 is 114 delete /
+0 keep / 0 hide, so at the moment of the flip **zero documents qualify for publication**.
+(This spec originally recorded 15 delete, measured 2026-07-18; deletes have accumulated
+since. The count that matters is `keep`, which is still zero.) Running
 bootstrap→publish today takes VG's public library to zero and leaves it there until that
 work is done.
 
