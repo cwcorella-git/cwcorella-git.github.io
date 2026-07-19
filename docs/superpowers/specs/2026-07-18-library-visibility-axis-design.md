@@ -145,8 +145,25 @@ practical ceiling for unmodified single keys; a sixth would need a modifier sche
 `draftChanged` stops considering it. A state flag does not belong inside a text editor,
 and routing it through a body save was cutting spurious version snapshots.
 
-**Filtering is unchanged.** `StateControl` already filters on both `visibility` and
-`needs_formatting`; those controls keep working and now reflect a mutable axis.
+**Filtering does NOT see the marks. Corrected 2026-07-18 after the whole-branch review
+found the original claim here was false.**
+
+`StateControl` filters on `visibility` and `needs_formatting`, and those controls keep
+working — but `query.py` filters and facets against `library.db.documents` directly. The
+overlay is applied only to rows that have *already been selected*. So a document marked
+public displays "public" in its row while being excluded by `visibility=public`, and the
+facet count never moves.
+
+The practical consequence, which matters for the migration: after every document is
+forced private, the visibility facet reads 100% private permanently, and **there is no
+way to review the set of documents you have marked public before running the flip.** The
+marks are correct — `publish.py` resolves them through the overlay — but they are
+invisible to the tools you would use to check your work.
+
+Making filters and facets overlay-aware is a real piece of work: it means either joining
+the attached overlay into the filter and count queries, or maintaining a derived index.
+It is **out of scope here and tracked as a follow-up.** Until it lands, verify a marking
+session with `publish.py --dry-run`, which reports exactly what would be published.
 
 ## Migration
 
