@@ -1,5 +1,6 @@
 import { env } from '$env/dynamic/public';
 import { adminState } from '$lib/admin/state.svelte';
+import { toast } from '$lib/admin/toast.svelte';
 import { createLibraryClient, AuthError, OfflineError, ApiError } from './api';
 import {
 	defaultControls,
@@ -315,7 +316,10 @@ export const libraryState = {
 				if (c2 && c2.id === doc.id) _rowCache.set(idx, { ...c2, decision: prevVal });
 				_version++;
 			}
-			_mapError(e);
+			// Deliberately NOT _mapError: that sets the page-level _status, and the
+			// controls are gated behind status === 'ready', so one failed write would
+			// unmount the entire UI mid-triage. Same failure class as saveEdit (2889d58).
+			toast.error('could not save decision');
 		}
 	},
 
