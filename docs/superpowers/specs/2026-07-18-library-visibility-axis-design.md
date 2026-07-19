@@ -1,0 +1,190 @@
+# Library visibility axis — design
+
+**Date:** 2026-07-18
+**Status:** approved, not yet implemented
+**Scope:** `library-api` (backend + publish CLI) and this repo's `/library` frontend.
+**Explicitly out of scope:** creating new documents, and the VG-side tab function. Both
+depend on this spec and get their own.
+
+## Problem
+
+`/library` conflates two independent questions. The curation decision (`keep`/`hide`/
+`delete`) currently drives VG production visibility through `publish.py`
+(`keep`→public, `hide`→private). That is wrong: **keep is about retention, not
+publication.** A document can be worth keeping and still not be for the public.
+
+Three defects follow from the conflation:
+
+1. **`visibility` is write-once at ingest.** `library.db.documents` has a
+   `visibility TEXT NOT NULL DEFAULT 'private'` column, indexed, populated by
+   `loader.py` — but no API can change it. It is filterable and unmaintainable.
+2. **`sources.py` fabricates it.** Line 23 derives `visibility` from the real
+   `is_public` for the `user` source, but lines 34/45/55 hard-code
+   `visibility="private"` for anarchist, marxist, and youtube regardless of their
+   actual VG state. The column lies for 97% of the corpus.
+3. **`needs_formatting` is only settable from inside edit mode.** Marking a document
+   clean requires opening the editor and saving a body revision, which also cuts a
+   version snapshot and reindexes FTS — for a boolean that has nothing to do with text.
+
+A prior measurement recorded in CLAUDE.md — "`public` is exactly the `user` count, so
+visibility is nearly a restatement of source" — is an **artifact of defects 1 and 2
+plus VG having shipped all-public**, not a property of the data. It should not be cited
+as a reason to trim the axis.
+
+## The model
+
+Two axes, explicitly independent:
+
+| Axis | Values | Question it answers | Home |
+|---|---|---|---|
+| `decision` | keep / hide / delete / undecided | Do I retain this? | `curation.db` |
+| `visibility` | public / private | Can the world see it? | `library.db` + `edits.db` overlay |
+
+Resulting VG behavior:
+
+- **keep + public** → publicly visible on VG.
+- **keep + private** → present on VG with `is_public=false`: admin-only, reachable
+  through the existing tab function. This is the case the old model could not express.
+- **delete** → `purge.py` removes it entirely. Unchanged.
+
+`hide` remains a curation decision meaning "I do not want this in my working set." It no
+longer implies anything about publication.
+
+### Where the edit lives
+
+**`visibility` becomes an overlay field in `edits.db`,** exactly as `needs_formatting`
+already is. Effective value is `overlay.visibility ?? library.visibility`, resolved by
+the existing `apply_overlay_fields` helper.
+
+This preserves the standing discipline: `library.db` is read-mostly (ingest, plus the
+one deliberate `documents_fts` reindex on body save), and every user-originated change
+lives in the overlay. No new store, and the migration-exempt status of `edits.db` still
+holds.
+
+## API
+
+**One new endpoint:** `PUT /documents/{id}/flags`, body `{ visibility?, needs_formatting? }`.
+Both fields optional; at least one required. Writes to the `edits.db` overlay.
+
+It sits beside `PUT /documents/{id}/body` and reuses the overlay-write path, with two
+deliberate differences:
+
+- **No version snapshot.** Flags are not content; a flag flip is not a revision.
+- **No `documents_fts` write.** Neither flag affects text. The single deliberate
+  `library.db` write stays confined to body saves, where it already is.
+
+`visibility` accepts exactly `"public"` or `"private"`; anything else is a 422.
+
+## Frontend
+
+**Reader header** gains two toggles beside the existing keep/hide/delete group: a
+public/private toggle and a needs-formatting/clean mark. Both use the optimistic-write
+pattern established by `setDecision`, including its failure behavior: a failed write
+**toasts and rolls back**, and must not call `_mapError` — page-level error state
+unmounts the controls.
+
+**Keyboard**, consistent with the triage keys shipped 2026-07-18:
+
+- `P` — toggle public/private
+- `F` — toggle needs-formatting/clean
+
+Both route through `resolveKey` in `src/lib/library/keyLogic.ts`, inheriting the
+auto-repeat guard and the load-window gating (`hasDoc && status === 'idle'`) that
+prevent a mark from landing on a stale document.
+
+**Neither auto-advances.** Decisions advance because triage is one-pass; marking a
+document clean or public is something done *while reading it*, often alongside a
+decision, so advancing would fight the user.
+
+This brings the reader to five marking keys (`Delete`/`K`/`H`/`P`/`F`). That is the
+practical ceiling for unmodified single keys; a sixth would need a modifier scheme.
+
+**`DocEditor` loses the `needs_formatting` checkbox.** `EditDraft` drops the field and
+`draftChanged` stops considering it. A state flag does not belong inside a text editor,
+and routing it through a body save was cutting spurious version snapshots.
+
+**Filtering is unchanged.** `StateControl` already filters on both `visibility` and
+`needs_formatting`; those controls keep working and now reflect a mutable axis.
+
+## Migration
+
+**`library.db`:** `UPDATE documents SET visibility='private' WHERE visibility='public'`,
+plus clearing any overlay `visibility` rows. Only the 2,521 `user` docs are affected —
+the other three sources are already `private` (dishonestly, but with the right value).
+
+**`sources.py`:** read the real `is_public` for all four sources instead of hard-coding
+`"private"` for three. This does not change current values; it stops the column lying on
+the next ingest.
+
+**VG:** `bootstrap.py` already does the mass `is_public=false` flip with a reversible
+snapshot to `/data/library-purged/bootstrap-snapshot.jsonl.gz`. No new code.
+
+**`publish.py`:** `publish_decisions()` currently groups by `keep`/`hide` via
+`curation_join.grouped_source_ids`. It changes to group by effective **visibility**
+(`public`→`is_public=true`, `private`→`false`). This is the semantic correction; it is
+small precisely because the pipeline was built but never initialized.
+
+### Order of operations — corrected
+
+The previously recorded order was *curate keeps first, then bootstrap→publish
+back-to-back*, so VG never visibly empties. **That is now wrong.** Publish is driven by
+visibility, not by `keep`, so curating keeps no longer feeds it.
+
+The order is: **mark public docs first, then bootstrap→publish back-to-back.**
+
+### Consequence, stated plainly
+
+This migration makes the entire public library private until documents are marked back.
+All 2,521 currently-public user docs go dark. Running bootstrap→publish with zero docs
+marked public takes VG's public library to zero and leaves it there.
+
+This is intended, and `bootstrap.py --restore --confirm` makes it reversible from the
+snapshot. But it is a deliberate blackout with manual work to recover from, not a
+background change.
+
+## Testing
+
+**Backend** (`library-api`, pytest):
+- `PUT /documents/{id}/flags` writes each field independently; omitted fields untouched.
+- Rejects a `visibility` value outside `{public, private}` with 422.
+- Cuts **no** version row and performs **no** `documents_fts` write — assert both
+  directly, since these are the invariants the endpoint exists to preserve.
+- Effective visibility resolves overlay-over-library, and a cleared overlay falls back.
+- `publish_decisions` groups by visibility, not decision: a `keep`+private doc must end
+  with `is_public=false`, and an undecided+public doc with `is_public=true`.
+
+**Frontend** (Vitest):
+- `resolveKey` maps `P` and `F` to their toggles, marks them non-advancing, and applies
+  the existing repeat and load-window guards to them.
+- A failed flags write leaves `status === 'ready'` and toasts (the `setDecision`
+  regression, re-asserted for the new path).
+- `draftChanged` ignores `needs_formatting` once the field is removed.
+
+**Not covered, deliberately:** the live API CORS-blocks localhost, so the flags round-trip
+cannot be verified end-to-end locally. Mocks resolve instantly and cannot falsify claims
+about latency or failure. Manual confirmation happens after deploy.
+
+## Ship order
+
+`library-api` and this repo both change, so the standing rule applies: **the frontend
+must tolerate an un-upgraded API.** The reader's flag toggles must degrade to a toast on
+404 rather than assuming `/documents/{id}/flags` exists.
+
+The migration and the VG flip are **manual, user-run steps** after both are deployed —
+not part of either deploy.
+
+## Out of scope, and why
+
+- **Creating new documents.** No `POST /documents` exists; a new document has no base
+  row and so does not fit the overlay model at all. It needs its own design and depends
+  on this one.
+- **The VG tab function.** Lives in `veritable-games-main`. This spec makes
+  `keep + private` expressible; surfacing it is that repo's concern.
+- **Editing other metadata** (source, category, date, language). Those are ingest facts,
+  not curation state.
+- **The missing title input.** `EditDraft.title`, `draftChanged`, `draftToPayload`, and
+  the backend's `EditBody.title` all handle title end-to-end, but `DocEditor` renders no
+  input for it — so title is unreachable from the UI. That is an oversight in the
+  document-editing feature, not part of this axis, and it is a ~10-line frontend-only
+  fix. Ship it separately rather than bundling it into a change that needs an API deploy
+  and a manual migration.
