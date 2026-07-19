@@ -77,6 +77,32 @@ one deliberate `documents_fts` reindex on body save), and every user-originated 
 lives in the overlay. No new store, and the migration-exempt status of `edits.db` still
 holds.
 
+**Flags get their own table inside `edits.db`, not a column on `edits`.**
+Amendment made during planning, from a constraint the design missed: `edits.edits`
+declares `body TEXT NOT NULL`, so writing a flag through `save_edit` would require
+materializing the document body into the overlay. Marking flags across the corpus would
+then duplicate a large fraction of 2.7GB of bodies to store two booleans.
+
+```sql
+CREATE TABLE IF NOT EXISTS edit_flags (
+    doc_id           INTEGER PRIMARY KEY,
+    visibility       TEXT,      -- 'public' | 'private' | NULL = no override
+    needs_formatting INTEGER,   -- 0 | 1 | NULL = no override
+    updated_at       TEXT NOT NULL
+);
+```
+
+Both columns are nullable, and NULL means "no override" — the same convention
+`edits.needs_formatting` already uses. A flag write touches only this table, so it is
+O(1) regardless of body size and independent of whether the document has ever been
+edited.
+
+`needs_formatting` now has two possible overrides (`edits` and `edit_flags`). Precedence
+is **`edit_flags` wins**, because it is the newer and more specific write path, and
+because after this change the editor no longer writes the field at all. Existing
+`edits.needs_formatting` values remain readable as a lower-precedence fallback rather
+than being migrated.
+
 ## API
 
 **One new endpoint:** `PUT /documents/{id}/flags`, body `{ visibility?, needs_formatting? }`.
