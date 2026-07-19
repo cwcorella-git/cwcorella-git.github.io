@@ -1,5 +1,6 @@
 import { env } from '$env/dynamic/public';
 import { adminState } from '$lib/admin/state.svelte';
+import { toast } from '$lib/admin/toast.svelte';
 import { createLibraryClient, AuthError, OfflineError, ApiError } from './api';
 import {
 	defaultControls,
@@ -252,6 +253,7 @@ export const libraryState = {
 	async openDocByIndex(index: number) {
 		const clamped = clampIndex(index, _total);
 		if (clamped === null) return;
+		_openDocStatus = 'loading';
 		_openIndex = clamped;
 		let id = _rowCache.get(clamped)?.id;
 		if (id === undefined) {
@@ -299,15 +301,19 @@ export const libraryState = {
 		// Optimistic: update the open doc + its cached row (no requery -> no yank).
 		_openDoc = { ...doc, decision: nextVal };
 		if (idx !== null) {
+			// Same id guard the rollback uses: _openIndex can already point at the
+			// NEXT row while the previous doc is still mounted (openDocByIndex sets
+			// the index synchronously), so an unguarded write would stamp this
+			// decision onto a different document's row.
 			const cached = _rowCache.get(idx);
-			if (cached) _rowCache.set(idx, { ...cached, decision: nextVal });
+			if (cached && cached.id === doc.id) _rowCache.set(idx, { ...cached, decision: nextVal });
 			_version++;
 		}
 
 		try {
 			await client.setCuration(doc.id, target);
 			await this.loadCurationStats();
-		} catch (e) {
+		} catch {
 			// Roll back only if the same doc is still open (user may have navigated).
 			if (_openDoc && _openDoc.id === doc.id) _openDoc = { ..._openDoc, decision: prevVal };
 			if (idx !== null) {
@@ -315,7 +321,10 @@ export const libraryState = {
 				if (c2 && c2.id === doc.id) _rowCache.set(idx, { ...c2, decision: prevVal });
 				_version++;
 			}
-			_mapError(e);
+			// Deliberately NOT _mapError: that sets the page-level _status, and the
+			// controls are gated behind status === 'ready', so one failed write would
+			// unmount the entire UI mid-triage. Same failure class as saveEdit (2889d58).
+			toast.error('could not save decision');
 		}
 	},
 
