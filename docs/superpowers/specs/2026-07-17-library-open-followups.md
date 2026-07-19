@@ -130,3 +130,58 @@ gitignored scratch.
    `showVersions` flips false but `activeTab` stays `'versions'`, leaving a stale/empty
    Versions view with no tab selected. Narrow-viewport only, no crash. Fix: reset
    `activeTab` to `'info'` when `showVersions` becomes false.
+
+---
+
+## Keyboard-triage follow-ups (2026-07-18, non-blocking)
+
+Surfaced by task/whole-branch reviews during the reader keyboard-triage feature
+(merged `78b5b4b`). All Minor; recorded here because `.superpowers/sdd` is
+gitignored scratch.
+
+1. **`isTextTarget`'s `SELECT` branch is untested**, as is the fall-through to `null`
+   for digit/function keys (`src/lib/library/keyLogic.ts`). Both are obviously correct
+   by inspection; noted only so the gap is known.
+
+2. **The auto-repeat gate depends on statement ordering.** In `resolveKey`, "navigation
+   may repeat, decisions may not" falls out of the `e.repeat` check sitting *below* the
+   arrow-key checks rather than from an explicit `action.kind === 'decide'` condition.
+   Tests pin it in both directions, so a reordering breaks a test rather than silently
+   changing behavior — but the ordering is load-bearing and commented as such.
+
+3. **An `AuthError` during curation no longer flips the page to the `auth` state.** It
+   surfaces as a generic "could not save decision" toast, so an expired token gives no
+   direct signal to re-authenticate. This is the deliberate trade for not unmounting the
+   UI mid-triage, and it matches what `saveEdit` has done since `2889d58`. The next
+   document-window fetch still calls `_mapError` and reaches `auth`, so it is a delay,
+   not a dead end. If it bites in practice, special-case `AuthError` in `setDecision` —
+   do **not** restore the blanket `_mapError` call.
+
+### Closed during this work — recorded so it is not re-reported
+
+- **A decision could be applied to the previous document while stamping the new row.**
+  `openDocByIndex` sets `_openIndex` synchronously, but `_openDoc` is not replaced until
+  `getDocument` resolves — the old document stays mounted for the whole load window
+  (stale-while-revalidate). A keypress in that window wrote the *old* doc's id against the
+  *new* index, and the optimistic `_rowCache.set` had no id guard (unlike the rollback).
+  Silent curation corruption, invisible in the UI. Fixed in two independent places
+  (`0f8b1ea`): `resolveKey` gates nav/decide on a loaded **and** idle reader, and the
+  optimistic cache write now checks `cached.id === doc.id`.
+- **The same hole on the uncached-row path.** `openDocByIndex` awaited `listDocuments`
+  while `_openDocStatus` was still `'idle'`, so the gate did not engage when stepping past
+  a window edge and an arrow press could silently skip a document. Fixed in `2589af4` by
+  entering `'loading'` before that fetch. Pre-dated the keyboard path (prev/next buttons
+  hit it too), but arrow-key triage at window edges is how it gets reached.
+- **Held decision keys fired ~30 curations/sec** and, at the last document or when
+  `_openIndex` was null, repeatedly *toggled* the same document with out-of-order tunnel
+  responses. Fixed in `0f8b1ea`.
+- **A false claim about `loadCurationStats`.** A review asserted that its position inside
+  `setDecision`'s `try` causes a successful write to roll back with a misleading toast.
+  It cannot: `loadCurationStats` swallows all its errors internally and never rejects.
+  Recorded here because the claim is plausible enough to be re-derived.
+
+### Note for whoever touches this next
+
+The gating logic lives in `src/lib/library/keyLogic.ts`, **not** in `DocReader.svelte`.
+That is deliberate: the load-window guard above is the difference between correct triage
+and silent data corruption, and in the component it had no test harness. Keep it pure.

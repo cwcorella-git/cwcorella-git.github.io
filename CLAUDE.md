@@ -140,6 +140,14 @@ design (a full list is a ~400KB response through the tunnel) — `GET /tags?q=` 
   **only** when the corpus source changes. It is guarded by `_facetsEpoch` (newest wins) and is
   **non-fatal on the refetch path** — a mid-session failure must not set `_status`, because the
   controls are gated behind `status === 'ready'` and would all unmount, leaving no way to recover.
+  The same rule binds **every per-document write**: `setDecision` and `saveEdit` toast instead of
+  calling `_mapError`. `_mapError` is for whole-page load failures only.
+- **The reader is stale-while-revalidate: `_openIndex` advances synchronously while the PREVIOUS
+  `_openDoc` stays mounted.** Anything acting on "the current document" must require the reader to
+  be loaded *and* `openDocStatus === 'idle'`, or it acts on the old document while stamping the new
+  row — silent curation corruption, no error. This is why keyboard gating lives in the pure
+  `src/lib/library/keyLogic.ts` and not in `DocReader.svelte`: in the component it had no test
+  harness, and the suite could not catch a regression. **Keep it pure.**
 
 ### Caution when verifying
 
@@ -193,7 +201,7 @@ static/.nojekyll                     — prevents GitHub Pages from running Jeky
 
 ## Current status
 
-**Done**: Admin system + settings panel (PAT/key show-hide, time capsule seal), reading list (902 books, 898 sourced), journal CRUD, homepage inline editor, doc reader, local-first write queue (10s debounce + manual sync), AES-256-GCM encryption (passphrase + raw key modes), 41 Vitest tests, 6-palette theme switcher (sky/neutral/sage time-of-day adaptive), tlock time-capsule (sealed 2026-06-11, unlocks 2095-02-13), encrypted links page (2,094 bookmarks, 10 categories), dual-deploy (Cloudflare Pages live + GitHub Pages archive mirror with encrypted zip).
+**Done**: Admin system + settings panel (PAT/key show-hide, time capsule seal), reading list (902 books, 898 sourced), journal CRUD, homepage inline editor, doc reader, local-first write queue (10s debounce + manual sync), AES-256-GCM encryption (passphrase + raw key modes), 41 Vitest tests, 6-palette theme switcher (sky/neutral/sage time-of-day adaptive), tlock time-capsule (sealed 2026-06-11, unlocks 2095-02-13), encrypted links page (2,094 bookmarks, 10 categories), dual-deploy (Cloudflare Pages live + GitHub Pages archive mirror with encrypted zip), library keyboard triage (reader-only: `←`/`→` navigate, `Delete`/`K`/`H` decide-and-advance, no UI hints — one curator).
 
 **Not done**:
 - Homepage actual content (currently placeholder)
