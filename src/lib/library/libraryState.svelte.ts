@@ -253,6 +253,7 @@ export const libraryState = {
 	async openDocByIndex(index: number) {
 		const clamped = clampIndex(index, _total);
 		if (clamped === null) return;
+		_openDocStatus = 'loading';
 		_openIndex = clamped;
 		let id = _rowCache.get(clamped)?.id;
 		if (id === undefined) {
