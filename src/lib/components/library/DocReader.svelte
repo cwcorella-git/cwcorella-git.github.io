@@ -6,6 +6,7 @@
 	import { toast } from '$lib/admin/toast.svelte';
 	import DocInfoPanel from './DocInfoPanel.svelte';
 	import DocEditor from './DocEditor.svelte';
+	import { resolveKey, isTextTarget } from '$lib/library/keyLogic';
 
 	const DECISIONS: Decision[] = ['keep', 'hide', 'delete'];
 	function decide(d: Decision) { libraryState.setDecision(d); }
@@ -15,12 +16,37 @@
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
-		if (e.key !== 'Escape') return;
-		if (libraryState.editMode) {
-			libraryState.cancelEdit();
-		} else {
-			close();
+		// svelte:window listens for the whole page, not just the overlay — without
+		// this guard, Delete/K/H would curate documents while browsing the list.
+		if (libraryState.openDoc === null) return;
+
+		const action = resolveKey(e, {
+			editMode: libraryState.editMode,
+			isTextTarget: isTextTarget(e.target)
+		});
+		if (!action) return;
+
+		if (action.kind === 'close') {
+			if (libraryState.editMode) {
+				libraryState.cancelEdit();
+			} else {
+				close();
+			}
+			return;
 		}
+
+		e.preventDefault();
+
+		if (action.kind === 'nav') {
+			if (action.dir === 'prev') void libraryState.openPrevDoc();
+			else void libraryState.openNextDoc();
+			return;
+		}
+
+		// Decide and advance. Deliberately NOT awaited: the write is optimistic, so
+		// advancing immediately is what makes one-keystroke triage feel instant.
+		void libraryState.setDecision(action.decision);
+		void libraryState.openNextDoc();
 	}
 
 	function startEditing() {
