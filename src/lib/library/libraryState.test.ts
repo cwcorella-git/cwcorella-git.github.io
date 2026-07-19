@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const setCuration = vi.fn();
+const setFlags = vi.fn();
 const getDocument = vi.fn();
 const getCurationStats = vi.fn();
 const listDocuments = vi.fn();
@@ -22,6 +23,7 @@ vi.mock('./api', async () => {
 		// unrelated TypeError rather than the assertion the test is actually making.
 		createLibraryClient: () => ({
 			setCuration,
+			setFlags,
 			getDocument,
 			getCurationStats,
 			listDocuments,
@@ -142,5 +144,49 @@ describe('setDecision row-cache writes (open index known)', () => {
 		expect(state.rowAt(1)?.decision).toBe(null);
 		expect(state.rowAt(0)?.decision).toBe(null);
 		release?.(docB);
+	});
+});
+
+describe('flag toggles', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		getDocument.mockResolvedValue({ ...doc, visibility: 'private', needs_formatting: false });
+		getCurationStats.mockResolvedValue(null);
+	});
+
+	it('optimistically flips visibility', async () => {
+		const { libraryState } = await import('./libraryState.svelte');
+		await libraryState.openDocById(1);
+		setFlags.mockResolvedValue({ ...doc, visibility: 'public' });
+		await libraryState.toggleVisibility();
+		expect(setFlags).toHaveBeenCalledWith(1, { visibility: 'public' });
+		expect(libraryState.openDoc?.visibility).toBe('public');
+	});
+
+	it('rolls back and toasts when the write fails', async () => {
+		const { libraryState } = await import('./libraryState.svelte');
+		await libraryState.openDocById(1);
+		setFlags.mockRejectedValue(new Error('nope'));
+		await libraryState.toggleVisibility();
+		expect(libraryState.openDoc?.visibility).toBe('private');
+		expect(toastError).toHaveBeenCalled();
+	});
+
+	it('does not put the page into an error state when the write fails', async () => {
+		const { libraryState } = await import('./libraryState.svelte');
+		await libraryState.openDocById(1);
+		const statusBefore = libraryState.status;
+		setFlags.mockRejectedValue(new Error('nope'));
+		await libraryState.toggleVisibility();
+		expect(libraryState.status).toBe(statusBefore);
+		expect(libraryState.status).not.toBe('error');
+	});
+
+	it('flips needs_formatting', async () => {
+		const { libraryState } = await import('./libraryState.svelte');
+		await libraryState.openDocById(1);
+		setFlags.mockResolvedValue({ ...doc, needs_formatting: true });
+		await libraryState.toggleNeedsFormatting();
+		expect(setFlags).toHaveBeenCalledWith(1, { needs_formatting: 1 });
 	});
 });
