@@ -119,8 +119,14 @@ deployed page keyed a Svelte 5 `{#each}` on name, which is a hard runtime error.
 | marxist | 12,576 | 8 |
 | user | 2,521 | **0** |
 
-100,417 total. `visibility`: private 97,896 / public 2,521 — **`public` is exactly the `user`
-count**, so visibility is nearly a restatement of source. `needs_formatting`: 317 (0.3%).
+100,417 total. `needs_formatting`: 317 (0.3%).
+
+`visibility` read private 97,896 / public 2,521 at that measurement — **`public` was
+exactly the `user` count.** Do NOT conclude from this that visibility restates source
+(CLAUDE.md said so until 2026-07-18; it was wrong). That reading was an artifact of two
+separate defects: VG shipped all-public so `bootstrap.py` had never run, and `sources.py`
+hard-coded `visibility="private"` for anarchist/marxist/youtube regardless of their real
+`is_public`. Both are fixed. Visibility is now an independent, editable axis.
 33 languages, but `en` / `en-US` / `en-GB` are **separate buckets**. 65,780 undated (65%);
 youtube is entirely undated. Tags: ~12k distinct, and `/facets` caps its list at **200** by
 design (a full list is a ~400KB response through the tunnel) — `GET /tags?q=` serves the tail.
@@ -142,6 +148,15 @@ design (a full list is a ~400KB response through the tunnel) — `GET /tags?q=` 
   controls are gated behind `status === 'ready'` and would all unmount, leaving no way to recover.
   The same rule binds **every per-document write**: `setDecision` and `saveEdit` toast instead of
   calling `_mapError`. `_mapError` is for whole-page load failures only.
+- **Publication requires BOTH marks: `is_public = (decision == 'keep') AND (visibility == 'public')`.**
+  `keep` puts a document on VG; `visibility` decides public vs admin-only there. A document with
+  no curation row is never published, whatever its visibility — publishing uncurated material
+  exposes private documents, while failing to publish a curated one is a missing click. Never
+  weaken this to visibility alone; `test_undecided_and_public_is_NOT_published` exists to stop it.
+- **Effective visibility is overlay-merged** (`edit_flags.visibility` over `library.db`), and it is
+  resolved in three places — the detail read, the list read, and `plan_publish`. They must agree.
+  Note filters and facets do **not** see it yet, so marks are not filterable; verify a marking
+  session with `publish.py --dry-run`. See followups doc item 1.
 - **The reader is stale-while-revalidate: `_openIndex` advances synchronously while the PREVIOUS
   `_openDoc` stays mounted.** Anything acting on "the current document" must require the reader to
   be loaded *and* `openDocStatus === 'idle'`, or it acts on the old document while stamping the new
@@ -201,7 +216,7 @@ static/.nojekyll                     — prevents GitHub Pages from running Jeky
 
 ## Current status
 
-**Done**: Admin system + settings panel (PAT/key show-hide, time capsule seal), reading list (902 books, 898 sourced), journal CRUD, homepage inline editor, doc reader, local-first write queue (10s debounce + manual sync), AES-256-GCM encryption (passphrase + raw key modes), 41 Vitest tests, 6-palette theme switcher (sky/neutral/sage time-of-day adaptive), tlock time-capsule (sealed 2026-06-11, unlocks 2095-02-13), encrypted links page (2,094 bookmarks, 10 categories), dual-deploy (Cloudflare Pages live + GitHub Pages archive mirror with encrypted zip), library keyboard triage (reader-only: `←`/`→` navigate, `Delete`/`K`/`H` decide-and-advance, no UI hints — one curator).
+**Done**: Admin system + settings panel (PAT/key show-hide, time capsule seal), reading list (902 books, 898 sourced), journal CRUD, homepage inline editor, doc reader, local-first write queue (10s debounce + manual sync), AES-256-GCM encryption (passphrase + raw key modes), 41 Vitest tests, 6-palette theme switcher (sky/neutral/sage time-of-day adaptive), tlock time-capsule (sealed 2026-06-11, unlocks 2095-02-13), encrypted links page (2,094 bookmarks, 10 categories), dual-deploy (Cloudflare Pages live + GitHub Pages archive mirror with encrypted zip), library visibility axis (editable public/private independent of keep/hide/delete; P/F mark keys), library keyboard triage (reader-only: `←`/`→` navigate, `Delete`/`K`/`H` decide-and-advance, no UI hints — one curator).
 
 **Not done**:
 - Homepage actual content (currently placeholder)
