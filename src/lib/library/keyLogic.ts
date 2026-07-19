@@ -7,6 +7,7 @@ import type { Decision } from './types';
 export type TriageAction =
 	| { kind: 'nav'; dir: 'prev' | 'next' }
 	| { kind: 'decide'; decision: Decision }
+	| { kind: 'mark'; flag: 'visibility' | 'needs_formatting' }
 	| { kind: 'close' };
 
 /** Structural subset of KeyboardEvent, so the mapping is testable without a DOM. */
@@ -35,6 +36,11 @@ const DECISION_KEYS: Record<string, Decision> = {
 	delete: 'delete',
 	k: 'keep',
 	h: 'hide'
+};
+
+const MARK_KEYS: Record<string, 'visibility' | 'needs_formatting'> = {
+	p: 'visibility',
+	f: 'needs_formatting'
 };
 
 /**
@@ -86,6 +92,9 @@ export function resolveKey(e: KeyEventLike, ctx: KeyContext): TriageAction | nul
 
 	const decision = DECISION_KEYS[e.key.toLowerCase()];
 	if (decision) return { kind: 'decide', decision };
+
+	const flag = MARK_KEYS[e.key.toLowerCase()];
+	if (flag) return { kind: 'mark', flag };
 
 	return null;
 }

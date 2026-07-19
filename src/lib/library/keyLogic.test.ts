@@ -163,6 +163,32 @@ describe('resolveKey — auto-repeat', () => {
 	});
 });
 
+describe('resolveKey — marks', () => {
+	it('maps p and P to the visibility mark', () => {
+		expect(resolveKey({ key: 'p' }, ctx())).toEqual({ kind: 'mark', flag: 'visibility' });
+		expect(resolveKey({ key: 'P' }, ctx())).toEqual({ kind: 'mark', flag: 'visibility' });
+	});
+	it('maps f and F to the needs-formatting mark', () => {
+		expect(resolveKey({ key: 'f' }, ctx())).toEqual({ kind: 'mark', flag: 'needs_formatting' });
+		expect(resolveKey({ key: 'F' }, ctx())).toEqual({ kind: 'mark', flag: 'needs_formatting' });
+	});
+	it('ignores auto-repeat for marks', () => {
+		expect(resolveKey({ key: 'p', repeat: true }, ctx())).toBeNull();
+		expect(resolveKey({ key: 'f', repeat: true }, ctx())).toBeNull();
+	});
+	it('is inert while editing or in a text field', () => {
+		expect(resolveKey({ key: 'p' }, ctx({ editMode: true }))).toBeNull();
+		expect(resolveKey({ key: 'f' }, ctx({ isTextTarget: true }))).toBeNull();
+	});
+	it('is inert during the load window and the error state', () => {
+		expect(resolveKey({ key: 'p' }, ctx({ status: 'loading' }))).toBeNull();
+		expect(resolveKey({ key: 'f' }, ctx({ status: 'error' }))).toBeNull();
+	});
+	it('passes modifier-bearing marks through', () => {
+		expect(resolveKey({ key: 'p', ctrlKey: true }, ctx())).toBeNull();
+	});
+});
+
 describe('isTextTarget', () => {
 	it('detects inputs and textareas', () => {
 		expect(isTextTarget({ tagName: 'INPUT' })).toBe(true);

@@ -43,6 +43,14 @@
 			return;
 		}
 
+		if (action.kind === 'mark') {
+			// Deliberately no advance: marking happens while reading, often alongside
+			// a decision, so advancing here would fight the user.
+			if (action.flag === 'visibility') void libraryState.toggleVisibility();
+			else void libraryState.toggleNeedsFormatting();
+			return;
+		}
+
 		// Decide and advance. Deliberately NOT awaited: the write is optimistic, so
 		// advancing immediately is what makes one-keystroke triage feel instant.
 		void libraryState.setDecision(action.decision);
