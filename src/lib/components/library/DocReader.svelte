@@ -18,7 +18,11 @@
 	function handleKeydown(e: KeyboardEvent) {
 		// svelte:window listens for the whole page, not just the overlay — without
 		// this guard, Delete/K/H would curate documents while browsing the list.
-		if (libraryState.openDoc === null) return;
+		// The overlay also renders during the loading window, when openDoc is still
+		// null, so Escape must stay live there.
+		const overlayOpen =
+			libraryState.openDoc !== null || libraryState.openDocStatus === 'loading';
+		if (!overlayOpen) return;
 
 		const action = resolveKey(e, {
 			editMode: libraryState.editMode,
@@ -34,6 +38,10 @@
 			}
 			return;
 		}
+
+		// Nav and decisions need a loaded document: acting on a null doc would no-op
+		// the write but still advance, silently skipping the document.
+		if (libraryState.openDoc === null) return;
 
 		e.preventDefault();
 
