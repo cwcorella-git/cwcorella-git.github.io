@@ -39,9 +39,19 @@
 			return;
 		}
 
-		// Nav and decisions need a loaded document: acting on a null doc would no-op
-		// the write but still advance, silently skipping the document.
-		if (libraryState.openDoc === null) return;
+		// Nav and decisions need a SETTLED document. openDocByIndex sets the new
+		// index synchronously but leaves the previous doc mounted until getDocument
+		// resolves (stale-while-revalidate), and the error state leaves it mounted
+		// too. Acting in either window would write the OLD doc's id against the NEW
+		// index — stamping a decision onto a row it doesn't belong to, silently.
+		// Escape is unaffected: the close branch returned above.
+		if (libraryState.openDoc === null || libraryState.openDocStatus !== 'idle') return;
+
+		// Auto-repeat (~30/s while held) would fire a decision AND a fetch per tick:
+		// dozens of unintended curations, and at the last row (or an id-opened
+		// reader) advance no-ops so the same doc gets toggled over and over.
+		// Navigation may repeat — holding an arrow to scan is legitimate.
+		if (action.kind === 'decide' && e.repeat) return;
 
 		e.preventDefault();
 

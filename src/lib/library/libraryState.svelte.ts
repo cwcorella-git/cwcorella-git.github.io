@@ -300,15 +300,19 @@ export const libraryState = {
 		// Optimistic: update the open doc + its cached row (no requery -> no yank).
 		_openDoc = { ...doc, decision: nextVal };
 		if (idx !== null) {
+			// Same id guard the rollback uses: _openIndex can already point at the
+			// NEXT row while the previous doc is still mounted (openDocByIndex sets
+			// the index synchronously), so an unguarded write would stamp this
+			// decision onto a different document's row.
 			const cached = _rowCache.get(idx);
-			if (cached) _rowCache.set(idx, { ...cached, decision: nextVal });
+			if (cached && cached.id === doc.id) _rowCache.set(idx, { ...cached, decision: nextVal });
 			_version++;
 		}
 
 		try {
 			await client.setCuration(doc.id, target);
 			await this.loadCurationStats();
-		} catch (e) {
+		} catch {
 			// Roll back only if the same doc is still open (user may have navigated).
 			if (_openDoc && _openDoc.id === doc.id) _openDoc = { ..._openDoc, decision: prevVal };
 			if (idx !== null) {
