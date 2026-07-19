@@ -33,22 +33,38 @@ as a reason to trim the axis.
 
 ## The model
 
-Two axes, explicitly independent:
+Two axes, each answering a different question:
 
 | Axis | Values | Question it answers | Home |
 |---|---|---|---|
-| `decision` | keep / hide / delete / undecided | Do I retain this? | `curation.db` |
-| `visibility` | public / private | Can the world see it? | `library.db` + `edits.db` overlay |
+| `decision` | keep / hide / delete / undecided | Does this go on the site at all? | `curation.db` |
+| `visibility` | public / private | Once there, can the world see it? | `library.db` + `edits.db` overlay |
 
-Resulting VG behavior:
+**They are conjunctive, not independent. The publication rule is:**
 
-- **keep + public** → publicly visible on VG.
-- **keep + private** → present on VG with `is_public=false`: admin-only, reachable
-  through the existing tab function. This is the case the old model could not express.
-- **delete** → `purge.py` removes it entirely. Unchanged.
+```
+is_public = (decision == 'keep') AND (visibility == 'public')
+```
 
-`hide` remains a curation decision meaning "I do not want this in my working set." It no
-longer implies anything about publication.
+`keep` is what puts a document on the site; `visibility` then decides whether it is
+publicly visible there or admin-only. Full behavior:
+
+| decision | visibility | VG result |
+|---|---|---|
+| keep | public | publicly visible |
+| keep | private | present, `is_public=false` — admin-only via the tab function |
+| undecided | either | not published (`is_public=false`) |
+| hide | either | not published (`is_public=false`) |
+| delete | — | `purge.py` removes it entirely. Unchanged. |
+
+**Why `keep` is required and not merely advisory:** the failure directions are asymmetric.
+Publishing a document that was never curated exposes private material; failing to publish
+a curated one is a missing click. So publication demands an affirmative `keep` — an
+untouched document is never public, whatever its visibility flag says.
+
+`hide` therefore does not need to "force" private as an override. It simply is not
+`keep`, so it is not published. The two axes stay conceptually clean while the
+conjunction provides the safety.
 
 ### Where the edit lives
 
@@ -120,27 +136,41 @@ the next ingest.
 snapshot to `/data/library-purged/bootstrap-snapshot.jsonl.gz`. No new code.
 
 **`publish.py`:** `publish_decisions()` currently groups by `keep`/`hide` via
-`curation_join.grouped_source_ids`. It changes to group by effective **visibility**
-(`public`→`is_public=true`, `private`→`false`). This is the semantic correction; it is
-small precisely because the pipeline was built but never initialized.
+`curation_join.grouped_source_ids`, setting `keep`→public and `hide`→private. It changes
+to apply the conjunctive rule: `is_public=true` for documents that are **both** `keep`
+**and** effective-visibility `public`; `is_public=false` for everything else it touches.
+It must resolve visibility through the overlay, not read `library.db` directly.
+
+The safety property to preserve: a document with no curation row is never published,
+regardless of its visibility. Publication requires an affirmative `keep`.
+
+This is small precisely because the pipeline was built but never initialized.
 
 ### Order of operations — corrected
 
 The previously recorded order was *curate keeps first, then bootstrap→publish
-back-to-back*, so VG never visibly empties. **That is now wrong.** Publish is driven by
-visibility, not by `keep`, so curating keeps no longer feeds it.
+back-to-back*, so VG never visibly empties. That ordering still holds, but its
+**reason changes and it is no longer sufficient**: `keep` is now necessary but not
+sufficient for publication, so curating keeps alone leaves the public library empty.
 
-The order is: **mark public docs first, then bootstrap→publish back-to-back.**
+The order is: **curate keeps AND mark public docs first — both — then
+bootstrap→publish back-to-back.** A document needs both marks to survive the flip.
 
 ### Consequence, stated plainly
 
-This migration makes the entire public library private until documents are marked back.
-All 2,521 currently-public user docs go dark. Running bootstrap→publish with zero docs
-marked public takes VG's public library to zero and leaves it there.
+**Full blackout, chosen deliberately** (2026-07-18): no seeding. Every document starts
+private and comes back one mark at a time. All 2,521 currently-public user docs go dark.
 
-This is intended, and `bootstrap.py --restore --confirm` makes it reversible from the
-snapshot. But it is a deliberate blackout with manual work to recover from, not a
-background change.
+And under the conjunctive rule the recovery is **two marks per document**, not one — a
+doc must be both `keep` and `public`. Current curation state is 15 delete / 0 keep /
+0 hide, so at the moment of the flip **zero documents qualify for publication**. Running
+bootstrap→publish today takes VG's public library to zero and leaves it there until that
+work is done.
+
+This is intended. `bootstrap.py --restore --confirm` makes it reversible from the
+snapshot. But it is a deliberate blackout with real manual work to recover from, not a
+background change — and it is the reason the migration and the VG flip are manual,
+user-run steps rather than part of any deploy.
 
 ## Testing
 
@@ -150,8 +180,10 @@ background change.
 - Cuts **no** version row and performs **no** `documents_fts` write — assert both
   directly, since these are the invariants the endpoint exists to preserve.
 - Effective visibility resolves overlay-over-library, and a cleared overlay falls back.
-- `publish_decisions` groups by visibility, not decision: a `keep`+private doc must end
-  with `is_public=false`, and an undecided+public doc with `is_public=true`.
+- `publish_decisions` applies the conjunctive rule. Assert every cell of the table in
+  "The model", and assert the safety property explicitly: **an undecided+public document
+  must end with `is_public=false`.** That is the case that exposes uncurated material if
+  the rule is ever weakened to visibility alone.
 
 **Frontend** (Vitest):
 - `resolveKey` maps `P` and `F` to their toggles, marks them non-advancing, and applies
