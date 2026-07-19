@@ -16,15 +16,11 @@
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
-		// svelte:window listens for the whole page, not just the overlay — without
-		// this guard, Delete/K/H would curate documents while browsing the list.
-		// The overlay also renders during the loading window, when openDoc is still
-		// null, so Escape must stay live there.
-		const overlayOpen =
-			libraryState.openDoc !== null || libraryState.openDocStatus === 'loading';
-		if (!overlayOpen) return;
-
+		// All gating — overlay open, document settled, auto-repeat — lives in
+		// resolveKey, which is pure and unit-tested. A null means "not ours".
 		const action = resolveKey(e, {
+			hasDoc: libraryState.openDoc !== null,
+			status: libraryState.openDocStatus,
 			editMode: libraryState.editMode,
 			isTextTarget: isTextTarget(e.target)
 		});
@@ -38,20 +34,6 @@
 			}
 			return;
 		}
-
-		// Nav and decisions need a SETTLED document. openDocByIndex sets the new
-		// index synchronously but leaves the previous doc mounted until getDocument
-		// resolves (stale-while-revalidate), and the error state leaves it mounted
-		// too. Acting in either window would write the OLD doc's id against the NEW
-		// index — stamping a decision onto a row it doesn't belong to, silently.
-		// Escape is unaffected: the close branch returned above.
-		if (libraryState.openDoc === null || libraryState.openDocStatus !== 'idle') return;
-
-		// Auto-repeat (~30/s while held) would fire a decision AND a fetch per tick:
-		// dozens of unintended curations, and at the last row (or an id-opened
-		// reader) advance no-ops so the same doc gets toggled over and over.
-		// Navigation may repeat — holding an arrow to scan is legitimate.
-		if (action.kind === 'decide' && e.repeat) return;
 
 		e.preventDefault();
 

@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { resolveKey, isTextTarget } from './keyLogic';
+import type { KeyContext } from './keyLogic';
 
-const ctx = (over: Partial<{ editMode: boolean; isTextTarget: boolean }> = {}) => ({
+const ctx = (over: Partial<KeyContext> = {}): KeyContext => ({
+	hasDoc: true,
+	status: 'idle',
 	editMode: false,
 	isTextTarget: false,
 	...over
@@ -72,6 +75,91 @@ describe('resolveKey — Escape survives the guards', () => {
 	});
 	it('is inert with a modifier', () => {
 		expect(resolveKey({ key: 'Escape', ctrlKey: true }, ctx())).toBeNull();
+	});
+});
+
+const NAV_KEYS = ['ArrowLeft', 'ArrowRight'];
+const DECISION_KEYS = ['Delete', 'k', 'h'];
+
+describe('resolveKey — no overlay open', () => {
+	// The svelte:window listener is live for the whole library page, so when the
+	// reader is closed NOTHING may resolve — not even Escape, which would
+	// otherwise be a stray close against no overlay.
+	const closed = ctx({ hasDoc: false, status: 'idle' });
+	it('resolves nothing at all, including Escape', () => {
+		for (const key of [...NAV_KEYS, ...DECISION_KEYS, 'Escape']) {
+			expect(resolveKey({ key }, closed)).toBeNull();
+		}
+	});
+});
+
+describe('resolveKey — the loading window', () => {
+	// openDocByIndex stamps the new index synchronously but leaves the PREVIOUS
+	// document mounted until the fetch resolves. Acting here writes the old doc's
+	// id against the new index — the Critical bug this gating exists to prevent.
+	const loadingStale = ctx({ hasDoc: true, status: 'loading' });
+	const loadingEmpty = ctx({ hasDoc: false, status: 'loading' });
+
+	it('blocks navigation while a document is loading', () => {
+		for (const key of NAV_KEYS) {
+			expect(resolveKey({ key }, loadingStale)).toBeNull();
+			expect(resolveKey({ key }, loadingEmpty)).toBeNull();
+		}
+	});
+	it('blocks decisions while a document is loading', () => {
+		for (const key of DECISION_KEYS) {
+			expect(resolveKey({ key }, loadingStale)).toBeNull();
+			expect(resolveKey({ key }, loadingEmpty)).toBeNull();
+		}
+	});
+	it('still closes on Escape — the overlay is visible during loading', () => {
+		expect(resolveKey({ key: 'Escape' }, loadingStale)).toEqual({ kind: 'close' });
+		expect(resolveKey({ key: 'Escape' }, loadingEmpty)).toEqual({ kind: 'close' });
+	});
+});
+
+describe('resolveKey — the error state', () => {
+	// The error state also leaves the previous document mounted, so it is exactly
+	// as unsafe to act in as the loading window.
+	const errored = ctx({ hasDoc: true, status: 'error' });
+
+	it('blocks navigation', () => {
+		for (const key of NAV_KEYS) expect(resolveKey({ key }, errored)).toBeNull();
+	});
+	it('blocks decisions', () => {
+		for (const key of DECISION_KEYS) expect(resolveKey({ key }, errored)).toBeNull();
+	});
+	it('still closes on Escape', () => {
+		expect(resolveKey({ key: 'Escape' }, errored)).toEqual({ kind: 'close' });
+	});
+});
+
+describe('resolveKey — auto-repeat', () => {
+	// Held keys fire ~30/s. A repeated decision would curate dozens of documents;
+	// a repeated arrow is just scanning, which is idempotent and intended.
+	it('ignores repeated decision keys', () => {
+		for (const key of DECISION_KEYS) {
+			expect(resolveKey({ key, repeat: true }, ctx())).toBeNull();
+		}
+	});
+	it('allows repeated navigation keys', () => {
+		expect(resolveKey({ key: 'ArrowRight', repeat: true }, ctx())).toEqual({
+			kind: 'nav',
+			dir: 'next'
+		});
+		expect(resolveKey({ key: 'ArrowLeft', repeat: true }, ctx())).toEqual({
+			kind: 'nav',
+			dir: 'prev'
+		});
+	});
+	it('allows a repeated Escape', () => {
+		expect(resolveKey({ key: 'Escape', repeat: true }, ctx())).toEqual({ kind: 'close' });
+	});
+	it('still resolves decision keys on the first, non-repeat press', () => {
+		expect(resolveKey({ key: 'k', repeat: false }, ctx())).toEqual({
+			kind: 'decide',
+			decision: 'keep'
+		});
 	});
 });
 
