@@ -126,6 +126,11 @@ export const writeQueue = {
 				if (!restored.has(k)) restored.set(k, v);
 			}
 			_pending = restored;
+			// Re-save drafts we cleared optimistically before the commit attempt —
+			// otherwise a reload after a failed flush loses the queued write silently.
+			for (const [domain, payload] of restored) {
+				draftStore.save(domain, payload);
+			}
 			_syncStatus = 'error';
 			_syncError = e instanceof Error ? e.message : 'Sync failed.';
 		} finally {

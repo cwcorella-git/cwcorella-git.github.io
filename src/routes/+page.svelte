@@ -97,7 +97,7 @@
 		margin: 0;
 		color: var(--clr-text);
 	}
-	:global(.prose strong) { color: var(--clr-text); font-weight: normal; letter-spacing: 0.01em; }
+	:global(.prose strong) { font-weight: normal; letter-spacing: 0.04em; }
 	:global(.prose em) { font-style: italic; }
 
 	.edit-btn {
