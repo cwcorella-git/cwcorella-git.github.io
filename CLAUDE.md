@@ -83,20 +83,10 @@ The largest thing on the site and the only one with a backend. **It spans two re
 | Frontend | this repo — `src/routes/library/`, `src/lib/library/`, `src/lib/components/library/` | The admin-only page |
 | Backend | **`~/Projects/library-api`** (own repo: `cwcorella-git/library-api`) | FastAPI + SQLite/FTS5 over ~100k docs |
 
-**Deploying the backend is not `git push`.** The service runs from `/data/library-api/` on the
-workstation, not from the laptop tree. Two gotchas, both hit in practice:
-
-- The LAN alias times out when off the home network. Go through the Cloudflare tunnel:
-  `ssh ssh.veritablegames.com`.
-- **The workstation has no GitHub key of its own** — `git pull` there fails with
-  "Could not read from remote repository" unless you forward your agent: `ssh -A`.
-
-```bash
-ssh -A ssh.veritablegames.com 'cd /data/library-api && git pull origin main && sudo systemctl restart library-api'
-```
-
-The token lives in `/data/library-api/library-api.env` (root-readable only — `sudo` to read it),
-and the service listens on `127.0.0.1:8087` behind nginx.
+**Deploying the backend is not `git push`** — the service runs from `/data/library-api/`
+on the workstation and must be pulled + restarted there over `ssh -A` (the workstation has
+no GitHub key of its own). Full deploy command, env/token location, and API traps:
+**`../library-api/CLAUDE.md`**.
 
 **Its CORS origin is the production domain, so `localhost:5173` cannot reach it.** Local dev and
 Playwright verification must mock `/facets`, `/documents`, `/curation/stats`, `/tags`. Mocks
@@ -110,26 +100,11 @@ It happened — source-attributed facet buckets introduced duplicate collection 
 deployed page keyed a Svelte 5 `{#each}` on name, which is a hard runtime error.
 **Deploy the frontend guard first, then the API.**
 
-### The corpus, as measured (2026-07-17 — not guesses)
+### The corpus, as measured
 
-| source | docs | categories |
-|---|---:|---:|
-| youtube | 60,726 | 1 (named `transcript`) |
-| anarchist | 24,594 | 26 |
-| marxist | 12,576 | 8 |
-| user | 2,521 | **0** |
-
-100,417 total. `needs_formatting`: 317 (0.3%).
-
-`visibility` read private 97,896 / public 2,521 at that measurement — **`public` was
-exactly the `user` count.** Do NOT conclude from this that visibility restates source
-(CLAUDE.md said so until 2026-07-18; it was wrong). That reading was an artifact of two
-separate defects: VG shipped all-public so `bootstrap.py` had never run, and `sources.py`
-hard-coded `visibility="private"` for anarchist/marxist/youtube regardless of their real
-`is_public`. Both are fixed. Visibility is now an independent, editable axis.
-33 languages, but `en` / `en-US` / `en-GB` are **separate buckets**. 65,780 undated (65%);
-youtube is entirely undated. Tags: ~12k distinct, and `/facets` caps its list at **200** by
-design (a full list is a ~400KB response through the tunnel) — `GET /tags?q=` serves the tail.
+Census numbers (100,417 docs; per-source counts; the visibility-history correction) live in
+`docs/STATE.md` — **measure, don't guess**; do not re-derive "visibility restates source",
+that reading was wrong and its correction is recorded there.
 
 ### Invariants — break these and it fails silently
 
@@ -181,50 +156,13 @@ notes before trusting its body**; several were written before anything had queri
 
 ## Key files
 
-```
-src/lib/types.ts                     — Book, BookDoc, BookLink, JournalMeta, LinkMeta interfaces
-src/lib/books.json                   — 902 books, BookLink[] schema
-src/lib/content/home.json            — { "content": "..." } single markdown field
-src/lib/admin/github.ts              — getFile, putFile, commitFiles (force:true PATCH)
-src/lib/admin/state.svelte.ts        — adminState, bookFormState, booksState, writeQueue, journalCache, linksState
-src/lib/admin/crypto.ts              — AES-256-GCM encrypt/decrypt, importRawKey, passphrase + rawkey paths
-src/lib/admin/slug.ts                — word-based slug generation via compromise NLP (browser, dynamic import)
-src/lib/admin/markdown.ts            — marked renderer + extractToc
-src/lib/admin/tlock.ts               — drand tlock encrypt/decrypt, sealContent, sealContentKey
-src/lib/admin/archive.svelte.ts      — archiveState (2095 unlock flow)
-src/lib/admin/toast.svelte.ts        — toast queue (error/success)
-src/lib/admin/theme.svelte.ts        — PALETTE definitions + themeState (6 palettes)
-src/lib/admin/draft.ts               — draftStore (localStorage draft persistence)
-src/lib/components/Sky.svelte        — CSS var time-of-day lighting (no canvas)
-src/lib/components/AdminDrawer.svelte
-src/lib/components/AdminToolbar.svelte
-src/lib/components/SettingsPanel.svelte — mid-session PAT/key/mode update + logout
-src/lib/components/ThemePanel.svelte    — 6-palette picker dropdown
-src/lib/components/BookForm.svelte
-src/lib/components/DocReader.svelte
-src/lib/components/HomeEditor.svelte
-src/lib/components/Toasts.svelte
-src/lib/components/YearPicker.svelte
-scripts/enrich-links.mjs             — Open Library enrichment script
-scripts/sort-links.mjs               — CLI for batch link sort/inspect/move/delete/retag
-scripts/encrypt-journals.mjs         — local tool: encrypt writing dir → static/docs/private/journals/
-scripts/build-archive.mjs            — generates archive-build/ (minimal HTML + README.txt for GitHub Pages)
-static/docs/private/content-key.tlock — tlock-sealed AES content key (unlocks 2095-02-13)
-static/.nojekyll                     — prevents GitHub Pages from running Jekyll
-.github/workflows/deploy.yml         — two parallel jobs: deploy-live (Cloudflare Pages) + deploy-archive (GitHub Pages)
-```
+See `docs/STATE.md` for the full annotated file map. Anchors: admin writes in
+`src/lib/admin/github.ts`, shared reactive state in `src/lib/admin/state.svelte.ts`,
+crypto only via `src/lib/admin/crypto.ts`.
 
 ## Current status
 
-**Done**: Admin system + settings panel (PAT/key show-hide, time capsule seal), reading list (902 books, 898 sourced), journal CRUD, homepage inline editor, doc reader, local-first write queue (10s debounce + manual sync), AES-256-GCM encryption (passphrase + raw key modes), 41 Vitest tests, 6-palette theme switcher (sky/neutral/sage time-of-day adaptive), tlock time-capsule (sealed 2026-06-11, unlocks 2095-02-13), encrypted links page (2,094 bookmarks, 10 categories), dual-deploy (Cloudflare Pages live + GitHub Pages archive mirror with encrypted zip), library visibility axis (editable public/private independent of keep/hide/delete; P/F mark keys), library keyboard triage (reader-only: `←`/`→` navigate, `Delete`/`K`/`H` decide-and-advance, no UI hints — one curator).
-
-**Not done**:
-- Homepage actual content (currently placeholder)
-- Photo gallery system
-- IPFS + DNSLink deployment
-- nsite/Nostr deployment
-- StaticCrypt password-protected sections
-- Links: ~100 domain-only titles to fetch, dead link check
+Done / not-done lists live in `docs/STATE.md`. Update them there, not here.
 
 ## Patterns and conventions
 
