@@ -59,8 +59,12 @@ time — no public page may depend on library-api at runtime.
 263 of 903 books have a body (225 exact title matches). Funnel:
 **263 matched → 178 licence-cleared → 174 unambiguous → 125 written.**
 Held: 85 on licence, 49 over the 40,000-word gate, 8 where one document was claimed by
-more than one book (two volumes of one work, plus duplicate list entries) — an ambiguous
-body is dropped, since the wrong text under a title is worse than none.
+more than one book — an ambiguous body is dropped, since the wrong text under a title is
+worse than none. One of those four collisions was a real duplicate (Holmgren's
+*Permaculture*, rows 470/472) and is merged, 903 → 902 books. The other three are
+**distinct books sharing a title** — two *Anarchism in the United States*, two *Anarchism:
+A Very Short Introduction*, and Bookchin's two *Third Revolution* volumes — so their
+documents stay excluded. Title alone cannot separate them.
 
 The 40k gate is a weak proxy for licence that fails safe. It is not a solved problem:
 the held 49 include both plainly public-domain classics and recent commercial titles, and
@@ -113,6 +117,8 @@ static/.nojekyll                     — prevents GitHub Pages from running Jeky
 - StaticCrypt password-protected sections
 - Links: ~100 domain-only titles to fetch, dead link check
 - Library ↔ reading list: 49 book-length works held by the word gate need per-title
-  licence calls (author death dates, publisher — not word counts); 85 held on licence,
-  almost all complete in-copyright books that should stay held; 4 documents each claimed
-  by two list entries (two are genuine duplicate books.json rows worth merging)
+  licence calls (author death dates, publisher — not word counts). Deferred by decision
+  2026-09-17: the gate stands. 85 held on licence, almost all complete in-copyright books
+  that should stay held. 3 documents remain claimed by two list entries each — all
+  distinct books sharing a title, which the matcher cannot separate without an author
+  signal; the safe outcome (exclude) is what happens today.

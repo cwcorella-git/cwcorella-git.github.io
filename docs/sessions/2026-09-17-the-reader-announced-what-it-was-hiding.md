@@ -12,8 +12,8 @@ Connecting `/library` full text to `/reading`. Two repos: this one and
 | 5 | Bake 125 freely-licensed texts into the reading list | **done** — `3fe2cc6` |
 | 6 | Record invariants + funnel in CLAUDE.md / STATE.md | **done** — `a01c484`, `d337259` |
 | 7 | Per-title licence calls for the 49 gated book-length works | **proposed** — needs author death dates + publisher, not word counts |
-| 8 | Merge the duplicate `books.json` rows (2 pairs) | **proposed** — surfaced by the export guard |
-| 9 | Push the site (production deploy) | **blocked** — operator-gated, owning tab |
+| 8 | Merge the duplicate `books.json` rows | **done** — `329049a`; **one** pair, not two |
+| 9 | Push the site (production deploy) | **done** — `329049a` pushed, both deploy jobs green, live checked |
 
 ## 1. The reader announced what it was hiding
 
@@ -93,8 +93,8 @@ both claimed document 286. An ordinal check (`vol|volume|part|book|no`) does not
 catch it, because the *corpus* title carries no volume number — there is nothing
 to conflict with. The dedupe-by-document guard catches it instead: any document
 claimed by more than one book is dropped from the export. Attaching the wrong
-text to a title is worse than attaching none. It also surfaced two genuine
-duplicate rows in `books.json` (item 8).
+text to a title is worse than attaching none. It also surfaced a genuine
+duplicate row in `books.json` (item 8).
 
 ## 5. What I was told, and what I repeated, that was wrong
 
@@ -107,6 +107,12 @@ duplicate rows in `books.json` (item 8).
 - **I told the operator the `license` column was "entirely unused".** It is
   exposed through the detail endpoint. Wrong in a way that would have mattered
   if the frontend had validated responses.
+- **I wrote "2 pairs of duplicate `books.json` rows" into this document.** There
+  was one — David Holmgren's *Permaculture* entered twice as 470 and 472. The
+  other three contested groups are distinct books that share a title: *Anarchism
+  in the United States* (Madison 1945 vs Creagh/Kuhn/Cohn 2009), *Anarchism: A
+  Very Short Introduction* (Prichard vs Ward), and the two Bookchin volumes. I
+  counted collisions and called them duplicates without opening the rows.
 
 ## The funnel, as measured
 
@@ -122,15 +128,23 @@ the 79 rows, no collateral.
 
 ## Open
 
-**Status: COMMITTED, NOT DEPLOYED, and NOT SEEN.**
+**Status: DEPLOYED. Verified over HTTP, never seen on a screen.**
 
-- **Nothing was pushed.** The site deploys on push to `main`; that is
-  operator-gated. The 125 texts are not live.
-- **The asymmetry matters:** the *database* changes are live now. The licence
-  backfill and the 79-row visibility flip were applied directly to production
-  `library.db`. The *website* changes are not. Half of this session is deployed
-  and half is not.
-- **Never verified by eye.** I did not open the site in a browser at any point.
+Pushed `2e13cc6..329049a` on operator instruction. Both Actions jobs green
+(Cloudflare Pages + GitHub Pages). Checked against the live site, not the
+runner's exit code:
+
+- `/docs/public/2-a-brief-critique-of-anarcho-syndicalism.md` → 200, correct
+  front matter. The baked texts are being served.
+- The string `no source available` appears nowhere in the built bundle, and
+  `no document attached` is gone from the served page. The leak is off production.
+- One Holmgren row on the live reading list, not two.
+
+**The database changes were already live** — the licence backfill and the 79-row
+visibility flip went straight to production `library.db` before any of this. The
+two halves are now in step.
+
+- **Still never verified by eye.** I did not open the site in a browser at any point.
   The link-out empty state, the 125 baked documents rendering in `BookView`, and
   the admin-vs-visitor difference have been verified **only** by unit test, type
   check, and a clean production build. 248 frontend + 429 backend tests green,
@@ -141,12 +155,13 @@ the 79 rows, no collateral.
 - `library-api` was **not restarted**. It did not need to be — `sources.py` is
   ingest-only and the API reads `library.db` at query time — but the running
   process holds the pre-change module.
-- Items 7 and 8 above are unstarted and listed so they are visible.
+- Item 7 is unstarted by decision: the operator chose to leave the 49
+  book-length works held. The 40k gate stands and 125 texts is the answer.
 
 ## Artifacts
 
-- Frontend: `c5d1b46` `a4aa0ee` `3fe2cc6` `a01c484` (4 ahead of `origin/main`)
-- library-api: `d908fc2` `58aa851` `d337259` (3 ahead)
+- Frontend: `c5d1b46` `a4aa0ee` `3fe2cc6` `a01c484` `55be72a` `329049a` — **pushed**
+- library-api: `d908fc2` `58aa851` `d337259` (3 ahead — **not pushed**)
 - Reversal snapshot: `/data/backups/user-books-visibility-2026-09-17.jsonl.gz`
 - Provenance: `library-api/scripts/data/reading-list-user-books.ids` (79 ids)
 - Plan: `~/.claude/plans/spicy-twirling-wave.md`
