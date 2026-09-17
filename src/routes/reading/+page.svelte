@@ -2,7 +2,7 @@
 	import type { Book } from '$lib/types';
 	import allBooksStatic from '$lib/books.json';
 	import { adminState, bookFormState, booksState, writeQueue } from '$lib/admin/state.svelte';
-	import { toast } from '$lib/admin/toast.svelte';
+	import { linksFor } from '$lib/bookDocLogic';
 	import BookView from '$lib/components/BookView.svelte';
 
 	// Derive from shared booksState so BookForm updates are visible here
@@ -112,23 +112,13 @@
 
 	function closeMenu() { menu = null; }
 
-	function goodreadsUrl(book: Book) {
-		const q = encodeURIComponent(`${book.title} ${book.author}`.trim());
-		return `https://www.goodreads.com/search?q=${q}`;
-	}
-
-	function hasLinks(book: Book) {
-		return book.links && book.links.length > 0;
-	}
-
 	// ── book view ────────────────────────────────────────────────
 	let bookViewBook = $state<Book | null>(null);
 
 	function handleRowClick(book: Book) {
-		if (book.doc?.visibility === 'admin' && !adminState.active) {
-			toast.error('no source available');
-			return;
-		}
+		// Every book opens, always. Refusing to open an admin-only book told a
+		// visitor a body existed — the one thing the reader must not reveal.
+		// BookView shows the link-out instead, identically to a book with no body.
 		bookViewBook = book;
 	}
 
@@ -162,13 +152,9 @@
 {#if menu}
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div class="menu" style="top:{menu.y}px; left:{menu.x}px" role="dialog">
-		{#if hasLinks(menu.book)}
-			{#each menu.book.links! as link}
-				<a href={link.url} target="_blank" rel="noopener noreferrer">{link.name} ↗</a>
-			{/each}
-		{:else}
-			<a href={goodreadsUrl(menu.book)} target="_blank" rel="noopener noreferrer">Goodreads ↗</a>
-		{/if}
+		{#each linksFor(menu.book) as link}
+			<a href={link.url} target="_blank" rel="noopener noreferrer">{link.name} ↗</a>
+		{/each}
 	</div>
 	<div
 		class="menu-backdrop"

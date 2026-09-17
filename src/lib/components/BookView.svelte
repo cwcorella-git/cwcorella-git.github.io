@@ -4,6 +4,7 @@
 	import type { TocEntry } from '$lib/admin/markdown';
 	import type { EncryptedDoc } from '$lib/admin/crypto';
 	import { adminState, booksState, writeQueue } from '$lib/admin/state.svelte';
+	import { resolveBookDoc, linksFor } from '$lib/bookDocLogic';
 	import { renderMarkdown, extractToc } from '$lib/admin/markdown';
 	import { toast } from '$lib/admin/toast.svelte';
 	import YearPicker from '$lib/components/YearPicker.svelte';
@@ -24,25 +25,31 @@
 
 	// ── doc load ─────────────────────────────────────────────────
 	type LoadState = 'loading' | 'ready' | 'empty' | 'error';
-	let loadState = $state<LoadState>(untrack(() => book.doc ? 'loading' : 'empty'));
+	let loadState = $state<LoadState>(
+		untrack(() => (resolveBookDoc(book, adminState.active).kind === 'body' ? 'loading' : 'empty'))
+	);
 	let loadError = $state('');
+	// Shown wherever there is no readable body. Deliberately carries no hint as to
+	// WHY there isn't one — see bookDocLogic.
+	let fallbackLinks = $derived(linksFor(book));
 	let html = $state('');
 	let toc = $state<TocEntry[]>([]);
 	let docContent = $state('');   // raw markdown (edit mode + annotation gesture)
 	let contentEl = $state<HTMLElement | undefined>();
 
 	async function loadDoc() {
-		if (!book.doc) { loadState = 'empty'; return; }
-		if (book.doc.visibility === 'admin' && !adminState.active) { loadState = 'empty'; return; }
+		const view = resolveBookDoc(book, adminState.active);
+		if (view.kind === 'links') { loadState = 'empty'; return; }
+		const doc = view.doc;
 		loadState = 'loading';
 		try {
 			let md: string;
-			if (book.doc.visibility === 'public') {
-				const res = await fetch(`/docs/public/${book.doc.file}.md`);
+			if (doc.visibility === 'public') {
+				const res = await fetch(`/docs/public/${doc.file}.md`);
 				if (!res.ok) throw new Error(`HTTP ${res.status}`);
 				md = await res.text();
 			} else {
-				const res = await fetch(`/docs/private/${book.doc.file}.enc`);
+				const res = await fetch(`/docs/private/${doc.file}.enc`);
 				if (!res.ok) throw new Error(`HTTP ${res.status}`);
 				const enc: EncryptedDoc = await res.json();
 				try {
@@ -281,7 +288,13 @@
 				{:else if loadState === 'error'}
 					<div class="state-center"><p class="state-msg error">{loadError}</p></div>
 				{:else if loadState === 'empty'}
-					<div class="state-center"><p class="state-msg">no document attached</p></div>
+					<div class="state-center">
+						<nav class="state-links">
+							{#each fallbackLinks as link}
+								<a href={link.url} target="_blank" rel="noopener noreferrer">{link.name} ↗</a>
+							{/each}
+						</nav>
+					</div>
 				{:else}
 					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 					<div class="doc-content" bind:this={contentEl}>{@html html}</div>
@@ -580,6 +593,23 @@
 		opacity: 0.5;
 	}
 	.state-msg.error { color: var(--clr-danger); opacity: 1; }
+
+	.state-links {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.6rem;
+	}
+	.state-links a {
+		font-family: var(--font-ui);
+		font-size: 0.75rem;
+		letter-spacing: 0.08em;
+		color: var(--clr-text);
+		opacity: 0.5;
+		text-decoration: none;
+		transition: opacity 0.15s ease;
+	}
+	.state-links a:hover { opacity: 1; }
 
 	.spinner {
 		display: inline-block;
