@@ -139,6 +139,27 @@ that reading was wrong and its correction is recorded there.
   `src/lib/library/keyLogic.ts` and not in `DocReader.svelte`: in the component it had no test
   harness, and the suite could not catch a regression. **Keep it pure.**
 
+### Reading list ↔ library
+
+- **A withheld body and an absent body must be indistinguishable to a visitor.** Whether a
+  text is in the corpus is itself private. `resolveBookDoc` in `src/lib/bookDocLogic.ts` is
+  the one gate, and its `links` result deliberately carries no field naming the withheld
+  document — so the two cannot drift into branches that render differently. Never add a
+  "not available to you" state, and never refuse to open a book: refusing was the original
+  leak (`reading/+page.svelte` toasted 'no source available'). Pure, and tested, for the
+  same reason as `keyLogic.ts`.
+- **Full text is baked at build time, never fetched.** library-api is bearer-token auth,
+  CORS-pinned to the production domain. A public page that called it would extend the
+  `/library` exception instead of containing it. `scripts/export-library-docs.mjs` writes
+  plain files; `scripts/lib/match-books.mjs` holds the matching, shared with the report so
+  the two cannot disagree about what matched.
+- **Republication needs the document's own `license`, and a corpus-policy licence is not a
+  per-text finding.** It is least reliable for book-length works, hence the 40k-word gate.
+  Details and the funnel: `docs/STATE.md`.
+- **books.json is written minified with no trailing newline**, byte-identical to
+  `state.svelte.ts`'s `JSON.stringify(payload.books)`. Pretty-printing it makes the next
+  in-browser sync rewrite all 903 entries.
+
 ### Caution when verifying
 
 The live API can't be reached from localhost, so visual checks run against mocks — and mocks

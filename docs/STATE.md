@@ -24,6 +24,48 @@ hard-coded `visibility="private"` for anarchist/marxist/youtube regardless of th
 youtube is entirely undated. Tags: ~12k distinct, and `/facets` caps its list at **200** by
 design (a full list is a ~400KB response through the tunnel) — `GET /tags?q=` serves the tail.
 
+**Amended 2026-09-17:** visibility now reads private 97,975 / public 2,442. 79 `user`
+documents moved to private — complete in-copyright books, identified by matching the
+reading list against the corpus. Nothing had been published (that needs
+`decision == 'keep'` AND `visibility == 'public'`, and every curation row is `delete`), so
+it was a latent trap, not an exposure. Reversal snapshot:
+`/data/backups/user-books-visibility-2026-09-17.jsonl.gz`.
+
+## Licence policy (2026-09-17)
+
+`documents.license` was NULL for all 100,417 rows since cutover — wired end to end
+(schema → loader → upsert) and never supplied a value. Now backfilled per source by
+library-api's `scripts/backfill_license.py`, from `SOURCE_LICENSE` in `backend/sources.py`:
+
+| source | licence | republishable |
+|---|---|---|
+| anarchist | `anti-copyright` | yes |
+| marxist | `free-distribution` | yes |
+| user | NULL | no — scraped third-party material |
+| youtube | NULL | no — other people's transcripts |
+
+This is a **corpus-policy assertion, not a per-text verification**, and it is least
+reliable for book-length works: theanarchistlibrary hosts books by living authors on
+commercial presses that it cannot relicense. NULL means "deny until cleared", never
+"no licence needed". A licence says a text MAY be republished — publication still
+requires both curation marks.
+
+## Reading list ↔ library (2026-09-17)
+
+`scripts/match-library.mjs` reports; `scripts/export-library-docs.mjs` writes; matching
+is shared in `scripts/lib/match-books.mjs` so the two cannot disagree. Baked at build
+time — no public page may depend on library-api at runtime.
+
+263 of 903 books have a body (225 exact title matches). Funnel:
+**263 matched → 178 licence-cleared → 174 unambiguous → 125 written.**
+Held: 85 on licence, 49 over the 40,000-word gate, 8 where one document was claimed by
+more than one book (two volumes of one work, plus duplicate list entries) — an ambiguous
+body is dropped, since the wrong text under a title is worse than none.
+
+The 40k gate is a weak proxy for licence that fails safe. It is not a solved problem:
+the held 49 include both plainly public-domain classics and recent commercial titles, and
+separating them needs author death dates, not word counts.
+
 ## Key files
 
 ```
@@ -61,7 +103,7 @@ static/.nojekyll                     — prevents GitHub Pages from running Jeky
 
 ## Current status
 
-**Done**: Admin system + settings panel (PAT/key show-hide, time capsule seal), reading list (902 books, 898 sourced), journal CRUD, homepage inline editor, doc reader, local-first write queue (10s debounce + manual sync), AES-256-GCM encryption (passphrase + raw key modes), 41 Vitest tests, 6-palette theme switcher (sky/neutral/sage time-of-day adaptive), tlock time-capsule (sealed 2026-06-11, unlocks 2095-02-13), encrypted links page (2,094 bookmarks, 10 categories), dual-deploy (Cloudflare Pages live + GitHub Pages archive mirror with encrypted zip), library visibility axis (editable public/private independent of keep/hide/delete; P/F mark keys), library keyboard triage (reader-only: `←`/`→` navigate, `Delete`/`K`/`H` decide-and-advance, no UI hints — one curator).
+**Done**: Admin system + settings panel (PAT/key show-hide, time capsule seal), reading list (902 books, 898 sourced), journal CRUD, homepage inline editor, doc reader, local-first write queue (10s debounce + manual sync), AES-256-GCM encryption (passphrase + raw key modes), 41 Vitest tests, 6-palette theme switcher (sky/neutral/sage time-of-day adaptive), tlock time-capsule (sealed 2026-06-11, unlocks 2095-02-13), encrypted links page (2,094 bookmarks, 10 categories), dual-deploy (Cloudflare Pages live + GitHub Pages archive mirror with encrypted zip), library visibility axis (editable public/private independent of keep/hide/delete; P/F mark keys), library keyboard triage (reader-only: `←`/`→` navigate, `Delete`/`K`/`H` decide-and-advance, no UI hints — one curator), reading list ↔ library full text (125 baked docs; licence policy + backfill; the reader no longer reveals that a withheld body exists).
 
 **Not done**:
 - Homepage actual content (currently placeholder)
@@ -70,3 +112,7 @@ static/.nojekyll                     — prevents GitHub Pages from running Jeky
 - nsite/Nostr deployment
 - StaticCrypt password-protected sections
 - Links: ~100 domain-only titles to fetch, dead link check
+- Library ↔ reading list: 49 book-length works held by the word gate need per-title
+  licence calls (author death dates, publisher — not word counts); 85 held on licence,
+  almost all complete in-copyright books that should stay held; 4 documents each claimed
+  by two list entries (two are genuine duplicate books.json rows worth merging)
