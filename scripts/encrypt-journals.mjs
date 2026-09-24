@@ -12,8 +12,12 @@
  * Pass --reslug to regenerate word slugs for ALL entries (including
  * browser-created entries stored only as .enc files) and delete old files.
  *
+ * The passphrase is read from STDIN, never from argv: a key passed as an
+ * argument lands in shell history, in `ps` output, and in any transcript of the
+ * session that ran it. Changed 2026-09-24.
+ *
  * Usage:
- *   node scripts/encrypt-journals.mjs <passphrase> [--reslug] [source-dir ...]
+ *   printf '%s' "$KEY" | node scripts/encrypt-journals.mjs [--reslug] [source-dir ...]
  *
  * source-dir defaults to ~/Documents/Writing/MD Files
  */
@@ -28,17 +32,21 @@ const { subtle } = webcrypto;
 const getRandomValues = (arr) => webcrypto.getRandomValues(arr);
 
 const args = process.argv.slice(2);
-const passphrase = args.find(a => !a.startsWith('--') && !a.startsWith('/') && !a.startsWith('~') && !a.startsWith('.'));
 const reslug = args.includes('--reslug');
-const sourceDirArgs = args.filter(a => !a.startsWith('--') && a !== passphrase);
+const sourceDirArgs = args.filter(a => !a.startsWith('--'));
 const sourceDirs = sourceDirArgs.length
   ? sourceDirArgs.map(d => resolve(d))
   : [join(homedir(), 'Documents/Writing/MD Files')];
 
-if (!passphrase) {
-  console.error('Usage: node scripts/encrypt-journals.mjs <passphrase> [--reslug] [source-dir ...]');
+if (process.stdin.isTTY) {
+  console.error("Usage: printf '%s' \"$KEY\" | node scripts/encrypt-journals.mjs [--reslug] [source-dir ...]");
+  console.error('The passphrase is read from stdin, not from the command line.');
   process.exit(1);
 }
+const _chunks = [];
+for await (const c of process.stdin) _chunks.push(c);
+const passphrase = Buffer.concat(_chunks).toString('utf8').replace(/\r?\n$/, '');
+if (!passphrase) { console.error('no passphrase on stdin'); process.exit(1); }
 
 const __dir = new URL('..', import.meta.url).pathname;
 const JOURNALS_DIR = join(__dir, 'static/docs/private/journals');

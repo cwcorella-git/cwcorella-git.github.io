@@ -41,6 +41,39 @@ if (confirm === dryRun) {
 // published. The same 40k rule governs the user source. Raise it only per-title.
 const MAX_WORDS = Number(arg('--max-words', '40000'));
 
+// Provenance gate. The length gate is a proxy; this is the real question, and
+// the answer is usually printed in the body's own frontmatter. theanarchistlibrary
+// asserts anti-copyright site-wide, but it hosts material it has no standing to
+// relicense — measured 2026-09-24, 244 of its 24,594 bodies name a commercial
+// publisher or a piracy host in their OWN source_url/notes, not in a
+// bibliography. Five had already been republished as plaintext on the public
+// site: a Wiley-Blackwell encyclopedia entry (3,585w), three Palgrave Handbook
+// chapters, and a Bataille translation whose source_url is a Sci-Hub link
+// wrapping JSTOR. Every one sat far under the 40k gate, because an encyclopedia
+// chapter is short and commercial — exactly the hole a length proxy leaves.
+// This fails in the safe direction too: a genuinely free text that merely cites
+// Routledge in its provenance line is withheld for a human call, not published.
+const PROVENANCE_DENY = /palgrave|wiley|routledge|springer|university press|univ\. press|encyclopedia of|sci-?hub|libgen|jstor|macmillan|verso books|duke university/i;
+
+/** The frontmatter fields that claim where the text CAME FROM. A publisher named
+ *  anywhere else in the file is a citation, which is not a provenance claim. */
+function provenanceClaim(body) {
+	if (!body.startsWith('---')) return null;
+	const end = body.indexOf('\n---', 3);
+	const fm = body.slice(3, end === -1 ? 4000 : end);
+	const lines = fm.split('\n');
+	const out = [];
+	let inField = false;
+	for (const line of lines) {
+		if (/^\s*(source_url|notes|publisher)\s*:/.test(line)) { inField = true; out.push(line); continue; }
+		if (inField && /^(\s{2,}|\t)/.test(line)) { out.push(line); continue; }
+		inField = false;
+	}
+	const joined = out.join(' ');
+	const m = joined.match(PROVENANCE_DENY);
+	return m ? m[0] : null;
+}
+
 /** Matches the existing convention in static/docs/public: `<bookId>-<slug>`. */
 function docName(book) {
 	const slug = norm(book.title).split(' ').filter(Boolean).slice(0, 8).join('-');
@@ -55,6 +88,7 @@ const byId = new Map(books.map((b) => [b.id, b]));
 const planned = [];
 const skipped = [];
 const gated = [];   // cleared by licence, withheld by the length gate
+const held = [];    // cleared by licence, withheld because the body names its publisher
 for (const r of ok) {
 	const book = byId.get(r.bookId);
 	if (!book) continue;
@@ -64,6 +98,8 @@ for (const r of ok) {
 	if (r.words > MAX_WORDS) { gated.push(r); continue; }
 	const src = join(BODIES, r.file);
 	if (!existsSync(src)) { skipped.push({ ...r, why: 'body file missing' }); continue; }
+	const claim = provenanceClaim(readFileSync(src, 'utf8'));
+	if (claim) { held.push({ ...r, claim }); continue; }
 	planned.push({ ...r, book, src, name: docName(book) });
 }
 
@@ -78,6 +114,8 @@ for (const p of planned) {
 console.log(`matched ${rows.length}, exportable ${ok.length}, to write ${planned.length}`);
 console.log(`held (licence not cleared): ${rows.filter((r) => r.clearance === 'needs-review').length}`);
 console.log(`held (over the ${MAX_WORDS}w gate): ${gated.length}`);
+console.log(`held (provenance — body names a publisher or piracy host): ${held.length}`);
+for (const h of held) console.log(`  provenance ${h.bookId} — "${h.claim}": ${h.bookTitle.slice(0, 56)}`);
 const dupes = contested(rows);
 if (dupes.length) console.log(`excluded (document claimed by >1 book): ${dupes.length}`);
 for (const s of skipped) console.log(`  skip ${s.bookId} — ${s.why}: ${s.bookTitle.slice(0, 56)}`);
