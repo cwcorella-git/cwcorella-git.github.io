@@ -133,14 +133,19 @@ export function matchBooks(books, docs, { min = 0.88 } = {}) {
 				// dropped 51 matches, most of them right, including Proudhon's What
 				// is Property at 155,988 words.
 				//
-				// So: agreement corroborates, disagreement costs. The penalty is
-				// sized to lose a contest against a document whose author agrees,
-				// and NOT to push a sole candidate under `min` by itself.
-				if (bln && d._ln) score += bln === d._ln ? 0.06 : -0.05;
-				const better = !best || score > best.score ||
+				// So: agreement corroborates, disagreement costs, and it adjusts RANK
+				// only. `score` alone decides admission, so a junk author value can
+				// reorder candidates but can never reject a title match outright.
+				// Letting it subtract from the admission score cost three real books
+				// at weak tier -- The Wretched of the Earth at 101,722 words (the
+				// corpus names Fanon's translator), Workers' Councils at 101,248
+				// (its author field reads "I. THE TASK"), and Cicero's How to Win an
+				// Election (his translator again).
+				const rank = bln && d._ln ? score + (bln === d._ln ? 0.06 : -0.05) : score;
+				const better = !best || rank > best.rank ||
 					// Ties are common (many exact title matches). Prefer a freely
 					// licensed copy of the same text: no clearance queue.
-					(score === best.score &&
+					(rank === best.rank &&
 						FREE_LICENSES.has(d.license) && !FREE_LICENSES.has(best.d.license)) ||
 					// Same score, same clearance: take the longer body. The corpus
 					// holds both an image-scan husk and a re-sourced full text for
@@ -148,10 +153,10 @@ export function matchBooks(books, docs, { min = 0.88 } = {}) {
 					// words of Urbanization Without Cities beside 114,288, 106 of
 					// The Third Revolution beside 315,987. Publishing a fragment
 					// under the book's name is worse than publishing nothing.
-					(score === best.score &&
+					(rank === best.rank &&
 						FREE_LICENSES.has(d.license) === FREE_LICENSES.has(best.d.license) &&
 						(d.word_count ?? 0) > (best.d.word_count ?? 0));
-				if (better) best = { d, score };
+				if (better) best = { d, score, rank };
 			}
 		}
 		if (!best || best.score < min) continue;
