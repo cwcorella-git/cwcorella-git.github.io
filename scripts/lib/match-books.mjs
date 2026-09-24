@@ -97,6 +97,13 @@ export function matchBooks(books, docs, { min = 0.88 } = {}) {
 		// This! episode was claimed by both "The Revolt of the Masses" and "The
 		// Road to Serfdom" at tier `exact`. Excluded at the source, not scored.
 		if (d.source === 'youtube') continue;
+		// Nor is a review, a summary or a critique of a book its text. These are
+		// short and share almost every title token, so they score `exact` and can
+		// even outrank the real thing: a 1,154-word "Review: Social Anarchism or
+		// Lifestyle Anarchism" displaced the full 30,218-word text, and a
+		// 1,410-word "Review of Anarchism: A Very Short Introduction" was matched
+		// by both books that share that title.
+		if (/^\s*(?:a\s+)?(?:review|summary|critique|analysis)\b\s*(?:of|:|\u2014|-)/i.test(d.title ?? '')) continue;
 		d._t = tokens(d.title);
 		d._k = d._t.join(' ');
 		d._ln = lastName(d.author);
@@ -121,12 +128,13 @@ export function matchBooks(books, docs, { min = 0.88 } = {}) {
 				seen.add(d.id);
 				if (ordinalsConflict(b.title, d.title)) continue;
 				let score = d._k === bk ? 1 : dice(bt, d._t);
-				// Admission is decided here and only here. The old threshold carried
-				// 0.12 of slack so the author bonus could lift a candidate over it;
-				// now that author affects rank and not admission, that slack only
-				// let a sub-threshold candidate win the contest on rank and then
-				// disqualify the book that a qualifying candidate would have matched.
-				if (score < min) continue;
+				// Admission: a clean title match, or a near miss whose author agrees.
+				// Corroboration can rescue a weak title ("On the Duty of Civil
+				// Disobedience" against a corpus row simply titled "Civil
+				// Disobedience"); contradiction can never sink a clean one, because
+				// the author column is not trustworthy enough to be given that power.
+				const agrees = Boolean(bln && d._ln && bln === d._ln);
+				if (score < (agrees ? min - 0.12 : min)) continue;
 				// Author is a WEAK signal here and must never gate on its own. The
 				// corpus `author` column is scraped and frequently is not an author:
 				// publishers ("Princeton University Press"), title fragments ("HOW TO
@@ -146,7 +154,7 @@ export function matchBooks(books, docs, { min = 0.88 } = {}) {
 				// corpus names Fanon's translator), Workers' Councils at 101,248
 				// (its author field reads "I. THE TASK"), and Cicero's How to Win an
 				// Election (his translator again).
-				const rank = bln && d._ln ? score + (bln === d._ln ? 0.06 : -0.05) : score;
+				const rank = bln && d._ln ? score + (agrees ? 0.06 : -0.05) : score;
 				const better = !best || rank > best.rank ||
 					// Ties are common (many exact title matches). Prefer a freely
 					// licensed copy of the same text: no clearance queue.
