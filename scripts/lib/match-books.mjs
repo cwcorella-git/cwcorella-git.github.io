@@ -153,15 +153,22 @@ export function matchBooks(books, docs, { min = 0.88 } = {}) {
 				// dropped 51 matches, most of them right, including Proudhon's What
 				// is Property at 155,988 words.
 				//
-				// So: agreement corroborates, disagreement costs, and it adjusts RANK
-				// only. `score` alone decides admission, so a junk author value can
-				// reorder candidates but can never reject a title match outright.
+				// So: agreement buys admission slack and nothing more; disagreement
+				// costs rank. The +0.06 agreement bonus was removed 2026-09-24: a
+				// matching author and a matching title are not two facts about the
+				// same document, because the author column names whoever the text is
+				// ABOUT at least as often as it names who wrote it (34 lecture-series
+				// episodes carry their subject's name). Letting agreement raise rank
+				// counted one fact twice, in exactly the shape that made a podcast
+				// episode read as a copy of the Meditations. Only `score` decides
+				// admission, so a junk author value can still reorder candidates but
+				// can never reject a title match outright.
 				// Letting it subtract from the admission score cost three real books
 				// at weak tier -- The Wretched of the Earth at 101,722 words (the
 				// corpus names Fanon's translator), Workers' Councils at 101,248
 				// (its author field reads "I. THE TASK"), and Cicero's How to Win an
 				// Election (his translator again).
-				const rank = bln && d._ln ? score + (agrees ? 0.06 : -0.05) : score;
+				const rank = bln && d._ln && !agrees ? score - 0.05 : score;
 				const better = !best || rank > best.rank ||
 					// Ties are common (many exact title matches). Prefer a freely
 					// licensed copy of the same text: no clearance queue.
