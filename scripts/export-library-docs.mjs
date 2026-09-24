@@ -91,7 +91,15 @@ function docName(book) {
 }
 
 const books = loadBooks();
-const rows = matchBooks(books, loadDocs());
+// Reading 100k rows out of a 3.9 GB library.db takes ~30s, almost all of it
+// disk I/O rather than CPU. Say so: silence here is indistinguishable from a
+// hang, and the step before this one prints instantly, which makes the contrast
+// look like a crash. stderr, so piping stdout stays clean.
+process.stderr.write('  reading library.db (100k rows, ~30s)… ');
+const t0 = Date.now();
+const docs = loadDocs();
+process.stderr.write(`${docs.length.toLocaleString()} docs in ${((Date.now() - t0) / 1000).toFixed(1)}s\n`);
+const rows = matchBooks(books, docs);
 const STAGE_DIR = join(HERE, '..', '.admin-stage');
 const ok = exportable(rows);
 const byId = new Map(books.map((b) => [b.id, b]));
