@@ -21,6 +21,10 @@ export function norm(s) {
 	return (s ?? '')
 		.normalize('NFKD').replace(/[̀-ͯ]/g, '')
 		.toLowerCase()
+		// NFKD leaves these alone, and the next rule would delete them outright --
+		// "Arne Naess" spelled with the ligature reduced to the last name "ss".
+		.replace(/æ/g, 'ae').replace(/œ/g, 'oe').replace(/ß/g, 'ss')
+		.replace(/[ø]/g, 'o').replace(/[ł]/g, 'l').replace(/[ðđ]/g, 'd').replace(/þ/g, 'th')
 		.replace(/[‘’“”]/g, "'")
 		.replace(/[^a-z0-9']+/g, ' ')
 		.replace(/'/g, '')
@@ -88,6 +92,11 @@ export function loadDocs(dbPath = DEFAULT_DB) {
 export function matchBooks(books, docs, { min = 0.88 } = {}) {
 	const buckets = new Map();
 	for (const d of docs) {
+		// A video transcript is never the text of a book. All four youtube matches
+		// were a podcast or channel talking ABOUT the title, and one Philosophize
+		// This! episode was claimed by both "The Revolt of the Masses" and "The
+		// Road to Serfdom" at tier `exact`. Excluded at the source, not scored.
+		if (d.source === 'youtube') continue;
 		d._t = tokens(d.title);
 		d._k = d._t.join(' ');
 		d._ln = lastName(d.author);
@@ -111,29 +120,37 @@ export function matchBooks(books, docs, { min = 0.88 } = {}) {
 				if (seen.has(d.id)) continue;
 				seen.add(d.id);
 				if (ordinalsConflict(b.title, d.title)) continue;
-				// A named author on BOTH sides that disagrees is disqualifying, not
-				// merely uncorroborated. Title alone cannot separate two different
-				// books with the same name, and the matcher was handing them the
-				// same body: Madison 1945 and Creagh/Kuhn/Cohn 2009 both claimed
-				// "Anarchism in the United States"; Prichard 2022 and Ward 1981 both
-				// claimed "Anarchism: A Very Short Introduction"; and one
-				// Philosophize This! episode was claimed by BOTH "The Revolt of the
-				// Masses" and "The Road to Serfdom", at tier `exact`, because a
-				// podcast about a book shares no author with it.
-				//
-				// Still not a gate when either side is silent -- that was the
-				// original reasoning and it holds: many corpus rows have no author
-				// at all, and books.json carries translators inline. Absence stays
-				// permissive; contradiction does not.
-				if (bln && d._ln && bln !== d._ln) continue;
 				let score = d._k === bk ? 1 : dice(bt, d._t);
 				if (score < min - 0.12) continue;
-				if (bln && d._ln && bln === d._ln) score += 0.06;
+				// Author is a WEAK signal here and must never gate on its own. The
+				// corpus `author` column is scraped and frequently is not an author:
+				// publishers ("Princeton University Press"), title fragments ("HOW TO
+				// BE", "I. THE TASK"), truncations ("Murray Bookchi"), transcribers
+				// and translators ("Andy Blunden" for Engels, "Richard Philcox" for
+				// Fanon), and correct-but-different names (Bookchin published Our
+				// Synthetic Environment as Lewis Herber; Industrial Society and Its
+				// Future really is signed FC). Gating on disagreement was tried and
+				// dropped 51 matches, most of them right, including Proudhon's What
+				// is Property at 155,988 words.
+				//
+				// So: agreement corroborates, disagreement costs. The penalty is
+				// sized to lose a contest against a document whose author agrees,
+				// and NOT to push a sole candidate under `min` by itself.
+				if (bln && d._ln) score += bln === d._ln ? 0.06 : -0.05;
 				const better = !best || score > best.score ||
 					// Ties are common (many exact title matches). Prefer a freely
 					// licensed copy of the same text: no clearance queue.
 					(score === best.score &&
-						FREE_LICENSES.has(d.license) && !FREE_LICENSES.has(best.d.license));
+						FREE_LICENSES.has(d.license) && !FREE_LICENSES.has(best.d.license)) ||
+					// Same score, same clearance: take the longer body. The corpus
+					// holds both an image-scan husk and a re-sourced full text for
+					// several books, and the matcher was binding the husk -- 130
+					// words of Urbanization Without Cities beside 114,288, 106 of
+					// The Third Revolution beside 315,987. Publishing a fragment
+					// under the book's name is worse than publishing nothing.
+					(score === best.score &&
+						FREE_LICENSES.has(d.license) === FREE_LICENSES.has(best.d.license) &&
+						(d.word_count ?? 0) > (best.d.word_count ?? 0));
 				if (better) best = { d, score };
 			}
 		}
