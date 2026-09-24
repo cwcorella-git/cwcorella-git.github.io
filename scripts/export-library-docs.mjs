@@ -89,12 +89,23 @@ const planned = [];
 const skipped = [];
 const gated = [];   // cleared by licence, withheld by the length gate
 const held = [];    // cleared by licence, withheld because the body names its publisher
+const liveClaims = []; // ALREADY published, and the body names a publisher — an audit, not a gate
 for (const r of ok) {
 	const book = byId.get(r.bookId);
 	if (!book) continue;
 	// Never clobber a doc that is already attached — those were placed by hand
 	// and may have been edited since.
-	if (book.doc) { skipped.push({ ...r, why: 'already has a doc' }); continue; }
+	// An attached doc is not re-examined for export, but it IS audited: the five
+	// commercially-published bodies that prompted this gate were all already
+	// attached, so a gate that only inspects new candidates would never have
+	// found them.
+	if (book.doc) {
+		const src0 = join(BODIES, r.file);
+		const claim0 = existsSync(src0) ? provenanceClaim(readFileSync(src0, 'utf8')) : null;
+		if (claim0) liveClaims.push({ ...r, claim: claim0, doc: book.doc });
+		skipped.push({ ...r, why: 'already has a doc' });
+		continue;
+	}
 	if (r.words > MAX_WORDS) { gated.push(r); continue; }
 	const src = join(BODIES, r.file);
 	if (!existsSync(src)) { skipped.push({ ...r, why: 'body file missing' }); continue; }
@@ -116,6 +127,12 @@ console.log(`held (licence not cleared): ${rows.filter((r) => r.clearance === 'n
 console.log(`held (over the ${MAX_WORDS}w gate): ${gated.length}`);
 console.log(`held (provenance — body names a publisher or piracy host): ${held.length}`);
 for (const h of held) console.log(`  provenance ${h.bookId} — "${h.claim}": ${h.bookTitle.slice(0, 56)}`);
+if (liveClaims.length) {
+	console.log(`\nALREADY PUBLISHED, and the body names a publisher or piracy host: ${liveClaims.length}`);
+	for (const h of liveClaims) {
+		console.log(`  ${h.doc.visibility.padEnd(6)} ${String(h.bookId).padStart(4)} "${h.claim}" ${String(h.words).padStart(6)}w  ${h.bookTitle.slice(0, 52)}`);
+	}
+}
 const dupes = contested(rows);
 if (dupes.length) console.log(`excluded (document claimed by >1 book): ${dupes.length}`);
 for (const s of skipped) console.log(`  skip ${s.bookId} — ${s.why}: ${s.bookTitle.slice(0, 56)}`);
