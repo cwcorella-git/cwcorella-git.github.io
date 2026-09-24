@@ -58,8 +58,27 @@ WITHDRAW=(
 # The nine restricted §1f book ids to stage, never having been public.
 STAGE_IDS=22,64,548,684,708,778,842,891,212
 
-echo "=== [1/2] withdraw ${#WITHDRAW[@]} published bodies to /docs/private/*.enc (dry run) ==="
-node scripts/encrypt-doc.mjs --dry-run "${WITHDRAW[@]}"
+# Step 1 is idempotent in effect but not in exit code: encrypt-doc.mjs fails
+# hard when a name has no plaintext left, which is precisely the state a
+# successful earlier run leaves behind. Drop the ones already withdrawn, so a
+# half-finished run can be resumed instead of aborting before step 2.
+PENDING=()
+for n in "${WITHDRAW[@]}"; do
+	if [[ -f "static/docs/public/$n.md" || -f ".admin-stage/$n.md" ]]; then
+		PENDING+=("$n")
+	elif [[ -f "static/docs/private/$n.enc" ]]; then
+		echo "  already withdrawn: $n"
+	else
+		echo "  WARNING: $n has neither plaintext nor .enc — nothing to do, and nothing there" >&2
+	fi
+done
+
+if [[ ${#PENDING[@]} -eq 0 ]]; then
+	echo "=== [1/2] all ${#WITHDRAW[@]} bodies already withdrawn — nothing to do ==="
+else
+	echo "=== [1/2] withdraw ${#PENDING[@]} published bodies to /docs/private/*.enc (dry run) ==="
+	node scripts/encrypt-doc.mjs --dry-run "${PENDING[@]}"
+fi
 
 echo
 echo "=== [2/2] stage 9 restricted §1f texts (dry run) ==="
@@ -81,9 +100,11 @@ read -rs -p "admin content key: " KEY
 echo
 [[ -n "$KEY" ]] || { echo "empty key; aborted." >&2; exit 1; }
 
-echo
-echo "=== [1/2] encrypting ==="
-printf '%s' "$KEY" | node scripts/encrypt-doc.mjs --confirm "${WITHDRAW[@]}"
+if [[ ${#PENDING[@]} -gt 0 ]]; then
+	echo
+	echo "=== [1/2] encrypting ==="
+	printf '%s' "$KEY" | node scripts/encrypt-doc.mjs --confirm "${PENDING[@]}"
+fi
 
 echo
 echo "=== [2/2] staging ==="
