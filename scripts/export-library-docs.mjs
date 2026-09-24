@@ -16,6 +16,7 @@ import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync } from 'node
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadBooks, loadDocs, matchBooks, exportable, contested, norm } from './lib/match-books.mjs';
+import { stripChrome } from './lib/strip-chrome.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const BOOKS_JSON = join(HERE, '..', 'src', 'lib', 'books.json');
@@ -128,7 +129,11 @@ if (adminIds.size) {
 	if (missing.length) console.log(`  unmatched book ids: ${missing.join(', ')}`);
 	if (!confirm) { console.log('\nDRY RUN — re-run with --confirm, then encrypt with scripts/encrypt-doc.mjs.'); process.exit(0); }
 	mkdirSync(STAGE_DIR, { recursive: true });
-	for (const p of staged) writeFileSync(join(STAGE_DIR, `${p.name}.md`), readFileSync(p.src, 'utf8'));
+	for (const p of staged) {
+		const { text, removed } = stripChrome(readFileSync(p.src, 'utf8'));
+		if (removed.length) console.log(`  stripped ${removed.length} chrome line(s) from ${p.name}`);
+		writeFileSync(join(STAGE_DIR, `${p.name}.md`), text);
+	}
 	console.log(`\nstaged ${staged.length} body/ies → .admin-stage/ (gitignored).`);
 	console.log('Encrypt them, which deletes the plaintext and attaches them as admin-only:');
 	console.log(`  printf '%s' "$KEY" | node scripts/encrypt-doc.mjs --confirm ${staged.map((p) => p.name).join(' ')}`);
@@ -200,7 +205,8 @@ mkdirSync(OUT_DIR, { recursive: true });
 let written = 0;
 const attached = [];
 for (const p of planned) {
-	const body = readFileSync(p.src, 'utf8');
+	const { text: body, removed } = stripChrome(readFileSync(p.src, 'utf8'));
+	if (removed.length) console.log(`  stripped ${removed.length} chrome line(s) from ${p.name}`);
 	const out = join(OUT_DIR, `${p.name}.md`);
 	try {
 		writeFileSync(out, body);
