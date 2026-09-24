@@ -104,6 +104,13 @@ export function matchBooks(books, docs, { min = 0.88 } = {}) {
 		// 1,410-word "Review of Anarchism: A Very Short Introduction" was matched
 		// by both books that share that title.
 		if (/^\s*(?:a\s+)?(?:review|summary|critique|analysis)\b\s*(?:of|:|\u2014|-)/i.test(d.title ?? '')) continue;
+		// Nor is a numbered lecture or podcast episode. Excluding source==='youtube'
+		// does not cover these: 34 episodes of a lecture series are ingested as
+		// `user` documents, and their author column carries whoever was speaking --
+		// doc 186 is titled "Episode 15 Marcus Aurelius And Jesus" with author
+		// "Marcus Aurelius", which is exactly the shape that would bind a podcast
+		// to Meditations. None matches a book today; this keeps it that way.
+		if (/^\s*(?:episode|ep\.?)\s*\d+\b/i.test(d.title ?? '')) continue;
 		d._t = tokens(d.title);
 		d._k = d._t.join(' ');
 		d._ln = lastName(d.author);
