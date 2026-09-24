@@ -11,7 +11,12 @@ export interface Book {
 	notes?: string;
 	doc?: BookDoc;
 	read?: boolean;
+	/** What kind of text this is, from where it was catalogued and corroborated
+	 *  by the baked body's length. Regenerate with scripts/classify-book-types.mjs.
+	 *  'unknown' is a real answer, not a gap to be filled in. */
+	type?: BookType;
 }
+export type BookType = 'book' | 'article' | 'pamphlet' | 'unknown';
 export interface LinkMeta {
 	id: string;
 	url: string;
