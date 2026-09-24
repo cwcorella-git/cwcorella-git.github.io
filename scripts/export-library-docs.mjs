@@ -33,6 +33,7 @@ const dryRun = argv.includes('--dry-run');
 // turn into static/docs/private/<name>.enc. Nothing on this path can reach
 // static/docs/public/, which is why it may bypass the licence and provenance
 // gates that govern the public lane.
+const forceLarge = argv.includes('--force-large');
 const adminIds = new Set((arg('--admin', '') || '').split(',').map((x) => Number(x.trim())).filter(Boolean));
 if (confirm === dryRun) {
 	console.error('pass exactly one of --dry-run / --confirm');
@@ -105,6 +106,23 @@ if (adminIds.size) {
 		if (!existsSync(src)) { console.log(`  skip ${r.bookId} — body file missing`); continue; }
 		staged.push({ r, book, src, name: docName(book) });
 	}
+	// Size cap. The admin lane bypasses the licence and provenance gates because
+	// nothing on it reaches a public surface — but it must not bypass the length
+	// gate, which is about the REPO, not about licence. An .enc body is committed
+	// plaintext-sized-plus-overhead into a static site served from git, and the
+	// first test run staged a 108,034-word body without complaint. Same 40k rule
+	// as the public lane, overridable per-run because a deliberate big text is a
+	// real case and an accidental one is not.
+	const oversize = staged.filter((p) => p.r.words > MAX_WORDS);
+	if (oversize.length && !forceLarge) {
+		for (const p of oversize) {
+			console.error(`  refusing ${p.name}: ${p.r.words.toLocaleString()} words > ${MAX_WORDS.toLocaleString()}`);
+		}
+		console.error(`\n  ${oversize.length} body/ies over the cap. Re-run with --force-large to stage them anyway,`);
+		console.error('  or with a higher --max-words. Nothing was staged.');
+		process.exit(1);
+	}
+	for (const p of oversize) console.log(`  FORCED ${p.name}: ${p.r.words.toLocaleString()} words > ${MAX_WORDS.toLocaleString()}`);
 	const missing = [...adminIds].filter((id) => !staged.some((s2) => s2.r.bookId === id));
 	for (const p of staged) console.log(`  ${p.name}  (${p.r.words}w, ${p.r.license ?? 'no licence'}) → .admin-stage/`);
 	if (missing.length) console.log(`  unmatched book ids: ${missing.join(', ')}`);
