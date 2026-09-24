@@ -111,10 +111,23 @@ export function matchBooks(books, docs, { min = 0.88 } = {}) {
 				if (seen.has(d.id)) continue;
 				seen.add(d.id);
 				if (ordinalsConflict(b.title, d.title)) continue;
+				// A named author on BOTH sides that disagrees is disqualifying, not
+				// merely uncorroborated. Title alone cannot separate two different
+				// books with the same name, and the matcher was handing them the
+				// same body: Madison 1945 and Creagh/Kuhn/Cohn 2009 both claimed
+				// "Anarchism in the United States"; Prichard 2022 and Ward 1981 both
+				// claimed "Anarchism: A Very Short Introduction"; and one
+				// Philosophize This! episode was claimed by BOTH "The Revolt of the
+				// Masses" and "The Road to Serfdom", at tier `exact`, because a
+				// podcast about a book shares no author with it.
+				//
+				// Still not a gate when either side is silent -- that was the
+				// original reasoning and it holds: many corpus rows have no author
+				// at all, and books.json carries translators inline. Absence stays
+				// permissive; contradiction does not.
+				if (bln && d._ln && bln !== d._ln) continue;
 				let score = d._k === bk ? 1 : dice(bt, d._t);
 				if (score < min - 0.12) continue;
-				// Author agreement corroborates, it does not gate: many corpus rows
-				// have no author and books.json carries translators inline.
 				if (bln && d._ln && bln === d._ln) score += 0.06;
 				const better = !best || score > best.score ||
 					// Ties are common (many exact title matches). Prefer a freely
