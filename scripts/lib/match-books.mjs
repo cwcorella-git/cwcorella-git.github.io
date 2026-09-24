@@ -172,7 +172,10 @@ export function matchBooks(books, docs, { min = 0.88 } = {}) {
 				if (better) best = { d, score, rank };
 			}
 		}
-		if (!best || best.score < min) continue;
+		// No second threshold here: admission is enforced per candidate above, and
+		// re-testing `best.score` against `min` discarded exactly the corroborated
+		// near misses the slack exists for.
+		if (!best) continue;
 
 		const { d } = best;
 		const score = Math.min(1, best.score);
