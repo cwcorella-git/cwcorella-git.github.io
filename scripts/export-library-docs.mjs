@@ -26,6 +26,14 @@ const argv = process.argv.slice(2);
 const arg = (f, d) => { const i = argv.indexOf(f); return i === -1 ? d : argv[i + 1]; };
 const confirm = argv.includes('--confirm');
 const dryRun = argv.includes('--dry-run');
+// Admin lane. A text can be restricted and still be yours to read: every
+// library-api endpoint is bearer-auth'd, so a licence denial is a statement
+// about REPUBLISHING, not about access. --admin stages such a body as
+// plaintext in .admin-stage/ (gitignored, never served) for encrypt-doc.mjs to
+// turn into static/docs/private/<name>.enc. Nothing on this path can reach
+// static/docs/public/, which is why it may bypass the licence and provenance
+// gates that govern the public lane.
+const adminIds = new Set((arg('--admin', '') || '').split(',').map((x) => Number(x.trim())).filter(Boolean));
 if (confirm === dryRun) {
 	console.error('pass exactly one of --dry-run / --confirm');
 	process.exit(2);
@@ -82,8 +90,32 @@ function docName(book) {
 
 const books = loadBooks();
 const rows = matchBooks(books, loadDocs());
+const STAGE_DIR = join(HERE, '..', '.admin-stage');
 const ok = exportable(rows);
 const byId = new Map(books.map((b) => [b.id, b]));
+
+if (adminIds.size) {
+	const staged = [];
+	for (const r of rows) {
+		if (!adminIds.has(r.bookId)) continue;
+		const book = byId.get(r.bookId);
+		if (!book) { console.log(`  no book ${r.bookId}`); continue; }
+		if (book.doc) { console.log(`  skip ${r.bookId} — already has a doc (${book.doc.visibility})`); continue; }
+		const src = join(BODIES, r.file);
+		if (!existsSync(src)) { console.log(`  skip ${r.bookId} — body file missing`); continue; }
+		staged.push({ r, book, src, name: docName(book) });
+	}
+	const missing = [...adminIds].filter((id) => !staged.some((s2) => s2.r.bookId === id));
+	for (const p of staged) console.log(`  ${p.name}  (${p.r.words}w, ${p.r.license ?? 'no licence'}) → .admin-stage/`);
+	if (missing.length) console.log(`  unmatched book ids: ${missing.join(', ')}`);
+	if (!confirm) { console.log('\nDRY RUN — re-run with --confirm, then encrypt with scripts/encrypt-doc.mjs.'); process.exit(0); }
+	mkdirSync(STAGE_DIR, { recursive: true });
+	for (const p of staged) writeFileSync(join(STAGE_DIR, `${p.name}.md`), readFileSync(p.src, 'utf8'));
+	console.log(`\nstaged ${staged.length} body/ies → .admin-stage/ (gitignored).`);
+	console.log('Encrypt them, which deletes the plaintext and attaches them as admin-only:');
+	console.log(`  printf '%s' "$KEY" | node scripts/encrypt-doc.mjs --confirm ${staged.map((p) => p.name).join(' ')}`);
+	process.exit(0);
+}
 
 const planned = [];
 const skipped = [];

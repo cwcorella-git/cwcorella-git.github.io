@@ -28,6 +28,7 @@ const { subtle } = webcrypto;
 const HERE = dirname(fileURLToPath(import.meta.url));
 const BOOKS_JSON = join(HERE, '..', 'src', 'lib', 'books.json');
 const PUBLIC_DIR = join(HERE, '..', 'static', 'docs', 'public');
+const STAGE_DIR = join(HERE, '..', '.admin-stage');
 const PRIVATE_DIR = join(HERE, '..', 'static', 'docs', 'private');
 
 const argv = process.argv.slice(2);
@@ -40,11 +41,17 @@ if (!names.length) { console.error('name at least one doc'); process.exit(2); }
 const books = JSON.parse(readFileSync(BOOKS_JSON, 'utf8'));
 const targets = [];
 for (const name of names) {
-	const book = books.find((b) => b.doc && b.doc.file === name);
-	const src = join(PUBLIC_DIR, `${name}.md`);
-	if (!book) { console.error(`  no book in books.json carries doc.file "${name}"`); process.exit(1); }
-	if (!existsSync(src)) { console.error(`  no plaintext at ${src}`); process.exit(1); }
-	if (book.doc.visibility === 'admin') { console.error(`  ${name} is already admin — refusing`); process.exit(1); }
+	// Two sources: a body already published to the public surface (we are
+	// withdrawing it), or one staged straight to .admin-stage/ by
+	// export-library-docs.mjs --admin (it was never public and never will be).
+	const staged = join(STAGE_DIR, `${name}.md`);
+	const src = existsSync(staged) ? staged : join(PUBLIC_DIR, `${name}.md`);
+	if (!existsSync(src)) { console.error(`  no plaintext at ${staged} or ${join(PUBLIC_DIR, name)}.md`); process.exit(1); }
+	// A staged body has no doc yet; the book is found by the id prefix of the name.
+	const book = books.find((b) => b.doc && b.doc.file === name)
+		?? books.find((b) => b.id === Number(name.split('-')[0]));
+	if (!book) { console.error(`  no book in books.json matches "${name}"`); process.exit(1); }
+	if (book.doc && book.doc.visibility === 'admin') { console.error(`  ${name} is already admin — refusing`); process.exit(1); }
 	targets.push({ name, book, src });
 }
 
