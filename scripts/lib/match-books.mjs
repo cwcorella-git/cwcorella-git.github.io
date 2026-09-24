@@ -121,7 +121,12 @@ export function matchBooks(books, docs, { min = 0.88 } = {}) {
 				seen.add(d.id);
 				if (ordinalsConflict(b.title, d.title)) continue;
 				let score = d._k === bk ? 1 : dice(bt, d._t);
-				if (score < min - 0.12) continue;
+				// Admission is decided here and only here. The old threshold carried
+				// 0.12 of slack so the author bonus could lift a candidate over it;
+				// now that author affects rank and not admission, that slack only
+				// let a sub-threshold candidate win the contest on rank and then
+				// disqualify the book that a qualifying candidate would have matched.
+				if (score < min) continue;
 				// Author is a WEAK signal here and must never gate on its own. The
 				// corpus `author` column is scraped and frequently is not an author:
 				// publishers ("Princeton University Press"), title fragments ("HOW TO
