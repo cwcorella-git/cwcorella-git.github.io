@@ -27,6 +27,14 @@ covers.
 Clearing one means asserting you may republish that text on a public page. That
 is why the script will not decide it.
 
+**Checked 2026-09-24: there is nothing here an automatic pass can clear.** All
+84 rows are `user` (80) or `youtube` (4), and `SOURCE_LICENSE` declares no
+licence for either -- `user` is scraped third-party material including
+in-copyright books, `youtube` is other people's video. The two sources that do
+carry a corpus licence, `anarchist` and `marxist`, are already fully backfilled
+(24,594 and 12,576 rows, zero NULLs), so `backfill_license.py` would set
+nothing. These 84 are per-document judgements or they are nothing.
+
 | book | words | tier | doc |
 |---|--:|---|---|
 | The Making of the English Working Class | 342,295 | exact | `user/the-making-of-the-english-working-class` |
@@ -226,9 +234,25 @@ these is trusted -- including the ones already carrying a doc.
 ## 4. Contested documents
 
 Six rows share a document with another book, and the export excludes all of
-them rather than guessing which book owns the text. Each pair is the *same book
-listed twice in `books.json`* -- the fix is deduplicating the reading list, not
-the matcher.
+them rather than guessing which book owns the text.
+
+**Corrected 2026-09-24.** An earlier revision of this file said each pair was
+the same book listed twice and that the fix was deduplicating the reading list.
+That was wrong, and acting on it would have deleted real entries. Each pair is
+two *different* texts the matcher cannot separate, because it matches on title
+and ignores author and volume:
+
+- `Anarchism in the United States` -- Madison 1945 and Creagh/Kuhn/Cohn 2009 are
+  unrelated books that happen to share a title.
+- `The Third Revolution` -- volumes 1 and 2, same author, same series.
+- `Anarchism: A Very Short Introduction` -- Prichard 2022 and Ward 1981.
+
+So the fix is in the matcher (a second key: author, or year), not in the
+reading list. Until then, excluding all six is the correct behaviour. One
+consequence has been repaired: `apply-library-tags.mjs` had been copying the
+contested document's tags onto *both* books, which described each one with the
+other's subjects. It now skips contested documents and removes tags an earlier
+run had written.
 
 - doc 14477 -- Anarchism in the United States
 - doc 286 -- The Third Revolution: Popular Movements in the Revolutionary Era

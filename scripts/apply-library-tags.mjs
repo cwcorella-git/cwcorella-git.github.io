@@ -52,18 +52,33 @@ function tagsByDoc(docIds) {
 const books = loadBooks(BOOKS_URL);
 const rows = matchBooks(books, loadDocs(), { min: MIN });
 
-// One document can match two books (the reading list has duplicate entries).
-// That is fine for tags -- both copies describe the same text -- so unlike the
-// body export there is nothing to exclude here.
+// One document can match two books, and those books are NOT duplicates of each
+// other -- they are distinct texts the matcher cannot tell apart, because it
+// matches on title alone: two unrelated books called "Anarchism in the United
+// States", two volumes of "The Third Revolution", two "Very Short
+// Introduction"s by different authors. Copying one document's tags onto both
+// would describe one book with another book's subjects. So a contested
+// document is excluded here for the same reason the body export excludes it.
 const byBook = new Map();
 for (const r of rows) if (!byBook.has(String(r.bookId))) byBook.set(String(r.bookId), r);
 
+const claims = new Map();
+for (const r of byBook.values()) claims.set(Number(r.docId), (claims.get(Number(r.docId)) ?? 0) + 1);
+const contested = new Set([...claims].filter(([, n]) => n > 1).map(([d]) => d));
+
 const tags = tagsByDoc([...new Set(rows.map((r) => Number(r.docId)))]);
 
-let added = 0, changed = 0, unchanged = 0, noTags = 0;
+let added = 0, changed = 0, unchanged = 0, noTags = 0, contestedDropped = 0;
 const out = books.map((b) => {
 	const r = byBook.get(String(b.id));
 	if (!r) return b;
+	if (contested.has(Number(r.docId))) {
+		// Drop any tags an earlier run copied over before this was caught.
+		contestedDropped++;
+		if (!b.tags) return b;
+		const { tags: _drop, ...rest } = b;
+		return rest;
+	}
 	const t = tags.get(Number(r.docId));
 	if (!t?.length) { noTags++; return b; }
 	const before = JSON.stringify(b.tags ?? null);
@@ -76,6 +91,7 @@ const covered = added + changed + unchanged;
 console.log(`books: ${books.length}   matched: ${byBook.size}   threshold: ${MIN}`);
 console.log(`tagged: ${covered}  (new ${added}, updated ${changed}, already correct ${unchanged})`);
 console.log(`matched but the corpus has no tags for them: ${noTags}`);
+console.log(`skipped -- document contested by more than one book: ${contestedDropped}`);
 console.log(`untouched (no match): ${books.length - byBook.size}`);
 
 const freq = new Map();
