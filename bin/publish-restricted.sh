@@ -82,7 +82,7 @@ fi
 
 echo
 echo "=== [2/2] stage 9 restricted §1f texts (dry run) ==="
-echo "    (this reads the whole corpus index — expect ~30s of no output)"
+echo "    (this reads the whole corpus index — up to ~30s of no output on a cold read)"
 node scripts/export-library-docs.mjs --dry-run --admin "$STAGE_IDS" "${EXTRA[@]+"${EXTRA[@]}"}"
 
 if [[ $DRY_ONLY -eq 1 ]]; then

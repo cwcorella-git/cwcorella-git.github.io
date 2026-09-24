@@ -95,7 +95,7 @@ const books = loadBooks();
 // disk I/O rather than CPU. Say so: silence here is indistinguishable from a
 // hang, and the step before this one prints instantly, which makes the contrast
 // look like a crash. stderr, so piping stdout stays clean.
-process.stderr.write('  reading library.db (100k rows, ~30s)… ');
+process.stderr.write('  reading library.db (100k rows; ~30s cold, fast once cached)… ');
 const t0 = Date.now();
 const docs = loadDocs();
 process.stderr.write(`${docs.length.toLocaleString()} docs in ${((Date.now() - t0) / 1000).toFixed(1)}s\n`);
