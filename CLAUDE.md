@@ -123,15 +123,17 @@ that reading was wrong and its correction is recorded there.
   controls are gated behind `status === 'ready'` and would all unmount, leaving no way to recover.
   The same rule binds **every per-document write**: `setDecision` and `saveEdit` toast instead of
   calling `_mapError`. `_mapError` is for whole-page load failures only.
-- **Publication requires BOTH marks: `is_public = (decision == 'keep') AND (visibility == 'public')`.**
-  `keep` puts a document on VG; `visibility` decides public vs admin-only there. A document with
+- **Publication requires BOTH marks, plus a free licence: `is_public = keep AND visibility == 'public'
+  AND license ∈ FREE_LICENSES`** (2026-09-25; `library-api/docs/STATUS.md` has the current state).
+  `keep` puts a document on VG; with the other two it is public there, otherwise it is admin + developer
+  reference only. A document with
   no curation row is never published, whatever its visibility — publishing uncurated material
   exposes private documents, while failing to publish a curated one is a missing click. Never
   weaken this to visibility alone; `test_undecided_and_public_is_NOT_published` exists to stop it.
 - **Effective visibility is overlay-merged** (`edit_flags.visibility` over `library.db`), and it is
   resolved in three places — the detail read, the list read, and `plan_publish`. They must agree.
-  Note filters and facets do **not** see it yet, so marks are not filterable; verify a marking
-  session with `publish.py --dry-run`. See followups doc item 1.
+  Filters and facets have resolved it since 2026-09-09. Verify a marking session with
+  `python -m scripts.reconcile --plan` in library-api.
 - **The reader is stale-while-revalidate: `_openIndex` advances synchronously while the PREVIOUS
   `_openDoc` stays mounted.** Anything acting on "the current document" must require the reader to
   be loaded *and* `openDocStatus === 'idle'`, or it acts on the old document while stamping the new
