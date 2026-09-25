@@ -189,6 +189,7 @@ Done / not-done lists live in `docs/STATE.md`. Update them there, not here.
 
 ## Patterns and conventions
 
+- **Commit directly to `main` and push once the work is verified — never open a PR, never ask before committing** (operator, 2026-09-25). A push redeploys the static site.
 - Svelte 5 runes throughout (`$state`, `$derived`, `$effect`) — no legacy Svelte 4 reactivity
 - Module-level `$state` in `.svelte.ts` files for shared reactive state
 - GitHub API writes always use the Git Data API (blobs → tree → commit → ref PATCH), never the Contents API PUT for multi-file commits
