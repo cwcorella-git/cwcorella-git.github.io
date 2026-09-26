@@ -45,6 +45,13 @@
 </script>
 
 <div class="doc-editor">
+	<!-- draft.title was always saved (draftToPayload sends it, the API stores it in
+	     edits.title); there was simply no field to change it in. -->
+	<label class="title-field">
+		<span class="visually-hidden">Title</span>
+		<input type="text" bind:value={draft.title} placeholder="Title" spellcheck="true" />
+	</label>
+
 	<div class="toolbar">
 		{#if mode === 'write'}
 			<button type="button" onclick={() => wrap('**', '**')} title="Bold">B</button>
@@ -78,6 +85,10 @@
 
 <style>
 	.doc-editor { display: flex; flex-direction: column; }
+	.title-field input { width: 100%; box-sizing: border-box; margin-bottom: 0.75rem;
+		background: rgba(var(--ui-rgb), 0.05); border: 1px solid rgba(var(--ui-rgb), 0.22);
+		color: var(--clr-text); font-family: var(--font-prose); font-size: 1.4rem; padding: 0.4rem 0.6rem; }
+	.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 	.toolbar { display: flex; align-items: center; gap: 0.25rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
 	.toolbar button { background: none; border: 1px solid rgba(var(--ui-rgb), 0.22); color: var(--clr-text);
 		font-family: var(--font-ui); font-size: 0.7rem; padding: 0.15rem 0.45rem; cursor: pointer; }
