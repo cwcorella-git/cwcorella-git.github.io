@@ -54,9 +54,9 @@ npm test          # vitest
 
 **Writes**: GitHub Git Data API — blobs → tree → commit → ref PATCH with `force: true`. This avoids SHA conflicts. See `src/lib/admin/github.ts`.
 
-**Admin activation**: Triple-backtick (` ``` `) typed outside any input field. PAT + content key stored in `sessionStorage` only. SettingsPanel allows mid-session PAT/key updates.
+**Admin activation**: Triple-backtick (` ``` `) typed outside any input field. PAT, content key, key mode and the library token are stored in **`localStorage`** (`cwc-admin-*`, `cwc-library-token`), so admin survives new tabs and restarts until deactivated. **Correction 2026-09-26: this line said `sessionStorage` only; the code moved to `localStorage` in `6a2cd67` (2026-07-17).** The library's new-tab and bookmark links depend on it. SettingsPanel allows mid-session PAT/key updates.
 
-**Encryption**: Two modes — `passphrase` (PBKDF2 SHA-256 200k iterations → AES-256-GCM, 16-byte random salt) or `rawkey` (AES-256-GCM direct, 64-char hex or 44-char base64). Mode stored in sessionStorage. Auto-detected on decrypt from `EncryptedDoc.salt` (empty = rawkey). All call sites use `adminState.encryptContent()` / `adminState.decryptContent()`.
+**Encryption**: Two modes — `passphrase` (PBKDF2 SHA-256 200k iterations → AES-256-GCM, 16-byte random salt) or `rawkey` (AES-256-GCM direct, 64-char hex or 44-char base64). Mode stored in localStorage. Auto-detected on decrypt from `EncryptedDoc.salt` (empty = rawkey). All call sites use `adminState.encryptContent()` / `adminState.decryptContent()`.
 
 **Books data**: `src/lib/books.json` — 902 books, `BookLink[]` schema: `[{ name, url }]`.
 
@@ -140,6 +140,24 @@ that reading was wrong and its correction is recorded there.
   row — silent curation corruption, no error. This is why keyboard gating lives in the pure
   `src/lib/library/keyLogic.ts` and not in `DocReader.svelte`: in the component it had no test
   harness, and the suite could not catch a regression. **Keep it pure.**
+
+- **The URL is the library's state, and it has two shapes** (2026-09-26,
+  `src/lib/library/urlLogic.ts`, pure and tested): `/library?q=…&source=…` is the
+  list; `/library/<source>/<slug>?…` is a document over that list. `(source, slug)`
+  is unique and never edited in library-api, so a document's address survives title
+  edits. Rows are real `<a href>`s: a plain click opens in place, anything else is
+  the browser's (new tab, copy link). `/library/*` is not prerendered;
+  `static/_redirects` serves the SPA shell for it with 200.
+- **`page.url` is stale while a document is open.** Opening, advancing and closing
+  use SvelteKit shallow `pushState`/`replaceState`, which move the address bar but
+  leave `page.url` at the last real navigation. `LibraryView.svelte` reads
+  `location` and follows `popstate`. Reading `page.url` there broke Forward and Escape.
+- **No `pushState`/`replaceState` before the router has mounted** (`routerReady`,
+  set in `afterNavigate`). A URL rewritten on arrival threw inside SvelteKit
+  (`reading '$set'`) and left the page on "loading library…" for good.
+- **Verify URL behaviour with `scripts/e2e/library-links.sh`**: a seeded real
+  library-api, the built site served like Pages, Chromium. Both bugs above passed
+  type-check and unit tests and were caught only there.
 
 ### Reading list ↔ library
 

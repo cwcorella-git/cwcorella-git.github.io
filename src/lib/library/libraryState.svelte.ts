@@ -172,9 +172,14 @@ export const libraryState = {
 		return _rowCache.get(index);
 	},
 
-	async init() {
+	/** `controls`: the list as the URL describes it (a bookmark, a new tab). */
+	async init(controls?: LibraryControls) {
 		if (_status !== 'idle') return;
 		_status = 'loading';
+		if (controls) {
+			_controls = controls;
+			_queryKey = computeQueryKey(controls);
+		}
 		await Promise.all([_newQuery(), this.loadFacets({ fatal: true }), this.loadCurationStats()]);
 	},
 
@@ -250,6 +255,26 @@ export const libraryState = {
 		_openDocStatus = 'loading';
 		try {
 			const doc = await client.getDocument(id);
+			if (epoch !== _docEpoch) return;
+			_openDoc = doc;
+			_openDocStatus = 'idle';
+		} catch {
+			if (epoch !== _docEpoch) return;
+			_openDocStatus = 'error';
+		}
+	},
+
+	/**
+	 * Open a document by its address (a bookmark, a new tab, Back/Forward). It is
+	 * not a list position, so the index is cleared: prev/next and the advance after
+	 * a decision are off, and no list row can be stamped with this document.
+	 */
+	async openDocBySlug(source: string, slug: string) {
+		const epoch = ++_docEpoch;
+		_openIndex = null;
+		_openDocStatus = 'loading';
+		try {
+			const doc = await client.getDocumentBySlug(source, slug);
 			if (epoch !== _docEpoch) return;
 			_openDoc = doc;
 			_openDocStatus = 'idle';

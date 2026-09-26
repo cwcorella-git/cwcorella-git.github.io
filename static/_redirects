@@ -1,0 +1,6 @@
+# Cloudflare Pages. A document's address (/library/<source>/<slug>) is not a
+# prerendered file: serve the SPA shell, which reads the path and opens the
+# document. Without this rule Pages still serves 404.html (the same shell), but
+# with status 404. The shell is identical for every path, so the response says
+# nothing about whether a document exists; only the private API knows.
+/library/*  /404.html  200

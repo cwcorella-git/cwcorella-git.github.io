@@ -1,16 +1,26 @@
 <script lang="ts">
 	import type { DocListItem } from '$lib/library/types';
 	import { badgeLabel } from '$lib/library/curationLogic';
+	import { isBrowserClick } from '$lib/library/urlLogic';
 
 	interface Props {
 		item: DocListItem;
+		href: string;
 		onOpen: () => void;
 	}
 
-	const { item, onOpen }: Props = $props();
+	const { item, href, onOpen }: Props = $props();
+
+	// A real link, so the browser's own menu works: open in new tab, copy link,
+	// bookmark. A plain left click opens the reader in place instead.
+	function onclick(e: MouseEvent) {
+		if (isBrowserClick(e)) return;
+		e.preventDefault();
+		onOpen();
+	}
 </script>
 
-<button class="doc-row" data-doc-id={item.id} onclick={() => onOpen()}>
+<a class="doc-row" data-doc-id={item.id} {href} {onclick}>
 	<span class="title">
 		{#if item.visibility === 'public'}<span class="mine" aria-label="mine (public)" title="public">◉</span>{/if}
 		{item.title}
@@ -31,10 +41,12 @@
 			<span class="badge">needs formatting</span>
 		{/if}
 	</span>
-</button>
+</a>
 
 <style>
 	.doc-row {
+		text-decoration: none;
+		box-sizing: border-box;
 		display: flex;
 		align-items: baseline;
 		justify-content: space-between;

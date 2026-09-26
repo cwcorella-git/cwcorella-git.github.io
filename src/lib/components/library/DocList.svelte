@@ -13,6 +13,8 @@
 		sort: string;
 		queryKey: string;
 		onOpen: (index: number) => void;
+		/** The row's own address: what a new tab, a bookmark or a copied link opens. */
+		hrefFor: (row: DocListItem) => string;
 		onVisibleRange: (start: number, end: number) => void;
 		resolveJumpIndex: (seek: string | null) => Promise<number>;
 		anchors: RailAnchor[];
@@ -25,6 +27,7 @@
 		sort,
 		queryKey,
 		onOpen,
+		hrefFor,
 		onVisibleRange,
 		resolveJumpIndex,
 		anchors
@@ -106,9 +109,9 @@
 				{@const row = rowAt(index)}
 				{#if row}
 					{#if view === 'grid'}
-						<div class="grid-cell"><DocCard item={row} onOpen={() => onOpen(index)} /></div>
+						<div class="grid-cell"><DocCard item={row} href={hrefFor(row)} onOpen={() => onOpen(index)} /></div>
 					{:else}
-						<DocRow item={row} onOpen={() => onOpen(index)} />
+						<DocRow item={row} href={hrefFor(row)} onOpen={() => onOpen(index)} />
 					{/if}
 				{:else}
 					<div class="skeleton" aria-hidden="true"></div>

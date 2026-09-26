@@ -124,6 +124,12 @@ export function createLibraryClient({ baseUrl, getToken, fetchImpl = fetch }: Cr
 		getDocument(id: number | string): Promise<LibraryDoc> {
 			return request<LibraryDoc>('/documents/' + id);
 		},
+		/** A document by its address. The slug is unique within a source only. */
+		getDocumentBySlug(source: string, slug: string): Promise<LibraryDoc> {
+			return request<LibraryDoc>('/documents/by-slug/' + encodeURIComponent(slug), {
+				query: { source }
+			});
+		},
 		getFacets(source?: string): Promise<Facets> {
 			// `source` narrows collections/tags/visibility/needs_formatting/date_range.
 			// languages/sources stay global — they are how the UI navigates back out.

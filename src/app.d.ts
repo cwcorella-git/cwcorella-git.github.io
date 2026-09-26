@@ -5,7 +5,10 @@ declare global {
 		// interface Error {}
 		// interface Locals {}
 		// interface PageData {}
-		// interface PageState {}
+		interface PageState {
+			/** This entry was pushed by opening a document from the list: closing it goes Back. */
+			libraryDoc?: boolean;
+		}
 		// interface Platform {}
 	}
 }
