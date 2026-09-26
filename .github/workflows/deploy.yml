@@ -30,12 +30,14 @@ jobs:
         env:
           VITE_COMMIT_HASH: ${{ github.sha }}
 
-      - uses: cloudflare/pages-action@v1
+      # cloudflare/pages-action was removed from GitHub; every run failed at
+      # "Unable to resolve action" before a step ran. wrangler-action is
+      # Cloudflare's replacement and takes the same token and account id.
+      - uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
-          projectName: cwcorella
-          directory: build
+          command: pages deploy build --project-name=cwcorella --branch=main --commit-hash=${{ github.sha }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
   deploy-archive:
