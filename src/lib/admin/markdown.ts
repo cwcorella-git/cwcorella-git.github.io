@@ -21,7 +21,13 @@ export function extractToc(markdown: string): TocEntry[] {
 	while ((match = headingRe.exec(markdown)) !== null) {
 		const level = match[1].length as 1 | 2 | 3;
 		const text = match[2].trim();
-		entries.push({ level, text, anchor: slugify(text) });
+		const anchor = slugify(text);
+		// A heading of only punctuation or non-ASCII script ("***", "—", "Глава")
+		// slugifies to ''. A TOC entry for it has nowhere to jump, and a reader
+		// building `#${anchor}` from it throws inside an effect, which halts every
+		// later update on the page (the library reader's buttons all went dead).
+		if (!anchor) continue;
+		entries.push({ level, text, anchor });
 	}
 	return entries;
 }
@@ -30,7 +36,10 @@ export function renderMarkdown(markdown: string): string {
 	const renderer = new Renderer();
 	renderer.heading = ({ text, depth }: { text: string; depth: number }) => {
 		const anchor = slugify(text);
-		return `<h${depth} id="${anchor}">${text}</h${depth}>\n`;
+		// No id="" for a heading extractToc skips; the two must agree.
+		return anchor
+			? `<h${depth} id="${anchor}">${text}</h${depth}>\n`
+			: `<h${depth}>${text}</h${depth}>\n`;
 	};
 	let html = marked(markdown, { renderer }) as string;
 	// Convert <ann note="...">text</ann> to interactive hover-annotation spans.

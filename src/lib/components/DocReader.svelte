@@ -61,7 +61,8 @@
 	let contentEl = $state<HTMLElement>();
 
 	function scrollTo(anchor: string) {
-		const el = (contentEl as HTMLElement)?.querySelector(`#${anchor}`);
+		if (!anchor) return;
+		const el = (contentEl as HTMLElement)?.querySelector(`#${CSS.escape(anchor)}`);
 		el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 	}
 </script>

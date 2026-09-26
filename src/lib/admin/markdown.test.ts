@@ -98,3 +98,15 @@ describe('renderMarkdown', () => {
 		expect(html).toContain('<p>');
 	});
 });
+
+// A heading that slugifies to '' used to become `querySelector('#')` in the
+// library reader, which threw inside an effect and left every button dead.
+describe('headings with no slug', () => {
+	it.each(['***', '—', 'Глава первая', '* * *'])('%j gets no TOC entry and no empty id', (h) => {
+		const md = `# Real\n\n## ${h}\n\nbody\n`;
+		const toc = extractToc(md);
+		expect(toc.map((t) => t.anchor)).toEqual(['real']);
+		expect(toc.every((t) => t.anchor !== '')).toBe(true);
+		expect(renderMarkdown(md)).not.toContain('id=""');
+	});
+});
