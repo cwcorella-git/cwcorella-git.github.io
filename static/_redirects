@@ -3,4 +3,6 @@
 # document. Without this rule Pages still serves 404.html (the same shell), but
 # with status 404. The shell is identical for every path, so the response says
 # nothing about whether a document exists; only the private API knows.
-/library/*  /404.html  200
+# The target has no .html: Pages strips the extension from served paths, and
+# /404.html here came back as a 308 to /404, dropping the document's address.
+/library/*  /404  200
