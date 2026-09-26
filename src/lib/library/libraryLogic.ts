@@ -1,7 +1,7 @@
 import type { LibraryQuery } from './types';
 
 export interface LibraryControls {
-	sort: string; // title|author|publication_date|word_count offered in the dropdown; updated_at is a valid backend value but not offered
+	sort: string; // title|author|publication_date|word_count offered in the dropdown, plus relevance while searching; updated_at is a valid backend value but not offered
 	dir: 'asc' | 'desc';
 	q: string; // search text ('' = none)
 	filters: {
@@ -27,6 +27,26 @@ function isAppliedFilterValue(value: unknown): boolean {
 
 export function defaultControls(): LibraryControls {
 	return { sort: 'title', dir: 'asc', q: '', filters: {}, view: 'list' };
+}
+
+/** Best match first. Only valid with a search: the API 400s it without `q`, and it
+ *  has no jump rail (railKind -> 'none'). */
+export const RELEVANCE = 'relevance';
+
+/**
+ * The sort that goes with a controls patch. Starting a search switches the list to
+ * best-match order, which is what a search is for; ending one leaves relevance,
+ * which the API would reject with no `q`. A sort chosen in the same patch wins.
+ */
+export function withSearchSort(
+	prev: LibraryControls,
+	patch: Partial<LibraryControls>
+): Partial<LibraryControls> {
+	if (patch.q === undefined || patch.sort !== undefined) return patch;
+	const searching = patch.q !== '';
+	if (searching && prev.q === '') return { ...patch, sort: RELEVANCE };
+	if (!searching && prev.sort === RELEVANCE) return { ...patch, sort: 'title' };
+	return patch;
 }
 
 export function computeQueryKey(c: LibraryControls): string {

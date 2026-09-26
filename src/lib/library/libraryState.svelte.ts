@@ -7,7 +7,8 @@ import {
 	toQuery,
 	computeQueryKey,
 	controlsChanged,
-	filtersToParams
+	filtersToParams,
+	withSearchSort
 } from './libraryLogic';
 import type { LibraryControls } from './libraryLogic';
 import {
@@ -199,8 +200,9 @@ export const libraryState = {
 		return client.searchTags(q);
 	},
 
-	applyControls(patch: Partial<LibraryControls>) {
+	applyControls(input: Partial<LibraryControls>) {
 		const prev = _controls;
+		const patch = withSearchSort(prev, input);
 		const next = { ...prev, ...patch };
 		_controls = next;
 		if (controlsChanged(prev, next)) {

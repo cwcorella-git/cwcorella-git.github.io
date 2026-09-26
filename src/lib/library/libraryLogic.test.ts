@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { defaultControls, toQuery, computeQueryKey, controlsChanged, filtersToParams } from './libraryLogic';
+import {
+	defaultControls,
+	toQuery,
+	computeQueryKey,
+	controlsChanged,
+	filtersToParams,
+	withSearchSort,
+	RELEVANCE
+} from './libraryLogic';
 import type { LibraryControls } from './libraryLogic';
 
 describe('defaultControls', () => {
@@ -272,5 +280,52 @@ describe('decision filter composition', () => {
 		const a = defaultControls();
 		const b = { ...a, filters: { decision: 'keep' as const } };
 		expect(computeQueryKey(a)).not.toBe(computeQueryKey(b));
+	});
+});
+
+describe('withSearchSort', () => {
+	const base = defaultControls();
+
+	it('starting a search switches to best match', () => {
+		expect(withSearchSort(base, { q: 'bolo' })).toEqual({ q: 'bolo', sort: RELEVANCE });
+	});
+
+	it('also from a non-title sort', () => {
+		expect(withSearchSort({ ...base, sort: 'author' }, { q: 'bolo' }).sort).toBe(RELEVANCE);
+	});
+
+	it('editing a search keeps the sort the user has', () => {
+		const searching = { ...base, q: 'bol', sort: 'author' };
+		expect(withSearchSort(searching, { q: 'bolo' })).toEqual({ q: 'bolo' });
+	});
+
+	it('ending a search leaves relevance, which the API rejects without q', () => {
+		const searching = { ...base, q: 'bolo', sort: RELEVANCE };
+		expect(withSearchSort(searching, { q: '' })).toEqual({ q: '', sort: 'title' });
+	});
+
+	it('ending a search keeps a sort the user picked while searching', () => {
+		const searching = { ...base, q: 'bolo', sort: 'author' };
+		expect(withSearchSort(searching, { q: '' })).toEqual({ q: '' });
+	});
+
+	it('a sort in the same patch wins', () => {
+		expect(withSearchSort(base, { q: 'bolo', sort: 'author' }).sort).toBe('author');
+	});
+
+	it('leaves patches without q alone', () => {
+		const patch = { filters: { language: 'en' } };
+		expect(withSearchSort(base, patch)).toBe(patch);
+	});
+
+	it('never leaves relevance without a search', () => {
+		const states = [base, { ...base, q: 'x' }, { ...base, q: 'x', sort: RELEVANCE }];
+		const patches = [{ q: '' }, { q: 'y' }, { filters: {} }];
+		for (const s of states) {
+			for (const p of patches) {
+				const next = { ...s, ...withSearchSort(s, p) };
+				if (next.sort === RELEVANCE) expect(next.q).not.toBe('');
+			}
+		}
 	});
 });

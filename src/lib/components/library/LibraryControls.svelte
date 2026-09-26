@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { LibraryControls } from '$lib/library/libraryLogic';
+	import { RELEVANCE, type LibraryControls } from '$lib/library/libraryLogic';
 	import type { Facets } from '$lib/library/types';
 	import TagChipInput from './TagChipInput.svelte';
 	import { libraryState } from '$lib/library/libraryState.svelte';
@@ -18,6 +18,10 @@
 		{ value: 'publication_date', label: 'Date published' },
 		{ value: 'word_count', label: 'Word count' }
 	];
+	// Best match exists only while searching (the API rejects it without q).
+	const sortOptions = $derived(
+		controls.q !== '' ? [{ value: RELEVANCE, label: 'Best match' }, ...SORT_OPTIONS] : SORT_OPTIONS
+	);
 
 	// ── sort / direction ─────────────────────────────────────────────────
 	function onSortChange(e: Event) {
@@ -46,13 +50,15 @@
 
 		<div class="capsule">
 			<select class="cap-sel" value={controls.sort} onchange={onSortChange} aria-label="Sort by">
-				{#each SORT_OPTIONS as opt (opt.value)}
+				{#each sortOptions as opt (opt.value)}
 					<option value={opt.value}>{opt.label}</option>
 				{/each}
 			</select>
 			<button
 				class="cap-btn"
 				onclick={toggleDir}
+				disabled={controls.sort === RELEVANCE}
+				title={controls.sort === RELEVANCE ? 'Best match is always best first' : undefined}
 				aria-label={controls.dir === 'asc' ? 'ascending' : 'descending'}
 			>{controls.dir === 'asc' ? '↑' : '↓'}</button>
 		</div>
