@@ -18,6 +18,11 @@ export interface DocListItem {
 	decision: Decision | null; // null = undecided
 	tags: string[];
 	edited?: boolean;
+	// Only `sort=relevance` rows carry this, and an un-upgraded API omits it
+	// entirely; `splitSnippet` then returns [] and no snippet line renders. The
+	// matched words are delimited by ASCII STX/ETX, never markup — see
+	// `snippetLogic.ts` for why, and never interpolate it as HTML.
+	snippet?: string;
 }
 
 export interface DocVersion {

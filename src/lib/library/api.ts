@@ -118,6 +118,10 @@ export function createLibraryClient({ baseUrl, getToken, fetchImpl = fetch }: Cr
 			const res = await request<ListResponse>('/documents', { query });
 			for (const it of res.items) {
 				if (it.tags == null) it.tags = [];
+				// Same reasoning for `snippet`: only relevance rows carry one, and it
+				// must be a string or nothing. Dropping a non-string here means one
+				// malformed row can never reach a template.
+				if (it.snippet != null && typeof it.snippet !== 'string') delete it.snippet;
 			}
 			return res;
 		},

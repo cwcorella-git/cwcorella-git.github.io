@@ -2,6 +2,7 @@
 	import type { DocListItem } from '$lib/library/types';
 	import { badgeLabel } from '$lib/library/curationLogic';
 	import { isBrowserClick } from '$lib/library/urlLogic';
+	import { splitSnippet } from '$lib/library/snippetLogic';
 
 	interface Props {
 		item: DocListItem;
@@ -18,6 +19,9 @@
 		e.preventDefault();
 		onOpen();
 	}
+
+	// Empty unless this is a relevance row whose body actually matched.
+	const parts = $derived(splitSnippet(item.snippet));
 </script>
 
 <a class="doc-card" data-doc-id={item.id} {href} {onclick}>
@@ -26,6 +30,11 @@
 		{item.title}
 	</span>
 	<span class="author">{item.author ?? '—'}</span>
+	{#if parts.length > 0}
+		<span class="snippet"
+			>{#each parts as p, i (i)}{#if p.hit}<mark>{p.text}</mark>{:else}{p.text}{/if}{/each}</span
+		>
+	{/if}
 	<span class="row">
 		<span class="source">{item.source}</span>
 		<span class="date">{item.publication_date ?? '—'}</span>
@@ -90,6 +99,29 @@
 		font-size: 0.6rem;
 		color: var(--clr-text);
 		opacity: 0.6;
+	}
+
+	/* Why the match, for a body hit. The card is already a flex column, so this is
+	   just another child; clamped like .title so a long passage cannot stretch the
+	   card past its neighbours in the grid. */
+	.snippet {
+		font-family: var(--font-prose);
+		font-size: 0.6rem;
+		line-height: 1.35;
+		color: var(--clr-text);
+		opacity: 0.6;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		-webkit-box-orient: vertical;
+	}
+
+	.snippet mark {
+		background: rgba(var(--ui-rgb), 0.3);
+		color: inherit;
+		padding: 0 0.1rem;
 	}
 
 	.row {

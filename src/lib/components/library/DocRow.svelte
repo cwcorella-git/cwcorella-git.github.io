@@ -2,6 +2,7 @@
 	import type { DocListItem } from '$lib/library/types';
 	import { badgeLabel } from '$lib/library/curationLogic';
 	import { isBrowserClick } from '$lib/library/urlLogic';
+	import { splitSnippet } from '$lib/library/snippetLogic';
 
 	interface Props {
 		item: DocListItem;
@@ -18,6 +19,10 @@
 		e.preventDefault();
 		onOpen();
 	}
+
+	// Empty unless this is a relevance row whose body actually matched, so an
+	// ordinary listing renders exactly the two children it always has.
+	const parts = $derived(splitSnippet(item.snippet));
 </script>
 
 <a class="doc-row" data-doc-id={item.id} {href} {onclick}>
@@ -41,6 +46,11 @@
 			<span class="badge">needs formatting</span>
 		{/if}
 	</span>
+	{#if parts.length > 0}
+		<span class="snippet"
+			>{#each parts as p, i (i)}{#if p.hit}<mark>{p.text}</mark>{:else}{p.text}{/if}{/each}</span
+		>
+	{/if}
 </a>
 
 <style>
@@ -48,9 +58,12 @@
 		text-decoration: none;
 		box-sizing: border-box;
 		display: flex;
+		flex-wrap: wrap;
 		align-items: baseline;
 		justify-content: space-between;
-		gap: 0.8rem;
+		/* Row gap 0: the wrapped snippet line sets its own spacing below. Inheriting
+		   0.8rem here would push it a whole line clear of the title it belongs to. */
+		gap: 0 0.8rem;
 		width: 100%;
 		background: none;
 		border: none;
@@ -75,6 +88,30 @@
 		white-space: nowrap;
 		flex: 1 1 auto;
 		min-width: 0;
+	}
+
+	/* Why the match, for a body hit. A full-width third child, so it wraps onto its
+	   own line and a row without one keeps its exact previous geometry. Only
+	   sort=relevance produces snippets, and relevance has no jump rail, so the
+	   variable row height cannot reach the rail's offset arithmetic. */
+	.snippet {
+		flex: 0 0 100%;
+		min-width: 0;
+		margin-top: 0.25rem;
+		font-family: var(--font-prose);
+		font-size: 0.6rem;
+		line-height: 1.4;
+		color: var(--clr-text);
+		opacity: 0.6;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.snippet mark {
+		background: rgba(var(--ui-rgb), 0.3);
+		color: inherit;
+		padding: 0 0.1rem;
 	}
 
 	.meta {
