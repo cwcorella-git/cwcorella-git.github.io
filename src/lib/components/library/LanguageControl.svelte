@@ -37,6 +37,11 @@
 			<span>all languages</span>
 		</button>
 		<div class="divider"></div>
+		<!-- Same as CorpusControl: null facets means the first load has not landed,
+		     and an empty language list is indistinguishable from "no languages". -->
+		{#if facets === null}
+			<p class="loading">loading…</p>
+		{/if}
 		{#each buckets as b (b.name)}
 			<button class="row" role="menuitem" class:sel={language === b.name} onclick={() => pick(b.name)}>
 				<span>{b.name}</span>
@@ -58,4 +63,8 @@
 	.row.sel { opacity: 1; background: rgba(var(--ui-rgb), 0.12); }
 	.c { opacity: 0.5; font-variant-numeric: tabular-nums; }
 	.divider { height: 1px; background: rgba(var(--ui-rgb), 0.16); margin: 0.3rem 0; }
+	.loading {
+		margin: 0; padding: 0.25rem 0.7rem; opacity: 0.45;
+		font-family: var(--font-ui); font-size: 0.6rem; letter-spacing: 0.04em;
+	}
 </style>

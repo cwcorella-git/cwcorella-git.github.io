@@ -65,6 +65,15 @@
 		</button>
 		<div class="divider"></div>
 
+		<!-- `facets` is null only during the FIRST load: loadFacets keeps the previous
+		     value on a refetch ("stale categories beat a destroyed page"), so this
+		     cannot flash when you change source. Without it the panel renders an
+		     empty, confident source list while /facets is still in flight -- which
+		     reads as "the library is empty", and was reported as exactly that. -->
+		{#if facets === null}
+			<p class="loading">loading…</p>
+		{/if}
+
 		{#each tree as src (src.name)}
 			<div class="row-group">
 				{#if src.categories.length}
@@ -120,6 +129,10 @@
 	.row.nest { padding-left: 1.6rem; }
 	.c { opacity: 0.5; font-variant-numeric: tabular-nums; }
 	.divider { height: 1px; background: rgba(var(--ui-rgb), 0.16); margin: 0.3rem 0; }
+	.loading {
+		margin: 0; padding: 0.25rem 0.7rem; opacity: 0.45;
+		font-family: var(--font-ui); font-size: 0.6rem; letter-spacing: 0.04em;
+	}
 
 	.row-group { display: flex; align-items: stretch; width: 100%; }
 	.caret,
