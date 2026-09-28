@@ -63,3 +63,24 @@ export function corpusLabel(corpus: CorpusFilter | undefined): string {
 	const source = sourceLabel(corpus.source);
 	return corpus.collection ? `${source} ▸ ${corpus.collection}` : source;
 }
+
+/**
+ * The corpus total for the "all sources" row, as display text.
+ *
+ * Empty string while `facets` is null, NOT "0". The panel can be opened before
+ * `getFacets` resolves -- roughly a second and a half over the tunnel -- and a
+ * confident `0` beside an empty source list reads as "the library is empty"
+ * rather than "still loading". It was reported as exactly that.
+ *
+ * This is the convention the other three panels already follow: LanguageControl
+ * gives the "all" row no count, StateControl returns '' for a missing bucket
+ * ("show no count rather than a wrong one"), DecisionControl uses `?? ''`.
+ * CorpusControl was the one that used `?? 0`.
+ *
+ * A LOADED but empty `sources` is a real zero and prints as one -- the distinction
+ * is absent-versus-empty, not falsy.
+ */
+export function corpusTotal(facets: Facets | null): string {
+	if (!facets) return '';
+	return facets.sources.reduce((n, s) => n + s.count, 0).toLocaleString();
+}

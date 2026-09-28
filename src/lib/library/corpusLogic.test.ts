@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildCorpusTree, corpusLabel, sourceLabel } from './corpusLogic';
+import { buildCorpusTree, corpusLabel, corpusTotal, sourceLabel } from './corpusLogic';
 import type { Facets } from './types';
 
 const facets = (over: Partial<Facets> = {}): Facets => ({
@@ -91,5 +91,24 @@ describe('sourceLabel', () => {
 
 	it('falls back to the raw slug for an unknown source', () => {
 		expect(sourceLabel('unknown-src')).toBe('unknown-src');
+	});
+});
+
+describe('corpusTotal', () => {
+	it('sums the source buckets', () => {
+		expect(corpusTotal(facets())).toBe((60726 + 24594 + 2521).toLocaleString());
+	});
+
+	it('is EMPTY while facets are still loading, not "0"', () => {
+		// The regression. The panel opens before getFacets resolves, and a confident
+		// `0` beside an empty source list reads as "the library is empty" -- which is
+		// how it was reported. Absent is not zero.
+		expect(corpusTotal(null)).toBe('');
+	});
+
+	it('is a real "0" when the API genuinely returns no sources', () => {
+		// The other half: loaded-but-empty is a fact and prints as one. A blanket
+		// falsy check would have collapsed these two cases together.
+		expect(corpusTotal(facets({ sources: [] }))).toBe('0');
 	});
 });

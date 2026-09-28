@@ -1,6 +1,6 @@
 <script lang="ts">
 	import FacetPanel from './FacetPanel.svelte';
-	import { buildCorpusTree, corpusLabel, sourceLabel } from '$lib/library/corpusLogic';
+	import { buildCorpusTree, corpusLabel, corpusTotal, sourceLabel } from '$lib/library/corpusLogic';
 	import type { Facets, CorpusFilter } from '$lib/library/types';
 
 	interface Props {
@@ -61,7 +61,7 @@
 	{#snippet children()}
 		<button class="row" role="menuitem" class:sel={!corpus?.source} onclick={pickAll}>
 			<span>all sources</span>
-			<span class="c">{fmt(facets?.sources.reduce((n, s) => n + s.count, 0) ?? 0)}</span>
+			<span class="c">{corpusTotal(facets)}</span>
 		</button>
 		<div class="divider"></div>
 
