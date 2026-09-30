@@ -1,4 +1,5 @@
 import { marked, Renderer } from 'marked';
+import DOMPurify from 'isomorphic-dompurify';
 
 export interface TocEntry {
 	level: 1 | 2 | 3;
@@ -6,12 +7,20 @@ export interface TocEntry {
 	anchor: string;
 }
 
+// DOMPurify's anti-DOM-clobbering pass rewrites every id/name to `user-content-*`
+// (without it, a heading slugifying to "title" or "forms" has its id DROPPED, and
+// the TOC jump for it silently does nothing). We emit that prefix ourselves so the
+// id survives sanitising unchanged, and because slugify is the single source for
+// both extractToc's anchor and the heading renderer's id, the two still agree.
+const ID_PREFIX = 'user-content-';
+
 function slugify(text: string): string {
-	return text
+	const base = text
 		.toLowerCase()
 		.replace(/[^\w\s-]/g, '')
 		.trim()
 		.replace(/[\s_]+/g, '-');
+	return base ? ID_PREFIX + base : '';
 }
 
 export function extractToc(markdown: string): TocEntry[] {
@@ -48,5 +57,11 @@ export function renderMarkdown(markdown: string): string {
 		const escaped = note.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 		return `<span class="ann" data-note="${escaped}">${text}</span>`;
 	});
-	return html;
+	// Sanitise LAST. Corpus bodies are not trustworthy input and every caller
+	// renders this through `{@html}` -- three documents in the library carry a
+	// live <script> in their article text. Moving this above the <ann> replace
+	// still returns plausible HTML, but strips <ann> as an unknown element and
+	// silently kills every hover annotation. The <ann> test below fails if it
+	// moves. DOMPurify's defaults keep `class` and `data-*`, so the span survives.
+	return DOMPurify.sanitize(html, { SANITIZE_NAMED_PROPS: true });
 }

@@ -2,13 +2,14 @@
 	import homeContent from '$lib/content/home.json';
 	import HomeEditor from '$lib/components/HomeEditor.svelte';
 	import { homeState, adminState, writeQueue } from '$lib/admin/state.svelte';
-	import { marked } from 'marked';
+	import { renderMarkdown } from '$lib/admin/markdown';
 
 	let editing = $state(false);
 
 	// Fall back to static build value if no draft has been restored
 	let content = $derived(homeState.content ?? homeContent.content);
-	let rendered = $derived(marked(content) as string);
+	// Through renderMarkdown, not marked directly: that is where sanitising lives.
+	let rendered = $derived(renderMarkdown(content));
 
 	function save(newContent: string) {
 		homeState.set(newContent);

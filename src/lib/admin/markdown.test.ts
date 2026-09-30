@@ -21,14 +21,14 @@ describe('extractToc', () => {
 	it('slugifies anchors: lowercase and spaces to hyphens', () => {
 		const md = '# Hello World\n';
 		const toc = extractToc(md);
-		expect(toc[0].anchor).toBe('hello-world');
+		expect(toc[0].anchor).toBe('user-content-hello-world');
 	});
 
 	it('slugifies anchors: strips special characters', () => {
 		const md = '## TypeScript & You! (A Guide)\n';
 		const toc = extractToc(md);
 		// Non-word chars (except spaces and -) are removed
-		expect(toc[0].anchor).toBe('typescript-you-a-guide');
+		expect(toc[0].anchor).toBe('user-content-typescript-you-a-guide');
 	});
 
 	it('returns empty array for markdown with no headings', () => {
@@ -54,7 +54,7 @@ describe('extractToc', () => {
 	it('anchor for single-word heading is just the lowercased word', () => {
 		const md = '# Introduction\n';
 		const toc = extractToc(md);
-		expect(toc[0].anchor).toBe('introduction');
+		expect(toc[0].anchor).toBe('user-content-introduction');
 	});
 });
 
@@ -68,7 +68,7 @@ describe('renderMarkdown', () => {
 
 	it('renders headings with id attributes based on slugified text', () => {
 		const html = renderMarkdown('# My Heading\n');
-		expect(html).toContain('id="my-heading"');
+		expect(html).toContain('id="user-content-my-heading"');
 		expect(html).toContain('<h1');
 		expect(html).toContain('My Heading');
 	});
@@ -76,13 +76,13 @@ describe('renderMarkdown', () => {
 	it('renders h2 with correct id', () => {
 		const html = renderMarkdown('## Section Title\n');
 		expect(html).toContain('<h2');
-		expect(html).toContain('id="section-title"');
+		expect(html).toContain('id="user-content-section-title"');
 	});
 
 	it('renders h3 with correct id', () => {
 		const html = renderMarkdown('### Sub Section\n');
 		expect(html).toContain('<h3');
-		expect(html).toContain('id="sub-section"');
+		expect(html).toContain('id="user-content-sub-section"');
 	});
 
 	it('renders bold text', () => {
@@ -90,11 +90,36 @@ describe('renderMarkdown', () => {
 		expect(html).toContain('<strong>bold</strong>');
 	});
 
+	// Three documents in the corpus (Hack This Zine 02/03/04) carry a live
+	// <script> in their article text, outside any code fence. Every caller
+	// renders this output through `{@html}`.
+	it('strips a script tag from a body', () => {
+		const html = renderMarkdown('Before.\n\n<script>alert(document.cookie)</script>\n\nAfter.');
+		expect(html).not.toContain('<script');
+		expect(html).not.toContain('alert(');
+		expect(html).toContain('Before.');
+	});
+
+	it('strips an inline event handler', () => {
+		const html = renderMarkdown('<img src="x" onerror="alert(1)">');
+		expect(html).not.toContain('onerror');
+		expect(html).not.toContain('alert(1)');
+	});
+
+	// This is the ordering test. The sanitiser runs AFTER the <ann> substitution;
+	// reorder them and <ann> is stripped as an unknown element, so this fails.
+	it('keeps the annotation span through sanitising', () => {
+		const html = renderMarkdown('An <ann note="a gloss">annotated</ann> word.');
+		expect(html).toContain('class="ann"');
+		expect(html).toContain('data-note="a gloss"');
+		expect(html).toContain('annotated');
+	});
+
 	it('renders multiple elements correctly', () => {
 		const md = '# Title\n\nA paragraph.\n\n## Section\n\nAnother paragraph.\n';
 		const html = renderMarkdown(md);
-		expect(html).toContain('id="title"');
-		expect(html).toContain('id="section"');
+		expect(html).toContain('id="user-content-title"');
+		expect(html).toContain('id="user-content-section"');
 		expect(html).toContain('<p>');
 	});
 });
@@ -105,7 +130,7 @@ describe('headings with no slug', () => {
 	it.each(['***', '—', 'Глава первая', '* * *'])('%j gets no TOC entry and no empty id', (h) => {
 		const md = `# Real\n\n## ${h}\n\nbody\n`;
 		const toc = extractToc(md);
-		expect(toc.map((t) => t.anchor)).toEqual(['real']);
+		expect(toc.map((t) => t.anchor)).toEqual(['user-content-real']);
 		expect(toc.every((t) => t.anchor !== '')).toBe(true);
 		expect(renderMarkdown(md)).not.toContain('id=""');
 	});

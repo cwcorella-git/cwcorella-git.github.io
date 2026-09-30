@@ -5,7 +5,8 @@
  * body that matched, with the matched words delimited by ASCII **STX and ETX**
  * (`\u0002` / `\u0003`) rather than `<mark>`. That choice is deliberate on the API
  * side -- a snippet is corpus body text, which is not trustworthy input, and the
- * reader renders through `{@html}` with no sanitizer. Control characters cannot
+ * reader renders through `{@html}`. (`renderMarkdown` now sanitises with
+ * DOMPurify, but that covers the body, not this path.) Control characters cannot
  * occur in HTML and cannot be typed, so there is nothing to escape and nothing to
  * inject. This module turns them into data; the components turn the data into real
  * `<mark>` elements through Svelte's normal escaping.
