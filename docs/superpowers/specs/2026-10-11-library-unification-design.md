@@ -13,7 +13,7 @@ Two sites read the same library-api bodies and render them with two different pi
 | Stack | SvelteKit static, admin-only page, bearer token, CORS = cwcorella.com | Next.js on Coolify, Postgres + library-api (host bridge `10.0.1.1:8088`, public fallback) |
 | Markdown | `marked` ^17, `src/lib/admin/markdown.ts` | react-markdown 10 + remark-gfm + rehype-raw, `HybridMarkdownRenderer.tsx` |
 | Into the DOM | `{@html}` in `components/library/DocReader.svelte`, `DocEditor.svelte` preview, `components/DocReader.svelte` | React tree |
-| Sanitizer | **none** | none at render (save-time DOMPurify for wiki edits only); rehype-sanitize in progress |
+| Sanitizer | isomorphic-dompurify, run LAST after the `<ann>` pass (`20d6729`; three Hack This Zine docs carry live `<script>`) | none at render (save-time DOMPurify for wiki edits only); rehype-sanitize in progress |
 | Math | none | remark-math + rehype-katex in progress, gated to `papers` source + wiki opt-in |
 | Extras | `<ann note>` → hover span (regex post-pass); heading ids must match `extractToc` | directives, columns, text colours, wiki links |
 
@@ -77,8 +77,8 @@ meta)`. One CSS file ships with it (see Q2).
   for exactly what those emit. Component overrides keep working.
 - **cwcorella** replaces `marked` with `renderToHtml` in the three call sites and in the
   build-time bake. Same output as VG for any library body.
-- **For:** one pipeline for library bodies on both sites; sanitizing and math land in
-  cwcorella for free; VG's wiki keeps its extensions as a layer on top; runs in the
+- **For:** one pipeline for library bodies on both sites; math lands in cwcorella for free, and
+  one allowlist replaces DOMPurify-here / rehype-sanitize-there; VG's wiki keeps its extensions as a layer on top; runs in the
   browser (editor preview) and in Node (bake, SSR).
 - **Against:** a gap still needs a package bump + two deploys (VG push, cwcorella push) —
   less overhead than writing it twice, more than Option A's zero. unified + KaTeX adds
@@ -188,6 +188,8 @@ fallback for one release. API fields are additive; removing them degrades to tod
 - `marked` → remark differ on edge cases (loose lists, HTML blocks, smart punctuation);
   the bake diff in step 4 is the check.
 - `<ann note>` must survive sanitize: the package handles it as a plugin, not a regex pass.
+  Today's ordering bug (sanitize-first strips `<ann>`) is pinned by a test in `20d6729`;
+  port that test into the fixture corpus. Hack This Zine 02/03/04 are the `<script>` fixtures.
 - Heading ids must keep matching `extractToc`, including the skip-empty-slug rule
   (punctuation-only / Cyrillic headings) — a fixture case.
 
