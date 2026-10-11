@@ -113,3 +113,10 @@ describe('fractionToIndex', () => {
 		expect(fractionToIndex(0.5, 0)).toBe(0);
 	});
 });
+
+describe('buildRail under a VG tier preview', () => {
+	it('has no rail while tier is set: /anchor-offset cannot filter by tier', () => {
+		expect(buildRail('title', 'asc', null, { tier: 'public' })).toEqual([]);
+		expect(buildRail('title', 'asc', null, {}).length).toBeGreaterThan(0);
+	});
+});

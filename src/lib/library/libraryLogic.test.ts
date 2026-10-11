@@ -329,3 +329,9 @@ describe('withSearchSort', () => {
 		}
 	});
 });
+
+describe('filtersToParams: tier', () => {
+	it('sends the VG preview as the API tier filter', () => {
+		expect(filtersToParams({ tier: 'public' })).toEqual({ tier: 'public' });
+	});
+});

@@ -12,6 +12,9 @@ export interface LibraryControls {
 		visibility?: string;
 		needs_formatting?: 0 | 1;
 		decision?: import('./types').DecisionInput;
+		// VG preview (rulings R3): the list as VG's tiers see it. Sent as the API's
+		// `tier` filter: public = VG public, curated = VG staff (both tiers), none = not on VG.
+		tier?: import('./types').TierFilter;
 	};
 	view: 'list' | 'grid';
 }

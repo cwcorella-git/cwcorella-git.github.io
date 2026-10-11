@@ -1,6 +1,11 @@
 export type Decision = 'keep' | 'hide' | 'delete';
 export type DecisionInput = Decision | 'undecided';
 
+/** library-api's computed VG tier of a document (backend/tiers.py tier_of). */
+export type VgTier = 'public' | 'reference';
+/** The `tier=` filter values library-api accepts (query.tier_sql). */
+export type TierFilter = 'public' | 'reference' | 'curated' | 'none';
+
 export interface DocListItem {
 	id: number;
 	source: string;
@@ -23,6 +28,8 @@ export interface DocListItem {
 	// matched words are delimited by ASCII STX/ETX, never markup — see
 	// `snippetLogic.ts` for why, and never interpolate it as HTML.
 	snippet?: string;
+	// VG tier (R3 badge). Optional: an un-upgraded API omits it; null = not on VG.
+	tier?: VgTier | null;
 }
 
 export interface DocVersion {

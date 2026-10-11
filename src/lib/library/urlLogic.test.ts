@@ -112,3 +112,14 @@ describe('isBrowserClick', () => {
 		expect(isBrowserClick({ ...plain, defaultPrevented: true })).toBe(true);
 	});
 });
+
+describe('VG tier preview in the URL', () => {
+	it('round-trips tier', () => {
+		const c = searchToControls(new URLSearchParams('tier=curated'));
+		expect(c.filters.tier).toBe('curated');
+		expect(controlsToSearch(c)).toBe('?tier=curated');
+	});
+	it('drops an unknown tier instead of sending it to the API', () => {
+		expect(searchToControls(new URLSearchParams('tier=bogus')).filters.tier).toBeUndefined();
+	});
+});

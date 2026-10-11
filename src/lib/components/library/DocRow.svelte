@@ -1,4 +1,5 @@
 <script lang="ts">
+	import TierBadge from './TierBadge.svelte';
 	import type { DocListItem } from '$lib/library/types';
 	import { badgeLabel } from '$lib/library/curationLogic';
 	import { isBrowserClick } from '$lib/library/urlLogic';
@@ -34,6 +35,7 @@
 		{#if item.decision}
 			<span class="decision decision-{item.decision}">{badgeLabel(item.decision)}</span>
 		{/if}
+		<TierBadge tier={item.tier} />
 		<span class="author">{item.author ?? '—'}</span>
 		<span class="source">{item.source}</span>
 		<span class="date">{item.publication_date ?? '—'}</span>

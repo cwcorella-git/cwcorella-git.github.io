@@ -11,6 +11,7 @@
 	import CorpusControl from '$lib/components/library/CorpusControl.svelte';
 	import LanguageControl from '$lib/components/library/LanguageControl.svelte';
 	import DecisionControl from '$lib/components/library/DecisionControl.svelte';
+	import TierControl from '$lib/components/library/TierControl.svelte';
 	import StateControl from '$lib/components/library/StateControl.svelte';
 	import { buildRail } from '$lib/library/railLogic';
 	import { progressText } from '$lib/library/curationLogic';
@@ -127,7 +128,8 @@
 		buildRail(
 			libraryState.controls.sort,
 			libraryState.controls.dir,
-			libraryState.facets?.date_range ?? null
+			libraryState.facets?.date_range ?? null,
+			libraryState.controls.filters
 		)
 	);
 	const linkSearch = $derived(controlsToSearch(libraryState.controls));
@@ -166,6 +168,13 @@
 					<DecisionControl
 						stats={libraryState.curationStats}
 						decision={libraryState.controls.filters.decision}
+						onChange={(patch) =>
+							libraryState.applyControls({
+								filters: { ...libraryState.controls.filters, ...patch }
+							})}
+					/>
+					<TierControl
+						tier={libraryState.controls.filters.tier}
 						onChange={(patch) =>
 							libraryState.applyControls({
 								filters: { ...libraryState.controls.filters, ...patch }

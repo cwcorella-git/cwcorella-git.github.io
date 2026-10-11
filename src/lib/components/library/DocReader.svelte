@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { renderLibrary, shouldUseMath } from '$lib/markdown/library';
 	import '$lib/markdown/lib-prose.css';
+	import TierBadge from './TierBadge.svelte';
 	import 'katex/dist/katex.min.css';
 	import { libraryState, libraryClient } from '$lib/library/libraryState.svelte';
 	import type { Decision } from '$lib/library/types';
@@ -266,7 +267,7 @@
 							{#if libraryState.editMode}
 								<DocEditor {doc} onCancel={() => libraryState.cancelEdit()} onSave={handleSave} />
 							{:else}
-								<h2 class="doc-heading">{doc.title}</h2>
+								<h2 class="doc-heading">{doc.title} <TierBadge tier={doc.tier} /></h2>
 								<div class="doc-body lib-prose" bind:this={bodyEl}>
 									{#if doc.body && doc.body.trim().length > 0}
 										<!-- eslint-disable-next-line svelte/no-at-html-tags -->

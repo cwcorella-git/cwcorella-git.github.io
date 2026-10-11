@@ -62,8 +62,13 @@ export function dateAnchors(range: DateRange, dir: 'asc' | 'desc'): RailAnchor[]
 export function buildRail(
 	sort: string,
 	dir: 'asc' | 'desc',
-	range: DateRange | null
+	range: DateRange | null,
+	filters: { tier?: string } = {}
 ): RailAnchor[] {
+	// /anchor-offset does not take `tier` (library-api, 2026-10-11). Under a VG
+	// preview it would count rows the list does not show and seek to the wrong
+	// one, silently. No rail until the API filters it the same way.
+	if (filters.tier) return [];
 	const kind = railKind(sort);
 	if (kind === 'alpha') return alphaAnchors(dir);
 	if (kind === 'date') return range ? dateAnchors(range, dir) : [];

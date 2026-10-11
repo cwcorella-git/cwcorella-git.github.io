@@ -203,8 +203,11 @@
 	.wrap { position: relative; flex: 1; min-width: 10rem; }
 	.bar {
 		display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;
-		border-bottom: 1px solid rgba(var(--ui-rgb), 0.22);
-		padding-bottom: 0.4rem;
+		/* Boxed like the reading-list search (2026-10-11 refresh). */
+		background: rgba(var(--ui-rgb), 0.06);
+		border: 1px solid var(--glass-border);
+		border-radius: 3px;
+		padding: 0.25rem 0.75rem;
 	}
 	.input {
 		background: none; border: none; outline: none; flex: 1; min-width: 6rem;
