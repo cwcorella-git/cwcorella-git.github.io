@@ -93,3 +93,14 @@ Kalinga was loaded from `static/fonts`. Only the library board was viewed after 
 the day and night boards were not looked at.
 
 Resume: wait for the operator's verdict on the look, then do the R2 port (see above).
+
+## 6. Operator notes on the renders; all three directions now drawn
+
+The operator's Media-tab notes asked two things. Why the search bar differs: it was an
+underline-only input, copied from the live site, among boxed pills. It is now a boxed field on
+both sky boards. Why the reader body differs: it is VG's own dark prose, per R5. A "blended"
+variant was added for comparison (VG type on the page glass). Static dark and flat calm were
+drawn with explicit metadata colours at about 7:1 instead of opacity. Two ops picks are
+pending: `library-body` and `direction`. Under flat calm the faithful dark body clashes most;
+under static dark it is indistinguishable from the page.
+Of the new boards, only `flatlibrary`, `dark` and `libraryblended` were viewed.
