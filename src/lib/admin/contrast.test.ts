@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { contrast, composite, lightFrame, metaFor, parseColor } from './contrast';
-import { PALETTES, fixedMeta } from './theme.svelte';
+import { PALETTES, fixedAccent, fixedMeta } from './theme.svelte';
 
-describe('every palette is legible (text and --clr-meta >= 4.5:1 on its panel)', () => {
+describe('every palette is legible (text, --clr-meta and accent >= 4.5:1 on its panel)', () => {
 	for (const [name, p] of Object.entries(PALETTES)) {
 		if (p.darkGlass) {
 			it(`${name} (fixed)`, () => {
@@ -10,6 +10,7 @@ describe('every palette is legible (text and --clr-meta >= 4.5:1 on its panel)',
 				const panel = composite(g.rgb, g.alpha, parseColor(p.bodyBg).rgb);
 				expect(contrast(p.textDay, panel)).toBeGreaterThanOrEqual(4.5);
 				expect(contrast(fixedMeta(p), panel)).toBeGreaterThanOrEqual(4.5);
+				expect(contrast(fixedAccent(p), panel)).toBeGreaterThanOrEqual(4.5);
 			});
 		} else {
 			// Every 5% of the day↔night swing, so a dip through twilight is caught —
@@ -20,6 +21,7 @@ describe('every palette is legible (text and --clr-meta >= 4.5:1 on its panel)',
 					const f = lightFrame(p, dl);
 					expect(contrast(f.text, f.panel), `${name} text at dl=${dl}`).toBeGreaterThanOrEqual(4.5);
 					expect(contrast(f.meta, f.panel), `${name} meta at dl=${dl}`).toBeGreaterThanOrEqual(4.5);
+					expect(contrast(f.accent, f.panel), `${name} accent at dl=${dl}`).toBeGreaterThanOrEqual(4.5);
 				}
 			});
 		}

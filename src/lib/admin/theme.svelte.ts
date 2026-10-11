@@ -1,4 +1,4 @@
-import { composite, metaFor, parseColor, rgbCss, type RGB } from './contrast';
+import { composite, legibleAccent, metaFor, parseColor, rgbCss, type RGB } from './contrast';
 
 // ── Palette system ─────────────────────────────────────────────────────────
 // Ten named palettes. Each defines the CSS seed vars that cascade into all
@@ -285,6 +285,13 @@ export function fixedMeta(p: Palette): RGB {
 	return metaFor(p.textDay, panel);
 }
 
+/** --pal-lib-link for a fixed palette, at >= 4.5:1 on its panel. */
+export function fixedAccent(p: Palette): RGB {
+	const glass = parseColor(p.glassFixed!);
+	const panel = composite(glass.rgb, glass.alpha, parseColor(p.bodyBg).rgb);
+	return legibleAccent(parseColor(p.accent).rgb, p.textDay, panel);
+}
+
 function applyPalette(name: PaletteName): void {
 	const p = PALETTES[name];
 	const r = document.documentElement;
@@ -297,7 +304,8 @@ function applyPalette(name: PaletteName): void {
 	r.style.setProperty('--glass-border-dark', p.glassBorderDark);
 
 	// Library-body colours (lib-prose.css reads --pal-lib-*, with fallbacks).
-	r.style.setProperty('--pal-lib-link', p.accent);
+	// Fixed palettes: accent made legible once; light-glass: Sky.svelte per frame.
+	r.style.setProperty('--pal-lib-link', p.darkGlass ? rgbCss(fixedAccent(p)) : p.accent);
 	for (const k of ['text', 'strong', 'soft', 'dim', 'rule', 'code-bg', 'pre-bg', 'ext', 'mention'] as const) {
 		const v = p.libProse?.[k];
 		if (v) r.style.setProperty(`--pal-lib-${k}`, v);

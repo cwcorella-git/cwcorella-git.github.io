@@ -65,18 +65,19 @@
 		display: flex; align-items: center; gap: 0.3rem;
 		background: none;
 		border: 1px solid rgba(var(--ui-rgb), 0.28);
-		color: var(--clr-text);
+		color: var(--clr-meta);
 		font-family: var(--font-ui);
 		font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase;
 		height: var(--ctl-h, 1.75rem);
 		padding: 0 0.5rem; /* horizontal only — vertical padding is what derived the height */
 		cursor: pointer; transition: all 0.15s;
-		white-space: nowrap; opacity: 0.72;
+		white-space: nowrap;
 	}
-	.trigger:hover { border-color: rgba(var(--ui-rgb), 0.45); opacity: 1; }
-	.trigger:focus-visible { outline: none; border-color: rgba(var(--ui-rgb), 0.45); opacity: 1; }
-	/* Set = the filter is doing work. Hierarchy via opacity, never a second colour. */
-	.trigger.set { opacity: 1; border-color: rgba(var(--ui-rgb), 0.55); }
+	.trigger:hover { border-color: rgba(var(--ui-rgb), 0.45); color: var(--clr-text); }
+	.trigger:focus-visible { outline: none; border-color: rgba(var(--ui-rgb), 0.45); color: var(--clr-text); }
+	/* Set = the filter is doing work. Hierarchy is text vs --clr-meta (both legible,
+	   2026-10-11) — not opacity, which faded rest-state labels under 4.5:1. */
+	.trigger.set { color: var(--clr-text); border-color: rgba(var(--ui-rgb), 0.55); }
 	.chev { opacity: 0.6; }
 
 	/* A SET label is a value and can be long — the worst real one is
@@ -93,9 +94,11 @@
 	.panel {
 		position: absolute; top: calc(100% + 0.3rem); right: 0; z-index: 20;
 		min-width: 11rem; max-height: 60vh; overflow-y: auto;
-		background: var(--glass-bg);
-		backdrop-filter: var(--glass-blur);
-		-webkit-backdrop-filter: var(--glass-blur);
+		/* Heavy glass: it floats over the list and controls, and the page glass let
+		   them read through it (2026-10-11). */
+		background: var(--glass-bg-heavy);
+		backdrop-filter: var(--glass-blur-heavy);
+		-webkit-backdrop-filter: var(--glass-blur-heavy);
 		border: 1px solid var(--glass-border);
 		padding: 0.4rem 0;
 		font-family: var(--font-ui); font-size: 0.6rem; letter-spacing: 0.05em;

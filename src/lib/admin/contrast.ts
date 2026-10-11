@@ -47,6 +47,15 @@ export function composite(panel: RGB, alpha: number, ground: RGB): RGB {
 	return mix(ground, panel, alpha);
 }
 
+/** `accent` as is if it reads on `panel`; else moved toward `text` just far enough. */
+export function legibleAccent(accent: RGB, text: RGB, panel: RGB): RGB {
+	for (let t = 0; t <= 1; t += 0.05) {
+		const a = mix(accent, text, t);
+		if (contrast(a, panel) >= MIN_RATIO) return a;
+	}
+	return text;
+}
+
 /** Metadata colour for `text` on `panel`: as soft as MAX_MIX, never under 4.5:1. */
 export function metaFor(text: RGB, panel: RGB): RGB {
 	for (let t = MAX_MIX; t > 0; t -= 0.02) {
@@ -64,6 +73,7 @@ export interface LightPaletteSeeds {
 	glassNight: RGB;
 	textDay: RGB;
 	textNight: RGB;
+	accent: string;
 }
 
 export interface LightFrame {
@@ -73,6 +83,7 @@ export interface LightFrame {
 	panel: RGB;       // what a panel actually shows: glass over ground
 	text: RGB;        // --clr-text / --clr-dark-text
 	meta: RGB;        // --clr-meta
+	accent: RGB;      // --pal-lib-link (sky's day blue vanished on the night ground)
 }
 
 /**
@@ -96,5 +107,6 @@ export function lightFrame(p: LightPaletteSeeds, dl: number): LightFrame {
 	const ground = dl < TWILIGHT ? mix(p.glassNight, [0, 0, 0], 0.25) : parseColor(p.bodyBg).rgb;
 	const panel = composite(glass, glassAlpha, ground);
 	const text = contrast(p.textDay, panel) >= contrast(p.textNight, panel) ? p.textDay : p.textNight;
-	return { ground, glass, glassAlpha, panel, text, meta: metaFor(text, panel) };
+	const accent = legibleAccent(parseColor(p.accent).rgb, text, panel);
+	return { ground, glass, glassAlpha, panel, text, meta: metaFor(text, panel), accent };
 }

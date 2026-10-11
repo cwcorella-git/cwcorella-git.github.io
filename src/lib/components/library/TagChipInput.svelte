@@ -240,10 +240,10 @@
 	.row {
 		display: flex; justify-content: space-between; gap: 1rem; width: 100%;
 		background: none; border: none; cursor: pointer; text-align: left;
-		color: var(--clr-text); opacity: 0.7;
+		color: var(--clr-meta);
 		font-family: var(--font-ui); font-size: 0.6rem; letter-spacing: 0.04em;
-		padding: 0.25rem 0.7rem; transition: opacity 0.12s;
+		padding: 0.25rem 0.7rem; transition: color 0.12s;
 	}
-	.row:hover { opacity: 1; background: rgba(var(--ui-rgb), 0.12); }
+	.row:hover { color: var(--clr-text); background: rgba(var(--ui-rgb), 0.12); }
 	.c { color: var(--clr-meta); font-variant-numeric: tabular-nums; }
 </style>

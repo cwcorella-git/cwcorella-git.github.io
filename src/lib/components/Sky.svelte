@@ -422,6 +422,7 @@
 		r.style.setProperty('--glass-nav-bg', `rgba(${gr},${gg},${gb},${(0.30*dl + 0.52*(1-dl)).toFixed(2)})`);
 		r.style.setProperty('--clr-text', rgbCss(f.text));
 		r.style.setProperty('--clr-meta', rgbCss(f.meta));
+		r.style.setProperty('--pal-lib-link', rgbCss(f.accent));
 
 		// Overlays + panels also track sky so they match the page at all times of day
 		r.style.setProperty('--glass-bg-dark',     `rgba(${gr},${gg},${gb},${(0.72*dl + 0.88*(1-dl)).toFixed(2)})`);

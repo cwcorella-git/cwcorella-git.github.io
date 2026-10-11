@@ -54,12 +54,12 @@
 	.row {
 		display: flex; justify-content: space-between; align-items: center; gap: 1rem;
 		width: 100%; background: none; border: none; cursor: pointer;
-		color: var(--clr-text); opacity: 0.7;
+		color: var(--clr-meta);
 		font-family: var(--font-ui); font-size: 0.6rem; letter-spacing: 0.04em;
-		padding: 0.25rem 0.7rem; text-align: left; transition: opacity 0.12s;
+		padding: 0.25rem 0.7rem; text-align: left; transition: color 0.12s;
 	}
-	.row:hover { opacity: 1; }
-	.row.sel { opacity: 1; background: rgba(var(--ui-rgb), 0.12); }
+	.row:hover { color: var(--clr-text); }
+	.row.sel { color: var(--clr-text); background: rgba(var(--ui-rgb), 0.12); }
 	.c { color: var(--clr-meta); }
 	.divider { height: 1px; background: rgba(var(--ui-rgb), 0.16); margin: 0.3rem 0; }
 </style>
