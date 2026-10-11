@@ -1,10 +1,12 @@
 // ── Palette system ─────────────────────────────────────────────────────────
-// Four named palettes. Each defines the CSS seed vars that cascade into all
+// Ten named palettes. Each defines the CSS seed vars that cascade into all
 // borders, glass tints, body background, and dark-panel colours. Sky.svelte
 // reads glassDay/glassNight/textDay/textNight to interpolate --clr-text and
 // the three --glass-* vars per-frame as the sun moves.
 
-export type PaletteName = 'amber' | 'sky' | 'dusk' | 'neutral' | 'sage' | 'rust';
+export type PaletteName =
+	| 'sky' | 'neutral' | 'sage' | 'dawn' | 'paper'
+	| 'amber' | 'rust' | 'dusk' | 'forest' | 'ink';
 
 export interface Palette {
 	label: string;
@@ -18,6 +20,10 @@ export interface Palette {
 	// Dark-glass mode: applyPalette sets all glass/text vars directly;
 	// Sky.svelte does NOT override them per-frame.
 	darkGlass: boolean;
+	// Solid mode (paper, ink): fixed colours like darkGlass, but opaque panels and
+	// no backdrop blur. Requires darkGlass=true so Sky.svelte leaves it alone.
+	// `ink` is the VG-fidelity palette (rulings R8): its values are VG's dark prose.
+	solid?: boolean;
 	glassFixed?: string;        // --glass-bg  (main content panels)
 	glassBorderFixed?: string;  // --glass-border
 	glassNavBgFixed?: string;   // --glass-nav-bg
@@ -41,7 +47,7 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		uiRgb:        '160, 120, 60',
 		darkPanelRgb: '200, 152, 64',    // amber-gold tint on all dark-panel chrome
 		bodyBg:       '#0c0902',          // dark amber body — near-black
-		clrDarkText:  '#c8b890',          // warm amber text — readable on near-black
+		clrDarkText:  '#e2d2a8',          // warm amber text — readable on near-black
 		glassBgDark:     'rgba(20, 13, 3, 0.88)',    // dark amber modals — glass feel, not a wall
 		glassBorderDark: 'rgba(200, 150, 60, 0.28)', // amber accent border
 		// Dark-glass: solid opaque panels — no sky transparency
@@ -52,8 +58,8 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		glassHeavyFixed:  'rgba(18, 12, 2, 0.92)',    // fullscreen overlays
 		glassDay:   [22,  14,  3  ],  // kept for compat; not used for glass in dark mode
 		glassNight: [12,  8,   2  ],
-		textDay:    [200, 184, 144],  // #c8b890 — same day and night (always dark site)
-		textNight:  [200, 184, 144],
+		textDay:    [226, 210, 168],  // #e2d2a8 — refined 2026-10-11 for contrast
+		textNight:  [226, 210, 168],
 		swatchBg:     '#0c0902',
 		swatchBorder: '#c8a060',
 	},
@@ -82,7 +88,7 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		uiRgb:        '148, 110, 178',     // muted violet light-context chrome
 		darkPanelRgb: '175, 130, 205',     // mauve tint for panel chrome
 		bodyBg:       '#0e0a16',            // deep purple-black
-		clrDarkText:  '#c0b4d0',           // muted mauve — warm-cool on deep purple glass
+		clrDarkText:  '#d8cce8',           // muted mauve — warm-cool on deep purple glass
 		glassBgDark:     'rgba(24, 14, 36, 0.88)',    // deep purple modals
 		glassBorderDark: 'rgba(165, 110, 210, 0.25)', // violet accent border
 		// Dark-glass: permanent twilight — panels never shift with sky
@@ -93,8 +99,8 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		glassHeavyFixed:  'rgba(26, 16, 40, 0.92)',    // fullscreen overlays
 		glassDay:   [30, 18, 44],  // kept for compat; not used in dark-glass mode
 		glassNight: [14,  9, 20],
-		textDay:    [192, 180, 210],  // #c0b4d2
-		textNight:  [192, 180, 210],
+		textDay:    [216, 204, 232],  // #d8cce8 — refined 2026-10-11
+		textNight:  [216, 204, 232],
 		swatchBg:     '#0e0a16',
 		swatchBorder: '#a068c0',
 	},
@@ -142,7 +148,7 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		uiRgb:        '170, 100, 70',      // warm orange-red accent for light-context chrome
 		darkPanelRgb: '150, 80, 50',       // warm rust tint for overlay chrome
 		bodyBg:       '#1a0e0a',            // very dark warm brown-red (rust-like)
-		clrDarkText:  '#d8a080',            // warm rust-orange text
+		clrDarkText:  '#ecc0a0',            // warm rust-orange text
 		glassBgDark:     'rgba(36, 16, 10, 0.88)',    // deep warm rust glass
 		glassBorderDark: 'rgba(180, 110, 70, 0.30)', // warm rust-orange border
 		// Dark-glass: permanent bold rust/oxide mood
@@ -153,10 +159,91 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		glassHeavyFixed:  'rgba(36, 16, 12, 0.92)',    // fullscreen overlays
 		glassDay:   [40, 18, 12],  // kept for compat; not used in dark-glass mode
 		glassNight: [24, 10, 6],
-		textDay:    [216, 160, 128],  // #d8a080 — warm rust-orange always
-		textNight:  [216, 160, 128],
+		textDay:    [236, 192, 160],  // #ecc0a0 — refined 2026-10-11
+		textNight:  [236, 192, 160],
 		swatchBg:     '#1a0e0a',
 		swatchBorder: '#c87050',
+	},
+	dawn: {
+		label: 'dawn',
+		uiRgb:        '190, 120, 90',
+		darkPanelRgb: '150, 70, 40',
+		bodyBg:       '#e8c8b0',
+		clrDarkText:  '#3a2014',
+		glassBgDark:     'rgba(240, 210, 190, 0.82)', // initial fallback; Sky.svelte overrides per-frame
+		glassBorderDark: 'rgba(150, 90, 60, 0.30)',
+		// Light-glass: warm peach panels that follow the day
+		darkGlass: false,
+		glassDay:   [255, 244, 234],
+		glassNight: [30,  16,  10 ],
+		textDay:    [58,  32,  20 ],
+		textNight:  [246, 226, 210],
+		darkPanelDay:   [150, 70,  40 ],
+		darkPanelNight: [240, 190, 160],
+		swatchBg:     '#e8c8b0',
+		swatchBorder: '#b04a2a',
+	},
+	paper: {
+		label: 'paper',
+		uiRgb:        '90, 86, 80',
+		darkPanelRgb: '27, 26, 24',
+		bodyBg:       '#f3f1ec',
+		clrDarkText:  '#1b1a18',
+		glassBgDark:     '#fbfaf7',
+		glassBorderDark: '#e1dcd2',
+		darkGlass:        true,
+		solid:            true,
+		glassFixed:       '#fbfaf7',
+		glassBorderFixed: '#e1dcd2',
+		glassNavBgFixed:  '#f3f1ec',
+		glassHeavyFixed:  '#fbfaf7',
+		glassDay:   [251, 250, 247],
+		glassNight: [251, 250, 247],
+		textDay:    [27,  26,  24 ],
+		textNight:  [27,  26,  24 ],
+		swatchBg:     '#f3f1ec',
+		swatchBorder: '#5a5650',
+	},
+	forest: {
+		label: 'forest',
+		uiRgb:        '90, 150, 110',
+		darkPanelRgb: '108, 192, 138',
+		bodyBg:       '#08110c',
+		clrDarkText:  '#cfe2d4',
+		glassBgDark:     'rgba(14, 28, 20, 0.88)',
+		glassBorderDark: 'rgba(108, 192, 138, 0.28)',
+		darkGlass:        true,
+		glassFixed:       'rgba(16, 32, 22, 0.88)',
+		glassBorderFixed: 'rgba(108, 192, 138, 0.16)',
+		glassNavBgFixed:  'rgba(10, 20, 14, 0.88)',
+		glassHeavyFixed:  'rgba(14, 28, 20, 0.92)',
+		glassDay:   [16, 32, 22],
+		glassNight: [10, 20, 14],
+		textDay:    [207, 226, 212],
+		textNight:  [207, 226, 212],
+		swatchBg:     '#08110c',
+		swatchBorder: '#6cc08a',
+	},
+	ink: {
+		label: 'ink',
+		uiRgb:        '163, 163, 163',
+		darkPanelRgb: '237, 237, 237',
+		bodyBg:       '#0a0a0a',            // VG --background
+		clrDarkText:  '#ededed',            // VG --foreground
+		glassBgDark:     '#121212',
+		glassBorderDark: '#262626',
+		darkGlass:        true,
+		solid:            true,
+		glassFixed:       '#121212',
+		glassBorderFixed: '#262626',
+		glassNavBgFixed:  '#0a0a0a',
+		glassHeavyFixed:  '#121212',
+		glassDay:   [18, 18, 18],
+		glassNight: [18, 18, 18],
+		textDay:    [237, 237, 237],
+		textNight:  [237, 237, 237],
+		swatchBg:     '#0a0a0a',
+		swatchBorder: '#60a5fa',
 	},
 };
 
@@ -177,6 +264,11 @@ function applyPalette(name: PaletteName): void {
 	r.style.setProperty('--clr-dark-text',     p.clrDarkText);
 	r.style.setProperty('--glass-bg-dark',     p.glassBgDark);
 	r.style.setProperty('--glass-border-dark', p.glassBorderDark);
+
+	// Solid palettes drop the frosted blur; every other palette restores it.
+	r.style.setProperty('--glass-blur',       p.solid ? 'none' : 'blur(22px)');
+	r.style.setProperty('--glass-blur-heavy', p.solid ? 'none' : 'blur(28px)');
+	r.style.setProperty('--glass-blur-nav',   p.solid ? 'none' : 'blur(20px)');
 
 	if (p.darkGlass) {
 		// Dark-glass palettes: set all glass/text vars directly.

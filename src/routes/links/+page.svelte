@@ -726,8 +726,11 @@
 	.search-bar {
 		display: flex; align-items: center; gap: 0.5rem;
 		flex: 1;
-		border-bottom: 1px solid rgba(var(--ui-rgb), 0.22);
-		padding-bottom: 0.4rem;
+		/* Boxed to match the reading list (2026-10-11 refresh). */
+		background: rgba(var(--ui-rgb), 0.06);
+		border: 1px solid var(--glass-border);
+		border-radius: 3px;
+		padding: 0.35rem 0.75rem;
 		overflow: hidden;
 	}
 	.search-input {

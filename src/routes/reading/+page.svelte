@@ -295,8 +295,11 @@
 		align-items: center;
 		gap: 0.5rem;
 		flex: 1;
-		border-bottom: 1px solid rgba(var(--ui-rgb), 0.22);
-		padding-bottom: 0.4rem;
+		/* Boxed like the pills below it (2026-10-11 refresh): it was underline-only. */
+		background: rgba(var(--ui-rgb), 0.06);
+		border: 1px solid var(--glass-border);
+		border-radius: 3px;
+		padding: 0.35rem 0.75rem;
 		overflow: hidden;
 	}
 	.pill-more {
@@ -336,7 +339,7 @@
 	.pill {
 		background: none;
 		border: 1px solid var(--glass-border);
-		border-radius: 2px;
+		border-radius: 3px;
 		padding: 0.25rem 0.65rem;
 		font-family: var(--font-ui);
 		font-size: 0.62rem;
