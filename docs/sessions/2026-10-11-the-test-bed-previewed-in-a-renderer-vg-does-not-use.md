@@ -16,9 +16,9 @@ operator deep-dive. **Nothing was built**; the outputs are docs. Repos read: thi
 | 7a | Ten palettes, solid mode, boxed search (R7–R9) | **done**: `a812535` |
 | 7 | O2: render "sky, refined" (day list, dusk library + VG body, night list) | **done**: canvas https://claude.ai/artifact/9zamj3pU4c1HpbewbhokZe + ops Media tab; awaiting verdict |
 
-| 8 | library-api: accept `tier` on `/anchor-offset`, then re-enable the jump rail under a preview | **proposed**: needs a library-api deploy |
-| 9 | `--clr-meta`: explicit metadata colour per palette instead of opacity | **proposed**: plan Phase 2, not done |
-| 10 | BookView (baked reading-list docs) through the VG renderer | **proposed**: it mixes library and personal docs |
+| 8 | library-api: accept `tier` on `/anchor-offset`, then re-enable the jump rail under a preview | **done**: library-api `13d4346` (deployed), cwcorella `a5809d9` |
+| 9 | `--clr-meta`: explicit metadata colour per palette instead of opacity | **done**: `dacddf2` (and night legibility, §9) |
+| 10 | BookView (baked reading-list docs) through the VG renderer | **done**: `9982955` (origin tag + backfill, 138/144) |
 
 Docs: `docs/superpowers/specs/2026-10-11-library-{unification-design,architecture-findings,visual-rulings}.md`.
 
@@ -163,3 +163,40 @@ Not verified:
   workstation; see `../library-api/CLAUDE.md`.
 - Re-port VG's renderer when VG changes it: `scripts/vg-parity/README.md`.
 - Nothing is running in the background.
+
+## 9. Follow-ups: rail, reading list, and a night nobody could read
+
+Second plan, approved by the operator. Three steps:
+- **The rail under a preview.** library-api `13d4346` adds `tier` to `/anchor-offset`. A
+  parametrized test checks every tier value; it fails without the fix (5/6) and passes with it.
+  `tests/`: 987 pass. `tools/scrape` has a collection error, already present: `requests` is
+  missing.
+  - The deploy is a restart on the workstation. The service process started 18:59:07, after
+    the commit, and `/livez` returns 200 on both the public URL and the bridge. My follow-up
+    `journalctl` and `systemctl show` calls were denied by the auto-mode classifier.
+  - **No authenticated call was made against production.** I didn't go looking for the token.
+  - cwcorella `a5809d9` puts the rail back. A new e2e checks that a jump under `?tier=none`
+    sends `tier=none` and lands on the right row (10/10).
+- **The reading list (`9982955`).** `BookDoc` gains `origin` and `source`. The backfill
+  matched 138 of 144 docs on text evidence. The 6 left unmatched are hand-placed, e.g. An
+  Anarchist FAQ, Aesop, The Oresteia, and stay on `marked`.
+  - A side effect is also a fix: **`marked`'s heading override emitted raw text**, so
+    `### **…**` headings showed literal asterisks on the public reading list.
+  - Two slips of my own came close to shipping. A replace hit my own new function and made
+    it recurse forever, which would have crashed every own doc. Separately, `loadDoc` still
+    used `marked`. Both were caught by checking the built page's class list, not by the tests.
+  - BookView saves now keep `origin`.
+- **`--clr-meta` (`dacddf2`).** Measuring it exposed a worse problem, already present: **the
+  four time-of-day palettes were illegible at night.** `--body-bg` never left its daytime
+  colour, so the darkening glass composited to mid-grey under pale text. Sky measured 2.9:1
+  at midnight and 1.3:1 at dusk, and that was confirmed on screen with a faked clock.
+  - The fix is the pure `lightFrame`. The ground switches at twilight, because no continuous
+    fade clears 4.5:1 for both text colours (the floor is about 3.7:1). The text is whichever
+    reads better on the panel actually shown.
+  - The test requires text and meta at 4.5:1 or better for every palette at every 5% of the
+    day. Seen: sky at noon, sky and dawn at 23:00, ink.
+
+Not verified:
+- The twilight switch was never watched in motion; the 1.5s transition is assumed.
+- Nested opacity on facet rows (row 0.7 × meta) still dims the counts.
+- The real reading-list deploy on Cloudflare was not checked.
