@@ -68,7 +68,7 @@ npm test          # vitest
 
 **Library** (`/library`) — the one server-backed page; see "The one acknowledged exception" above. Admin-gated in full. Detail below under "Library subsystem".
 
-**Theme**: 10 palettes (2026-10-11). Light, following the day via Sky.svelte: sky, neutral, sage, dawn. Dark-glass, fixed: amber, rust, dusk, forest. Solid (opaque, no blur): paper, and `ink` — VG's colours, the palette for judging formatting as VG shows it (rulings R8).
+**Theme**: 8 palettes (2026-10-11; paper and rust removed). Light, following the day via Sky.svelte: sky, neutral, sage, dawn. Dark-glass, fixed: amber, dusk, forest. Solid (opaque, no blur): `ink` — VG's colours, the palette for judging formatting as VG shows it (rulings R8).
 
 **tlock time-capsule**: Content key sealed 2026-06-11 to drand Quicknet round 751,863,412 (unlocks 2095-02-13). Stored at `static/docs/private/content-key.tlock`. `archiveState.tryUnlock()` called on page load when `isUnlockDay()`. SettingsPanel has a time capsule section showing seal status; auto-reseals when content key is updated.
 

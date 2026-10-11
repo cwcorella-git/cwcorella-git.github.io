@@ -4,10 +4,9 @@
 	// Two columns: light palettes left, dark right (row-major order interleaves them).
 	const ORDER: PaletteName[] = [
 		'sky', 'amber',
-		'neutral', 'rust',
-		'sage', 'dusk',
-		'dawn', 'forest',
-		'paper', 'ink',
+		'neutral', 'dusk',
+		'sage', 'forest',
+		'dawn', 'ink',
 	];
 </script>
 
