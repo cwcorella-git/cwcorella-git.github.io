@@ -200,3 +200,17 @@ Not verified:
 - The twilight switch was never watched in motion; the 1.5s transition is assumed.
 - Nested opacity on facet rows (row 0.7 × meta) still dims the counts.
 - The real reading-list deploy on Cloudflare was not checked.
+
+## 10. Facet rows, and two more found by looking (`afe795d`)
+
+The faded facet rows and triggers now use explicit colours: `--clr-meta` at rest, text on
+hover or when set. That supersedes the old house rule "hierarchy via opacity, never a second
+colour", whose comment in FacetPanel now says why. The screenshot exposed two more problems,
+both fixed:
+- **Menus let the controls behind them read through.** In sky at night, "TITLE" showed over
+  the counts. The menus now use the heavy glass.
+- **Sky's accent was dark blue on the night ground.** The tier badge and body links nearly
+  vanished. The accent is now made legible per palette, and per frame on light palettes;
+  contrast.test.ts covers it. 322 unit tests and 10/10 e2e pass.
+
+Still faint: about 8% of the page shows through heavy glass at night. Not fixed.
