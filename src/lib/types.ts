@@ -1,4 +1,12 @@
-export interface BookDoc { file: string; visibility: 'public' | 'admin'; }
+export interface BookDoc {
+	file: string;
+	visibility: 'public' | 'admin';
+	/** 'library' = a baked library-api body: BookView renders it through VG's
+	 *  pipeline (rulings R2). Absent = the operator's own doc (marked). */
+	origin?: 'library';
+	/** library-api source of a library body; gates math like VG (papers). */
+	source?: string;
+}
 export interface JournalMeta { slug: string; title: string; date: string | null; sealed?: boolean; }
 export interface BookLink { name: string; url: string; }
 export interface Book {

@@ -226,7 +226,8 @@ for (const p of planned) {
 		if (existsSync(out)) rmSync(out);
 		continue;
 	}
-	p.book.doc = { file: p.name, visibility: 'public' };
+	// origin/source: BookView renders library bodies through VG's pipeline.
+	p.book.doc = { file: p.name, visibility: 'public', origin: 'library', source: p.r.source };
 	attached.push(p);
 	written++;
 }

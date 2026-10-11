@@ -91,7 +91,8 @@ for (const t of targets) {
 	const back = JSON.parse(readFileSync(out, 'utf8'));
 	if (!back.ct || !back.iv || !back.salt) { console.error(`  FAILED ${t.name}: malformed output`); rmSync(out); continue; }
 	rmSync(t.src);
-	t.book.doc = { file: t.name, visibility: 'admin' };
+	// Keep origin/source if the doc already had them (a library body going admin).
+	t.book.doc = { ...t.book.doc, file: t.name, visibility: 'admin' };
 	moved++;
 	console.log(`  moved ${t.name}`);
 }

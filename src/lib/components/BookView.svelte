@@ -6,6 +6,9 @@
 	import { adminState, booksState, writeQueue } from '$lib/admin/state.svelte';
 	import { resolveBookDoc, linksFor } from '$lib/bookDocLogic';
 	import { renderMarkdown, extractToc } from '$lib/admin/markdown';
+	import { renderLibrary, shouldUseMath } from '$lib/markdown/library';
+	import '$lib/markdown/lib-prose.css';
+	import 'katex/dist/katex.min.css';
 	import { toast } from '$lib/admin/toast.svelte';
 	import YearPicker from '$lib/components/YearPicker.svelte';
 
@@ -34,6 +37,20 @@
 	let fallbackLinks = $derived(linksFor(book));
 	let html = $state('');
 	let toc = $state<TocEntry[]>([]);
+	// A baked library body renders through VG's pipeline (rulings R2) and gets
+	// VG's typography; the operator's own docs keep marked and this file's CSS.
+	let isLibraryDoc = $state(false);
+	function renderDoc(md: string, doc: BookDoc | undefined) {
+		isLibraryDoc = doc?.origin === 'library';
+		if (isLibraryDoc) {
+			const r = renderLibrary(md, { math: shouldUseMath(doc?.source) });
+			toc = r.toc;
+			html = r.html;
+		} else {
+			toc = extractToc(md);
+			html = renderMarkdown(md);
+		}
+	}
 	let docContent = $state('');   // raw markdown (edit mode + annotation gesture)
 	let contentEl = $state<HTMLElement | undefined>();
 
@@ -62,8 +79,7 @@
 				}
 			}
 			docContent = md;
-			toc = extractToc(md);
-			html = renderMarkdown(md);
+			renderDoc(md, doc);
 			loadState = 'ready';
 		} catch (e: unknown) {
 			loadError = e instanceof Error ? e.message : 'Failed to load document.';
@@ -112,7 +128,8 @@
 				} else {
 					extraUpdates.push({ path: `static/docs/public/${slug}.md`, content: docContent.trim() });
 				}
-				doc = { file: slug, visibility: docVisibility };
+				// Keep origin/source: an edited library body is still a library body.
+				doc = { ...book.doc, file: slug, visibility: docVisibility };
 			}
 
 			const validLinks = links.filter(l => l.name.trim() && l.url.trim())
@@ -136,8 +153,7 @@
 
 			// Update rendered view from new content
 			if (docContent.trim()) {
-				toc = extractToc(docContent);
-				html = renderMarkdown(docContent);
+				renderDoc(docContent, doc);
 				loadState = 'ready';
 			}
 
@@ -298,7 +314,7 @@
 					</div>
 				{:else}
 					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-					<div class="doc-content" bind:this={contentEl}>{@html html}</div>
+					<div class="doc-content" class:lib-prose={isLibraryDoc} bind:this={contentEl}>{@html html}</div>
 				{/if}
 			</div>
 
@@ -634,43 +650,44 @@
 	:global(.doc-content .text-center) { text-align: center; }
 	:global(.doc-content .text-right)  { text-align: right; }
 
+	/* Own docs only: library bodies (.lib-prose) take $lib/markdown/lib-prose.css. */
 	/* typography */
-	:global(.doc-content h1),
-	:global(.doc-content h2),
-	:global(.doc-content h3) {
+	:global(.doc-content:not(.lib-prose) h1),
+	:global(.doc-content:not(.lib-prose) h2),
+	:global(.doc-content:not(.lib-prose) h3) {
 		font-family: var(--font-prose);
 		color: var(--clr-text);
 		font-weight: normal;
 		margin-top: 2rem;
 	}
-	:global(.doc-content h1) { font-size: 1.4rem; border-bottom: 1px solid rgba(var(--ui-rgb),0.25); padding-bottom: 0.5rem; }
-	:global(.doc-content h2) { font-size: 1.1rem; }
-	:global(.doc-content h3) { font-size: 0.95rem; }
-	:global(.doc-content p)  { line-height: 1.9; color: var(--clr-text); margin-bottom: 1rem; }
-	:global(.doc-content a)  { color: var(--clr-text); }
-	:global(.doc-content blockquote) {
+	:global(.doc-content:not(.lib-prose) h1) { font-size: 1.4rem; border-bottom: 1px solid rgba(var(--ui-rgb),0.25); padding-bottom: 0.5rem; }
+	:global(.doc-content:not(.lib-prose) h2) { font-size: 1.1rem; }
+	:global(.doc-content:not(.lib-prose) h3) { font-size: 0.95rem; }
+	:global(.doc-content:not(.lib-prose) p)  { line-height: 1.9; color: var(--clr-text); margin-bottom: 1rem; }
+	:global(.doc-content:not(.lib-prose) a)  { color: var(--clr-text); }
+	:global(.doc-content:not(.lib-prose) blockquote) {
 		border-left: 2px solid rgba(var(--ui-rgb),0.38);
 		margin: 1rem 0; padding: 0.3rem 1rem;
 		color: var(--clr-text); font-style: italic;
 	}
-	:global(.doc-content code) {
+	:global(.doc-content:not(.lib-prose) code) {
 		font-family: var(--font-ui); font-size: 0.82em;
 		background: rgba(var(--ui-rgb),0.12); padding: 0.1em 0.35em; color: var(--clr-text);
 	}
-	:global(.doc-content pre) {
+	:global(.doc-content:not(.lib-prose) pre) {
 		background: rgba(var(--ui-rgb),0.08);
 		border: 1px solid rgba(var(--ui-rgb),0.20);
 		padding: 1rem; overflow-x: auto;
 	}
-	:global(.doc-content ul, .doc-content ol) { line-height: 1.8; color: var(--clr-text); padding-left: 1.5rem; }
+	:global(.doc-content:not(.lib-prose) ul, .doc-content:not(.lib-prose) ol) { line-height: 1.8; color: var(--clr-text); padding-left: 1.5rem; }
 
 	/* annotation spans */
-	:global(.doc-content .ann) {
+	:global(.doc-content:not(.lib-prose) .ann) {
 		position: relative;
 		border-bottom: 1.5px dotted rgba(var(--ui-rgb), 0.55);
 		cursor: help;
 	}
-	:global(.doc-content .ann::after) {
+	:global(.doc-content:not(.lib-prose) .ann::after) {
 		content: attr(data-note);
 		position: absolute;
 		bottom: calc(100% + 6px);
@@ -696,7 +713,7 @@
 		transition: opacity 0.15s;
 		z-index: 10;
 	}
-	:global(.doc-content .ann:hover::after) { opacity: 1; pointer-events: auto; }
+	:global(.doc-content:not(.lib-prose) .ann:hover::after) { opacity: 1; pointer-events: auto; }
 
 	/* edit mode */
 	.edit-body {
