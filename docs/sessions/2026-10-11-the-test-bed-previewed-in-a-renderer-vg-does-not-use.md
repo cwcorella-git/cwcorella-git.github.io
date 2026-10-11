@@ -10,10 +10,15 @@ operator deep-dive. **Nothing was built**; the outputs are docs. Repos read: thi
 | 1 | Unification spec (renderer options A/B/C, tokens, backend, migration) | **done**: `11101e8`, corrected `2c8c776` |
 | 2 | Architecture findings: how the sites link, feature gaps both ways | **done**: `2be937e` |
 | 3 | Operator rulings R1–R4 (fidelity, not chrome) | **done**: `2be937e` |
-| 4 | Port VG's markdown pipeline into cwcorella's library reader (R2) | **proposed**: not started; spec only |
-| 5 | Tier badge and VG public/staff preview toggle (R3) | **proposed**: needs `tier_of` per row from library-api |
+| 4 | Port VG's markdown pipeline into cwcorella's library reader (R2) | **done**: `0343f5b` |
+| 5 | Tier badge and VG public/staff preview toggle (R3) | **done**: see §8; the API already sent `tier` |
 | 6 | O1: VG prose colour and type inside the reader body? | **done**: ruled yes, body only (R5) |
+| 7a | Ten palettes, solid mode, boxed search (R7–R9) | **done**: `a812535` |
 | 7 | O2: render "sky, refined" (day list, dusk library + VG body, night list) | **done**: canvas https://claude.ai/artifact/9zamj3pU4c1HpbewbhokZe + ops Media tab; awaiting verdict |
+
+| 8 | library-api: accept `tier` on `/anchor-offset`, then re-enable the jump rail under a preview | **proposed**: needs a library-api deploy |
+| 9 | `--clr-meta`: explicit metadata colour per palette instead of opacity | **proposed**: plan Phase 2, not done |
+| 10 | BookView (baked reading-list docs) through the VG renderer | **proposed**: it mixes library and personal docs |
 
 Docs: `docs/superpowers/specs/2026-10-11-library-{unification-design,architecture-findings,visual-rulings}.md`.
 
@@ -112,3 +117,49 @@ palette, `ink` (R8). All six palettes are to be refined, and the set grows to 10
 is on the canvas and in Media (`20261011-174104-ten-palettes-*`). Pending: the operator's
 verdict on the 10 and any cull. The colours are proposals, not `theme.svelte.ts` values; the
 time-of-day palettes are shown in their day state only.
+
+## 8. The plan, executed: palettes, VG renderer, tier preview
+
+The operator approved the plan (`~/.claude/plans/polymorphic-bouncing-curry.md`). Three
+commits:
+- **`a812535` — ten palettes.** Adds dawn, paper, forest and ink, plus a `solid` mode with no
+  blur. The dark-glass text was lifted for contrast. The reading and links search fields are
+  now boxed. **The sky canvas paints nothing**: Sky.svelte only sets CSS vars, so the page
+  ground is `--body-bg`. The gradient skies in the renders were invented. Seen on the built
+  site, all ten palettes on the reading list (Media).
+- **`0343f5b` — VG renderer (R2).** Plugins ported verbatim @ VG `b51c85973`. The overrides
+  became a tree pass. A one-off parity run against VG's own `HybridMarkdownRenderer` over 184
+  real bodies came out **184/184 identical** after normalization. Getting there exposed three
+  VG behaviours, now matched:
+  - VG's span component drops every attribute except class and style, so marker's
+    `id="page-N-0"` is gone on VG.
+  - VG strips the trailing newline in code.
+  - **VG never renders its code-language label**: the `child.type === 'code'` check is dead
+    under react-markdown 10.
+
+  VG also leaks `node="[object Object]"` onto `<pre>` and `<code>`. That is a VG bug, which
+  the parity normalizer ignores. The fixtures carry VG-generated expected HTML
+  (`scripts/vg-parity/README.md`).
+- **The e2e was already failing at HEAD.** Relevance snippets put the body text in the list
+  row, so unscoped `getByText` matched two elements. 8099 was also taken by a 12-day-old
+  `python3 -m http.server`, which I did not kill. Fixed by scoping to `.doc-body` and making
+  the port configurable with `E2E_API_PORT`. 9/9 pass.
+- **R3, the tier badge and preview.** library-api already returns `tier` per row and per
+  document. The preview uses the `tier` filter, not `viewer=`: **`/anchor-offset` accepts
+  neither**, so the jump rail is disabled while a preview is set (row 8). Seen on the seeded
+  API: the badges, `tier=curated` in the URL, rail button count 27 → 0.
+
+Not verified:
+- **KaTeX:** rendering was never looked at in the browser, only in unit tests.
+- **Palettes in the reader:** only ink and paper were viewed, under a seeded body, never real
+  documents.
+- **Night palettes:** the time-of-day palettes were only seen at about 18:00.
+- **Live service:** nothing was checked against the real library-api; the CORS pin rules
+  localhost out.
+
+## Resume here (updated)
+
+- Rows 8–10 are proposed. Row 8 is a library-api change plus a service restart on the
+  workstation; see `../library-api/CLAUDE.md`.
+- Re-port VG's renderer when VG changes it: `scripts/vg-parity/README.md`.
+- Nothing is running in the background.
