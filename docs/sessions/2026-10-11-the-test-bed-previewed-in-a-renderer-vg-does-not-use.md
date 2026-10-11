@@ -214,3 +214,19 @@ both fixed:
   contrast.test.ts covers it. 322 unit tests and 10/10 e2e pass.
 
 Still faint: about 8% of the page shows through heavy glass at night. Not fixed.
+
+## Resume here (final)
+
+- Every row in the task table is done. Nothing is in progress and nothing runs in the
+  background (scratch servers on :8199/:5188/:5190 were `timeout`-bounded and have exited).
+- **Proposed, not started:**
+  - Check the live Cloudflare deploy of /reading and /library in a few palettes. Nothing
+    has been seen on cwcorella.com itself.
+  - Sweep the remaining ~120 information-bearing `opacity:` uses (journals, links, home)
+    to `--clr-meta`.
+  - Heavy glass at night lets about 8% through.
+- **Local `build/` points at the test API** (`PUBLIC_LIBRARY_API_URL=127.0.0.1:8199`). Run
+  `npm run build` before any hand deploy; CI builds clean.
+- Re-port VG's renderer when VG changes it: `scripts/vg-parity/README.md`.
+- library-api `13d4346` is deployed. Its other session's uncommitted files (`docs/STATUS.md`,
+  backups) were left untouched.
