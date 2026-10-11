@@ -245,5 +245,5 @@
 		padding: 0.25rem 0.7rem; transition: opacity 0.12s;
 	}
 	.row:hover { opacity: 1; background: rgba(var(--ui-rgb), 0.12); }
-	.c { opacity: 0.5; font-variant-numeric: tabular-nums; }
+	.c { color: var(--clr-meta); font-variant-numeric: tabular-nums; }
 </style>

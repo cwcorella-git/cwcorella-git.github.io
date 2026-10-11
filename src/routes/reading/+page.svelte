@@ -401,7 +401,7 @@
 		font-family: var(--font-ui);
 		font-size: 0.62rem;
 		letter-spacing: 0.06em;
-		color: var(--clr-text);
+		color: var(--clr-meta);
 	}
 
 	.row-action-btn {
@@ -470,7 +470,7 @@
 		font-family: var(--font-ui);
 		font-size: 0.62rem;
 		letter-spacing: 0.1em;
-		color: var(--clr-text);
+		color: var(--clr-meta);
 	}
 
 	/* ── context menu ────────────────────────────────────────── */

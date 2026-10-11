@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { themeState } from '$lib/admin/theme.svelte';
+	import { lightFrame, rgbCss } from '$lib/admin/contrast';
 
 	// ── constants ─────────────────────────────────────────────────────────────
 	const HORIZON_FRAC = 0.68;
@@ -408,43 +409,26 @@
 		const dl = Math.max(0, Math.min(1, (altDeg + 12) / 18));
 		console.log('[Sky] Setting dynamic CSS vars: dl=%f', dl);
 
-		function ri(d: number, n: number): number { return Math.round(d + (n - d) * (1 - dl)); }
-
 		const r = document.documentElement;
-		const { glassDay, glassNight, textDay, textNight, darkPanelDay, darkPanelNight } = themeState.palette;
+		const { darkPanelDay, darkPanelNight } = themeState.palette;
 
-		const gr = ri(glassDay[0], glassNight[0]);
-		const gg = ri(glassDay[1], glassNight[1]);
-		const gb = ri(glassDay[2], glassNight[2]);
-		r.style.setProperty('--glass-bg',     `rgba(${gr},${gg},${gb},${(0.22*dl + 0.42*(1-dl)).toFixed(2)})`);
+		// Ground, glass, text and meta for this frame: one pure function, tested
+		// for contrast in contrast.test.ts.
+		const f = lightFrame(themeState.palette, dl);
+		const [gr, gg, gb] = f.glass;
+		r.style.setProperty('--body-bg',      rgbCss(f.ground));
+		r.style.setProperty('--glass-bg',     `rgba(${gr},${gg},${gb},${f.glassAlpha.toFixed(2)})`);
 		r.style.setProperty('--glass-border', `rgba(${gr},${gg},${gb},${(0.40*dl + 0.15*(1-dl)).toFixed(2)})`);
 		r.style.setProperty('--glass-nav-bg', `rgba(${gr},${gg},${gb},${(0.30*dl + 0.52*(1-dl)).toFixed(2)})`);
-
-		// For light-glass palettes, keep text dark all day; only lighten at true night (dl < 0.1)
-		// For dark-glass (handled above), text is fixed
-		// This ensures readability on light backgrounds throughout the day
-		const textTransitionPoint = 0.15;  // Start text transition only when very close to night
-		let textAlpha = 0;
-		if (dl > textTransitionPoint) {
-			textAlpha = 0;  // Use textDay
-		} else {
-			// Transition from textDay to textNight only in the last part of twilight
-			textAlpha = (textTransitionPoint - dl) / textTransitionPoint;
-		}
-
-		r.style.setProperty('--clr-text',
-			`rgb(${Math.round(textDay[0] + (textNight[0] - textDay[0]) * textAlpha)},${Math.round(textDay[1] + (textNight[1] - textDay[1]) * textAlpha)},${Math.round(textDay[2] + (textNight[2] - textDay[2]) * textAlpha)})`
-		);
+		r.style.setProperty('--clr-text', rgbCss(f.text));
+		r.style.setProperty('--clr-meta', rgbCss(f.meta));
 
 		// Overlays + panels also track sky so they match the page at all times of day
 		r.style.setProperty('--glass-bg-dark',     `rgba(${gr},${gg},${gb},${(0.72*dl + 0.88*(1-dl)).toFixed(2)})`);
 		r.style.setProperty('--glass-border-dark', `rgba(${gr},${gg},${gb},${(0.38*dl + 0.22*(1-dl)).toFixed(2)})`);
 		r.style.setProperty('--glass-bg-heavy',    `rgba(${gr},${gg},${gb},${(0.78*dl + 0.92*(1-dl)).toFixed(2)})`);
 
-		const tr = ri(textDay[0], textNight[0]);
-		const tg = ri(textDay[1], textNight[1]);
-		const tb = ri(textDay[2], textNight[2]);
-		r.style.setProperty('--clr-dark-text', `rgb(${tr},${tg},${tb})`);
+		r.style.setProperty('--clr-dark-text', rgbCss(f.text));
 
 		if (darkPanelDay && darkPanelNight) {
 			const [pr, pg, pb] = lerpRGB(darkPanelDay as RGB, darkPanelNight as RGB, 1 - dl);

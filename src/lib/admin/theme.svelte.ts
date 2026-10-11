@@ -1,3 +1,5 @@
+import { composite, metaFor, parseColor, rgbCss, type RGB } from './contrast';
+
 // ── Palette system ─────────────────────────────────────────────────────────
 // Ten named palettes. Each defines the CSS seed vars that cascade into all
 // borders, glass tints, body background, and dark-panel colours. Sky.svelte
@@ -276,6 +278,13 @@ const STORAGE_KEY = 'cwc-theme';
 let _active  = $state<PaletteName>('neutral');
 let _version = $state(0);
 
+/** --clr-meta for a fixed (darkGlass/solid) palette. Exported for contrast.test.ts. */
+export function fixedMeta(p: Palette): RGB {
+	const glass = parseColor(p.glassFixed!);
+	const panel = composite(glass.rgb, glass.alpha, parseColor(p.bodyBg).rgb);
+	return metaFor(p.textDay, panel);
+}
+
 function applyPalette(name: PaletteName): void {
 	const p = PALETTES[name];
 	const r = document.documentElement;
@@ -301,6 +310,9 @@ function applyPalette(name: PaletteName): void {
 	r.style.setProperty('--glass-blur-nav',   p.solid ? 'none' : 'blur(20px)');
 
 	if (p.darkGlass) {
+		// Fixed palettes: metadata colour against the panel as actually shown
+		// (panel glass over the page ground). Light-glass: Sky.svelte, per frame.
+		r.style.setProperty('--clr-meta', rgbCss(fixedMeta(p)));
 		// Dark-glass palettes: set all glass/text vars directly.
 		// Sky.svelte detects darkGlass=true and skips per-frame overrides.
 		r.style.setProperty('--glass-bg',       p.glassFixed!);

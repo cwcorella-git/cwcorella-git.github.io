@@ -279,8 +279,8 @@
 		color: var(--clr-text);
 		margin: 0 0 0.8rem;
 	}
-	.meta-grid dt { opacity: 0.5; text-transform: uppercase; }
-	.meta-grid dd { margin: 0; opacity: 0.85; overflow-wrap: anywhere; }
+	.meta-grid dt { color: var(--clr-meta); text-transform: uppercase; }
+	.meta-grid dd { margin: 0; overflow-wrap: anywhere; }
 
 	.badge {
 		display: inline-block;

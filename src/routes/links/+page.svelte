@@ -830,7 +830,7 @@
 	}
 	.count {
 		font-family: var(--font-ui);
-		font-size: 0.62rem; letter-spacing: 0.1em; color: var(--clr-text);
+		font-size: 0.62rem; letter-spacing: 0.1em; color: var(--clr-meta);
 		margin: 0;
 	}
 	.footer-actions { display: flex; gap: 0.4rem; }

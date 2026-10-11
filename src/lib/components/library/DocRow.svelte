@@ -123,8 +123,7 @@
 		flex-shrink: 0;
 		font-size: 0.58rem;
 		letter-spacing: 0.05em;
-		color: var(--clr-text);
-		opacity: 0.55;
+		color: var(--clr-meta);
 		white-space: nowrap;
 	}
 

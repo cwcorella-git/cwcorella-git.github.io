@@ -173,6 +173,10 @@
 		/* [theme: --clr-dark-text] amber=#c8b890 | sky=#b8c8e4 | dusk=#c0b4d0 | neutral=#c0c4c8 */
 		--clr-dark-text: #c0c4c8;
 
+		/* Metadata text: an explicit colour, set per palette (theme.svelte.ts /
+		   Sky.svelte) at >= 4.5:1 against its panel. Never dim with opacity. */
+		--clr-meta: #4a4a50;
+
 		/* Semantic colors */
 		--clr-danger:       #c07050;
 		--clr-danger-muted: #8a4040;

@@ -98,6 +98,6 @@
 	}
 	.row:hover { opacity: 1; }
 	.row.sel { opacity: 1; background: rgba(var(--ui-rgb), 0.12); }
-	.c { opacity: 0.5; font-variant-numeric: tabular-nums; }
+	.c { color: var(--clr-meta); font-variant-numeric: tabular-nums; }
 	.divider { height: 1px; background: rgba(var(--ui-rgb), 0.16); margin: 0.35rem 0; }
 </style>
