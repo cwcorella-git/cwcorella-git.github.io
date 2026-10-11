@@ -2,6 +2,8 @@
 // Run with scripts/e2e/library-links.sh (seeds the API, builds, serves like Pages).
 import { test, expect, type BrowserContext } from '@playwright/test';
 
+// Body text is asserted inside the reader (.doc-body): relevance snippets put the
+// same words in the list row, and an unscoped getByText matched both.
 const BASE = 'http://127.0.0.1:5188';
 const session = () => {
 	localStorage.setItem('cwc-admin-key', 'e2e-content-key');
@@ -19,7 +21,7 @@ test.beforeAll(async () => {
 		fetch(url, { signal: AbortSignal.timeout(2000) })
 			.then((r) => r.ok)
 			.catch(() => false);
-	const up = (await ok('http://127.0.0.1:8099/health')) && (await ok(BASE + '/library'));
+	const up = (await ok(`http://127.0.0.1:${process.env.E2E_API_PORT ?? '8099'}/health`)) && (await ok(BASE + '/library'));
 	test.skip(!up, 'needs scripts/e2e/library-links.sh (seeded library-api on :8099, site on :5188)');
 });
 
@@ -35,23 +37,23 @@ test('a plain click opens in place; the URL follows; Back closes', async ({ page
 	await page.goto(BASE + '/library?q=bolo');
 	await page.locator('a.doc-row', { hasText: 'Bolo’bolo' }).click();
 	await expect(page).toHaveURL(BASE + '/library/anarchist/p-m-bolo-bolo?q=bolo');
-	await expect(page.getByText('Body of Bolo’bolo')).toBeVisible();
+	await expect(page.locator('.doc-body').getByText('Body of Bolo’bolo')).toBeVisible();
 	await expect(page).toHaveTitle(/Bolo’bolo — library/);
 	await page.goBack();
 	await expect(page).toHaveURL(BASE + '/library?q=bolo');
-	await expect(page.getByText('Body of Bolo’bolo')).toBeHidden();
+	await expect(page.locator('.doc-body').getByText('Body of Bolo’bolo')).toBeHidden();
 	await page.goForward();
-	await expect(page.getByText('Body of Bolo’bolo')).toBeVisible();
+	await expect(page.locator('.doc-body').getByText('Body of Bolo’bolo')).toBeVisible();
 });
 
 test('Escape closes and leaves no extra history entry', async ({ page, context }) => {
 	await ctx(context);
 	await page.goto(BASE + '/library?q=bolo');
 	await page.locator('a.doc-row', { hasText: 'Bolo’bolo' }).click();
-	await expect(page.getByText('Body of Bolo’bolo')).toBeVisible();
+	await expect(page.locator('.doc-body').getByText('Body of Bolo’bolo')).toBeVisible();
 	await page.keyboard.press('Escape');
 	await expect(page).toHaveURL(BASE + '/library?q=bolo');
-	await expect(page.getByText('Body of Bolo’bolo')).toBeHidden();
+	await expect(page.locator('.doc-body').getByText('Body of Bolo’bolo')).toBeHidden();
 	// Escape went Back over the reader's entry: one more Back leaves the library
 	// instead of reopening the document.
 	await page.goBack();
@@ -67,21 +69,21 @@ test('a modified click opens a new tab on the document', async ({ page, context 
 	]);
 	await tab.waitForLoadState();
 	await expect(tab).toHaveURL(BASE + '/library/anarchist/p-m-bolo-bolo?q=bolo');
-	await expect(tab.getByText('Body of Bolo’bolo')).toBeVisible();
+	await expect(tab.locator('.doc-body').getByText('Body of Bolo’bolo')).toBeVisible();
 	// The original tab did not open the reader.
-	await expect(page.getByText('Body of Bolo’bolo')).toBeHidden();
+	await expect(page.locator('.doc-body').getByText('Body of Bolo’bolo')).toBeHidden();
 });
 
 test('a bookmark (fresh load) opens the document and restores the list behind it', async ({ page, context }) => {
 	await ctx(context);
 	await page.goto(BASE + '/library/marxist/malatesta-the-suffragettes?q=suffragettes');
-	await expect(page.getByText('Body of The Suffragettes (marxist copy)')).toBeVisible();
+	await expect(page.locator('.doc-body').getByText('Body of The Suffragettes (marxist copy)')).toBeVisible();
 	await page.keyboard.press('Escape');
 	await expect(page).toHaveURL(BASE + '/library?q=suffragettes');
 	await expect(page.locator('a.doc-row')).toHaveCount(2); // the search behind it
 	// The same slug in the other source is a different document.
 	await page.goto(BASE + '/library/anarchist/malatesta-the-suffragettes');
-	await expect(page.getByText('Body of The Suffragettes.')).toBeVisible();
+	await expect(page.locator('.doc-body').getByText('Body of The Suffragettes.')).toBeVisible();
 });
 
 test('a stale bookmark says so and falls back to the list', async ({ page, context }) => {
@@ -110,11 +112,11 @@ test('K advances and the URL follows without new history entries', async ({ page
 	const len = await page.evaluate(() => history.length);
 	await page.keyboard.press('k');
 	await expect(page).toHaveURL(/\/library\/user\/filler-001\?/);
-	await expect(page.getByText('Body of Filler document 001')).toBeVisible();
+	await expect(page.locator('.doc-body').getByText('Body of Filler document 001')).toBeVisible();
 	expect(await page.evaluate(() => history.length)).toBe(len);
 	await page.goBack();
 	await expect(page).toHaveURL(/\/library\?q=filler&sort=title$/);
-	await expect(page.getByText('Body of Filler document 001')).toBeHidden();
+	await expect(page.locator('.doc-body').getByText('Body of Filler document 001')).toBeHidden();
 });
 
 test('a URL rewritten on arrival does not crash the router (the "$set" hang)', async ({ page, context }) => {
@@ -125,7 +127,7 @@ test('a URL rewritten on arrival does not crash the router (the "$set" hang)', a
 	await expect(page).toHaveURL(BASE + '/library?q=filler&sort=title');
 	await expect(page.getByText('150 documents')).toBeVisible();
 	await page.goto(BASE + '/library/anarchist/p-m-bolo-bolo?sort=relevance&q=bolo');
-	await expect(page.getByText('Body of Bolo’bolo')).toBeVisible();
+	await expect(page.locator('.doc-body').getByText('Body of Bolo’bolo')).toBeVisible();
 	await expect(page).toHaveURL(BASE + '/library/anarchist/p-m-bolo-bolo?q=bolo');
 	expect(errors).toEqual([]);
 });

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { renderMarkdown } from '$lib/admin/markdown';
+	import { renderLibraryMarkdown, shouldUseMath } from '$lib/markdown/library';
+	import '$lib/markdown/lib-prose.css';
 	import { docToDraft, type EditDraft } from '$lib/library/editLogic';
 	import type { LibraryDoc } from '$lib/library/types';
 	import TagEditor from './TagEditor.svelte';
@@ -16,7 +17,7 @@
 	let saving = $state(false);
 	let textareaEl = $state<HTMLTextAreaElement>();
 
-	const previewHtml = $derived(mode === 'preview' ? renderMarkdown(draft.body) : '');
+	const previewHtml = $derived(mode === 'preview' ? renderLibraryMarkdown(draft.body, { math: shouldUseMath(doc.source) }) : '');
 
 	function wrap(before: string, after: string) {
 		const el = textareaEl;
@@ -72,7 +73,7 @@
 		<textarea bind:value={draft.body} bind:this={textareaEl} spellcheck="true"></textarea>
 	{:else}
 		<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-		<div class="preview doc-body">{@html previewHtml}</div>
+		<div class="preview doc-body lib-prose">{@html previewHtml}</div>
 	{/if}
 
 	<TagEditor tags={draft.tags} onChange={(t) => (draft.tags = t)} />

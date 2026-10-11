@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { renderMarkdown, extractToc } from '$lib/admin/markdown';
+	import { renderLibrary, shouldUseMath } from '$lib/markdown/library';
+	import '$lib/markdown/lib-prose.css';
+	import 'katex/dist/katex.min.css';
 	import { libraryState, libraryClient } from '$lib/library/libraryState.svelte';
 	import type { Decision } from '$lib/library/types';
 	import type { EditDraft } from '$lib/library/editLogic';
@@ -124,11 +126,15 @@
 		};
 	});
 
-	const bodyHtml = $derived(
-		libraryState.openDoc?.body ? renderMarkdown(libraryState.openDoc.body) : ''
+	// VG's pipeline (rulings R2). HTML and TOC come from ONE parse, so the TOC's
+	// anchors are the ids VG assigns (repeats numbered: notes, notes-2).
+	const rendered = $derived(
+		libraryState.openDoc?.body
+			? renderLibrary(libraryState.openDoc.body, { math: shouldUseMath(libraryState.openDoc.source) })
+			: { html: '', toc: [] }
 	);
-
-	const toc = $derived(libraryState.openDoc?.body ? extractToc(libraryState.openDoc.body) : []);
+	const bodyHtml = $derived(rendered.html);
+	const toc = $derived(rendered.toc);
 
 	let activeAnchor = $state<string | null>(null);
 	let bodyEl: HTMLElement | undefined = $state();
@@ -261,7 +267,7 @@
 								<DocEditor {doc} onCancel={() => libraryState.cancelEdit()} onSave={handleSave} />
 							{:else}
 								<h2 class="doc-heading">{doc.title}</h2>
-								<div class="doc-body" bind:this={bodyEl}>
+								<div class="doc-body lib-prose" bind:this={bodyEl}>
 									{#if doc.body && doc.body.trim().length > 0}
 										<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 										{@html bodyHtml}
@@ -439,38 +445,5 @@
 		opacity: 0.5;
 	}
 
-	:global(.doc-body h1),
-	:global(.doc-body h2),
-	:global(.doc-body h3) {
-		font-family: var(--font-prose);
-		color: var(--clr-text);
-		font-weight: normal;
-		margin-top: 2rem;
-	}
-	:global(.doc-body h1) { font-size: 1.3rem; border-bottom: 1px solid rgba(var(--ui-rgb),0.25); padding-bottom: 0.5rem; }
-	:global(.doc-body h2) { font-size: 1.05rem; }
-	:global(.doc-body h3) { font-size: 0.92rem; }
-	:global(.doc-body p) { line-height: 1.9; color: var(--clr-text); margin-bottom: 1rem; }
-	:global(.doc-body a) { color: var(--clr-text); }
-	:global(.doc-body blockquote) {
-		border-left: 2px solid rgba(var(--ui-rgb),0.38);
-		margin: 1rem 0;
-		padding: 0.3rem 1rem;
-		color: var(--clr-text);
-		font-style: italic;
-	}
-	:global(.doc-body code) {
-		font-family: var(--font-ui);
-		font-size: 0.82em;
-		background: rgba(var(--ui-rgb),0.12);
-		padding: 0.1em 0.35em;
-		color: var(--clr-text);
-	}
-	:global(.doc-body pre) {
-		background: rgba(var(--ui-rgb),0.08);
-		border: 1px solid rgba(var(--ui-rgb),0.20);
-		padding: 1rem;
-		overflow-x: auto;
-	}
-	:global(.doc-body ul, .doc-body ol) { line-height: 1.8; color: var(--clr-text); padding-left: 1.5rem; }
+	/* Body typography lives in $lib/markdown/lib-prose.css (VG's renderer styles). */
 </style>

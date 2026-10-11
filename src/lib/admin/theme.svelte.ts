@@ -36,6 +36,11 @@ export interface Palette {
 	// Optional: if set, Sky.svelte also interpolates --dark-panel-rgb per-frame
 	darkPanelDay?:   [number, number, number];
 	darkPanelNight?: [number, number, number];
+	// Link/accent colour inside library bodies (--pal-lib-link).
+	accent: string;
+	// Full library-body colour set, overriding the derived defaults in
+	// lib-prose.css. Only `ink` has one: VG's exact neutrals (rulings R8).
+	libProse?: Partial<Record<'text' | 'strong' | 'soft' | 'dim' | 'rule' | 'code-bg' | 'pre-bg' | 'ext' | 'mention', string>>;
 	// Swatch preview colours shown in ThemePanel
 	swatchBg: string;
 	swatchBorder: string;
@@ -60,6 +65,7 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		glassNight: [12,  8,   2  ],
 		textDay:    [226, 210, 168],  // #e2d2a8 — refined 2026-10-11 for contrast
 		textNight:  [226, 210, 168],
+		accent: '#e0a040',
 		swatchBg:     '#0c0902',
 		swatchBorder: '#c8a060',
 	},
@@ -80,6 +86,7 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		// Chrome inside panels: dark navy at day, pale blue-white at night (visible on dark panels)
 		darkPanelDay:   [20,  55,  130],
 		darkPanelNight: [120, 170, 240],
+		accent: '#2456a8',
 		swatchBg:     '#b0c4dc',
 		swatchBorder: '#5890d0',
 	},
@@ -101,6 +108,7 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		glassNight: [14,  9, 20],
 		textDay:    [216, 204, 232],  // #d8cce8 — refined 2026-10-11
 		textNight:  [216, 204, 232],
+		accent: '#b48ae0',
 		swatchBg:     '#0e0a16',
 		swatchBorder: '#a068c0',
 	},
@@ -120,6 +128,7 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		// Chrome inside panels: dark at day (on white panels), pale at night (on dark panels)
 		darkPanelDay:   [40,  40,  50 ],
 		darkPanelNight: [220, 220, 228],
+		accent: '#3a3a44',
 		swatchBg:     '#d8d8d8',
 		swatchBorder: '#a0a8b0',
 	},
@@ -140,6 +149,7 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		// Chrome inside panels: sage green at day, pale green at night
 		darkPanelDay:   [60,  110, 90],
 		darkPanelNight: [170, 210, 190],
+		accent: '#2f6b48',
 		swatchBg:     '#c4cfc4',
 		swatchBorder: '#6a9a7a',
 	},
@@ -161,6 +171,7 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		glassNight: [24, 10, 6],
 		textDay:    [236, 192, 160],  // #ecc0a0 — refined 2026-10-11
 		textNight:  [236, 192, 160],
+		accent: '#e07850',
 		swatchBg:     '#1a0e0a',
 		swatchBorder: '#c87050',
 	},
@@ -180,6 +191,7 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		textNight:  [246, 226, 210],
 		darkPanelDay:   [150, 70,  40 ],
 		darkPanelNight: [240, 190, 160],
+		accent: '#b04a2a',
 		swatchBg:     '#e8c8b0',
 		swatchBorder: '#b04a2a',
 	},
@@ -201,6 +213,7 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		glassNight: [251, 250, 247],
 		textDay:    [27,  26,  24 ],
 		textNight:  [27,  26,  24 ],
+		accent: '#1d4ed8',
 		swatchBg:     '#f3f1ec',
 		swatchBorder: '#5a5650',
 	},
@@ -221,6 +234,7 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		glassNight: [10, 20, 14],
 		textDay:    [207, 226, 212],
 		textNight:  [207, 226, 212],
+		accent: '#6cc08a',
 		swatchBg:     '#08110c',
 		swatchBorder: '#6cc08a',
 	},
@@ -242,6 +256,14 @@ export const PALETTES: Record<PaletteName, Palette> = {
 		glassNight: [18, 18, 18],
 		textDay:    [237, 237, 237],
 		textNight:  [237, 237, 237],
+		accent: '#60a5fa',
+		// VG: gray-300/white/gray-200/gray-400/gray-600/gray-800/gray-900, with
+		// gray remapped to neutral (SITE_STYLE.md); green-400 external, pink-400 mention.
+		libProse: {
+			text: '#d4d4d4', strong: '#ffffff', soft: '#e5e5e5', dim: '#a3a3a3',
+			rule: '#525252', 'code-bg': '#262626', 'pre-bg': '#171717',
+			ext: '#4ade80', mention: '#f472b6',
+		},
 		swatchBg:     '#0a0a0a',
 		swatchBorder: '#60a5fa',
 	},
@@ -264,6 +286,14 @@ function applyPalette(name: PaletteName): void {
 	r.style.setProperty('--clr-dark-text',     p.clrDarkText);
 	r.style.setProperty('--glass-bg-dark',     p.glassBgDark);
 	r.style.setProperty('--glass-border-dark', p.glassBorderDark);
+
+	// Library-body colours (lib-prose.css reads --pal-lib-*, with fallbacks).
+	r.style.setProperty('--pal-lib-link', p.accent);
+	for (const k of ['text', 'strong', 'soft', 'dim', 'rule', 'code-bg', 'pre-bg', 'ext', 'mention'] as const) {
+		const v = p.libProse?.[k];
+		if (v) r.style.setProperty(`--pal-lib-${k}`, v);
+		else r.style.removeProperty(`--pal-lib-${k}`);
+	}
 
 	// Solid palettes drop the frosted blur; every other palette restores it.
 	r.style.setProperty('--glass-blur',       p.solid ? 'none' : 'blur(22px)');
