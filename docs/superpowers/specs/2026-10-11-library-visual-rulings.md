@@ -50,9 +50,16 @@ accent". With no VG chrome, nothing needs changing. If a refresh ever adopts VG 
 amber is still the right choice, because VG's `SITE_STYLE.md` reserves amber for
 governance actions.
 
+**R5 (was O1). VG prose inside the reader body only.** The operator chose "Yes, reader body
+only". The library reader body uses VG's prose: `#0a0a0a` ground, `text-gray-300`, white
+headings, blue links, Kalinga. The panel around it stays cwcorella's.
+
+**R6 (O2, partial). Render "sky, refined" first; renders before the renderer port.** The other
+directions (static dark, flat calm) were not picked for rendering.
+
 ## Open (operator undecided)
 
-- **O1. Does "reads faithfully" include colour and type inside the reader body?** For
+- ~~O1~~ ruled as R5. **O1 (historical). Does "reads faithfully" include colour and type inside the reader body?** For
   example, VG's dark prose (`text-gray-300`, white headings, Kalinga, blue links) shown
   inside cwcorella's reader panel, while the panel itself stays cwcorella's. The
   recommendation is **yes, scoped to the body only**: a fix to spacing, headings or

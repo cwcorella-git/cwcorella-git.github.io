@@ -12,8 +12,8 @@ operator deep-dive. **Nothing was built**; the outputs are docs. Repos read: thi
 | 3 | Operator rulings R1–R4 (fidelity, not chrome) | **done**: `2be937e` |
 | 4 | Port VG's markdown pipeline into cwcorella's library reader (R2) | **proposed**: not started; spec only |
 | 5 | Tier badge and VG public/staff preview toggle (R3) | **proposed**: needs `tier_of` per row from library-api |
-| 6 | O1: VG prose colour and type inside the reader body? | **blocked**: operator call |
-| 7 | O2: visual refresh of cwcorella, render 2–3 directions | **blocked**: operator call; renders not started |
+| 6 | O1: VG prose colour and type inside the reader body? | **done**: ruled yes, body only (R5) |
+| 7 | O2: render "sky, refined" (day list, dusk library + VG body, night list) | **done**: canvas https://claude.ai/artifact/9zamj3pU4c1HpbewbhokZe + ops Media tab; awaiting verdict |
 
 Docs: `docs/superpowers/specs/2026-10-11-library-{unification-design,architecture-findings,visual-rulings}.md`.
 
@@ -82,3 +82,14 @@ was rejected non-fast-forward. The spec was corrected in `2c8c776`, and the peer
   `renderMarkdown`/`extractToc` exports. Add a parity fixture suite. Push to `main` is
   ask-free here (static site).
 - Nothing is running in the background.
+
+## 5. Post-compaction: O1 ruled, the first refresh rendered
+
+The operator answered by `/blockout`: O1 yes, reader body only (R5). Render only "sky,
+refined", and send it to the ops Media tab as well. Renders come before the R2 port. Three
+1280×800 boards are on the canvas above. PNGs are in `/data/ops-media/20261011-173002-sky-refined-*`,
+pruned after 30 days. They are mockups with hand-set colours, not the live palette code.
+Kalinga was loaded from `static/fonts`. Only the library board was viewed after rendering;
+the day and night boards were not looked at.
+
+Resume: wait for the operator's verdict on the look, then do the R2 port (see above).
