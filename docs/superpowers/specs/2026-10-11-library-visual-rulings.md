@@ -57,6 +57,21 @@ headings, blue links, Kalinga. The panel around it stays cwcorella's.
 **R6 (O2, partial). Render "sky, refined" first; renders before the renderer port.** The other
 directions (static dark, flat calm) were not picked for rendering.
 
+**R7. No mixed themes.** The operator, on the flat-calm library mockup: *"this shouldn't be an
+option. no mixed themes. if you want a faithful version it should be its own thing."* This
+supersedes R5's dark body inside another theme: the reader body follows the page's palette.
+
+**R8. VG fidelity is a palette, named `ink`.** The operator: *"vg theme but dont name it that."*
+`ink` is near-black, neutral greys, blue accent. Choose it to judge formatting as VG shows it.
+
+**R9. Refine all six existing palettes, and grow to 10 (cull to 8 allowed).** The operator: *"each of
+the 10 should be distinct. if we need to cull to 8 that's fine."* Proposed set, drawn on the canvas
+board "Ten palettes":
+- Light: sky, neutral, sage, dawn (new), paper (new, was flat calm).
+- Dark: amber, rust, dusk, forest (new), ink (new).
+- Static dark was folded into ink as a near-twin.
+- Closest pairs if culling: neutral/paper, amber/rust.
+
 ## Open (operator undecided)
 
 - ~~O1~~ ruled as R5. **O1 (historical). Does "reads faithfully" include colour and type inside the reader body?** For

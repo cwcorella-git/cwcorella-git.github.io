@@ -104,3 +104,11 @@ drawn with explicit metadata colours at about 7:1 instead of opacity. Two ops pi
 pending: `library-body` and `direction`. Under flat calm the faithful dark body clashes most;
 under static dark it is indistinguishable from the page.
 Of the new boards, only `flatlibrary`, `dark` and `libraryblended` were viewed.
+
+## 7. No mixed themes; ten palettes drawn
+
+The operator struck the dark-body-on-a-light-page option (R7). VG fidelity becomes its own
+palette, `ink` (R8). All six palettes are to be refined, and the set grows to 10 (R9). The sheet
+is on the canvas and in Media (`20261011-174104-ten-palettes-*`). Pending: the operator's
+verdict on the 10 and any cull. The colours are proposals, not `theme.svelte.ts` values; the
+time-of-day palettes are shown in their day state only.
