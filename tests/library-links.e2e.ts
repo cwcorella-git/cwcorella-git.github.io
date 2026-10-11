@@ -131,3 +131,15 @@ test('a URL rewritten on arrival does not crash the router (the "$set" hang)', a
 	await expect(page).toHaveURL(BASE + '/library/anarchist/p-m-bolo-bolo?q=bolo');
 	expect(errors).toEqual([]);
 });
+
+test('under a VG tier preview the rail still jumps, and sends the same tier', async ({ page, context }) => {
+	await ctx(context);
+	// Nothing in the seed is kept, so tier=none is the whole corpus — enough to
+	// prove the param reaches /anchor-offset (library-api 13d4346) and the seek lands.
+	await page.goto(BASE + '/library?sort=title&tier=none');
+	await expect(page.locator('.rail-btn').first()).toBeVisible();
+	const req = page.waitForRequest((r) => r.url().includes('/anchor-offset'));
+	await page.locator('.rail-btn', { hasText: /^T$/ }).click();
+	expect(new URL((await req).url()).searchParams.get('tier')).toBe('none');
+	await expect(page.locator('a.doc-row', { hasText: 'The Suffragettes' }).first()).toBeVisible();
+});

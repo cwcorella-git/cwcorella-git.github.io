@@ -128,8 +128,7 @@
 		buildRail(
 			libraryState.controls.sort,
 			libraryState.controls.dir,
-			libraryState.facets?.date_range ?? null,
-			libraryState.controls.filters
+			libraryState.facets?.date_range ?? null
 		)
 	);
 	const linkSearch = $derived(controlsToSearch(libraryState.controls));

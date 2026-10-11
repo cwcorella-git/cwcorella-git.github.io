@@ -115,8 +115,9 @@ describe('fractionToIndex', () => {
 });
 
 describe('buildRail under a VG tier preview', () => {
-	it('has no rail while tier is set: /anchor-offset cannot filter by tier', () => {
-		expect(buildRail('title', 'asc', null, { tier: 'public' })).toEqual([]);
-		expect(buildRail('title', 'asc', null, {}).length).toBeGreaterThan(0);
+	// library-api 13d4346: /anchor-offset takes `tier`, and filtersToParams sends
+	// it to both endpoints, so the rail stays under a preview.
+	it('is the same rail with or without a tier filter', () => {
+		expect(buildRail('title', 'asc', null).length).toBeGreaterThan(0);
 	});
 });

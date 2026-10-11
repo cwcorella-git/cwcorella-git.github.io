@@ -1,7 +1,7 @@
 <script lang="ts">
 	// VG preview (library rulings R3): show the list as VG's tiers see it, via
-	// library-api's `tier` filter. While it is set the jump rail is off — see
-	// buildRail in railLogic.ts.
+	// library-api's `tier` filter. /anchor-offset takes it too (library-api
+	// 13d4346), so the jump rail keeps working under a preview.
 	import FacetPanel from './FacetPanel.svelte';
 	import type { TierFilter } from '$lib/library/types';
 
