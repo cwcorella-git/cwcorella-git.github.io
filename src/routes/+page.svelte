@@ -72,6 +72,7 @@
 		backdrop-filter: var(--glass-blur);
 		-webkit-backdrop-filter: var(--glass-blur);
 		border: 1px solid var(--glass-border);
+		box-shadow: var(--glass-edge, none);
 		padding: 2.5rem 2.5rem 2.5rem;
 		display: flex;
 		flex-direction: column;

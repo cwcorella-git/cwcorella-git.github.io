@@ -84,13 +84,13 @@ src/lib/admin/markdown.ts            — marked renderer + extractToc
 src/lib/admin/tlock.ts               — drand tlock encrypt/decrypt, sealContent, sealContentKey
 src/lib/admin/archive.svelte.ts      — archiveState (2095 unlock flow)
 src/lib/admin/toast.svelte.ts        — toast queue (error/success)
-src/lib/admin/theme.svelte.ts        — PALETTE definitions + themeState (6 palettes)
+src/lib/admin/theme.svelte.ts        — PALETTE definitions + themeState (sky + ink)
 src/lib/admin/draft.ts               — draftStore (localStorage draft persistence)
 src/lib/components/Sky.svelte        — CSS var time-of-day lighting (no canvas)
 src/lib/components/AdminDrawer.svelte
 src/lib/components/AdminToolbar.svelte
 src/lib/components/SettingsPanel.svelte — mid-session PAT/key/mode update + logout
-src/lib/components/ThemePanel.svelte    — 6-palette picker dropdown
+src/lib/components/ThemePanel.svelte    — sky / ink picker dropdown
 src/lib/components/BookForm.svelte
 src/lib/components/DocReader.svelte
 src/lib/components/HomeEditor.svelte
@@ -107,7 +107,7 @@ static/.nojekyll                     — prevents GitHub Pages from running Jeky
 
 ## Current status
 
-**Done**: Admin system + settings panel (PAT/key show-hide, time capsule seal), reading list (902 books, 898 sourced), journal CRUD, homepage inline editor, doc reader, local-first write queue (10s debounce + manual sync), AES-256-GCM encryption (passphrase + raw key modes), 41 Vitest tests, 6-palette theme switcher (sky/neutral/sage time-of-day adaptive), tlock time-capsule (sealed 2026-06-11, unlocks 2095-02-13), encrypted links page (2,094 bookmarks, 10 categories), dual-deploy (Cloudflare Pages live + GitHub Pages archive mirror with encrypted zip), library visibility axis (editable public/private independent of keep/hide/delete; P/F mark keys), library keyboard triage (reader-only: `←`/`→` navigate, `Delete`/`K`/`H` decide-and-advance, no UI hints — one curator), reading list ↔ library full text (125 baked docs; licence policy + backfill; the reader no longer reveals that a withheld body exists).
+**Done**: Admin system + settings panel (PAT/key show-hide, time capsule seal), reading list (902 books, 898 sourced), journal CRUD, homepage inline editor, doc reader, local-first write queue (10s debounce + manual sync), AES-256-GCM encryption (passphrase + raw key modes), 41 Vitest tests, one time-of-day look (sky) with the traced Reno skyline, plus `ink` for VG formatting checks, tlock time-capsule (sealed 2026-06-11, unlocks 2095-02-13), encrypted links page (2,094 bookmarks, 10 categories), dual-deploy (Cloudflare Pages live + GitHub Pages archive mirror with encrypted zip), library visibility axis (editable public/private independent of keep/hide/delete; P/F mark keys), library keyboard triage (reader-only: `←`/`→` navigate, `Delete`/`K`/`H` decide-and-advance, no UI hints — one curator), reading list ↔ library full text (125 baked docs; licence policy + backfill; the reader no longer reveals that a withheld body exists).
 
 **Not done**:
 - Homepage actual content (currently placeholder)

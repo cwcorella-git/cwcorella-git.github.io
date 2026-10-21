@@ -68,7 +68,7 @@ npm test          # vitest
 
 **Library** (`/library`) — the one server-backed page; see "The one acknowledged exception" above. Admin-gated in full. Detail below under "Library subsystem".
 
-**Theme**: 8 palettes (2026-10-11; paper and rust removed). Light, following the day via Sky.svelte: sky, neutral, sage, dawn. Dark-glass, fixed: amber, dusk, forest. Solid (opaque, no blur): `ink` — VG's colours, the palette for judging formatting as VG shows it (rulings R8).
+**Theme**: one look, `sky` (2026-10-21; the other palettes retired, see `docs/superpowers/specs/2026-10-21-visual-refresh-brief.md`), following the day via Sky.svelte, with the real Reno skyline behind the glass (`Ridge.svelte`, traced by `scripts/trace-ridge.mjs` into `src/lib/ridge.json`). UI face is self-hosted Libre Franklin; no monospace labels. Plus `ink`, solid and opaque: VG's colours, the palette for judging formatting as VG shows it (rulings R8); it hides the ridge.
 
 **tlock time-capsule**: Content key sealed 2026-06-11 to drand Quicknet round 751,863,412 (unlocks 2095-02-13). Stored at `static/docs/private/content-key.tlock`. `archiveState.tryUnlock()` called on page load when `isUnlockDay()`. SettingsPanel has a time capsule section showing seal status; auto-reseals when content key is updated.
 

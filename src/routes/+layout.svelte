@@ -14,6 +14,7 @@
 	import BookForm from '$lib/components/BookForm.svelte';
 	import Toasts from '$lib/components/Toasts.svelte';
 	import Sky from '$lib/components/Sky.svelte';
+	import Ridge from '$lib/components/Ridge.svelte';
 
 	let { children } = $props();
 
@@ -62,6 +63,7 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <Sky />
+<Ridge />
 <AdminDrawer bind:this={drawerRef} />
 <Toasts />
 
@@ -119,18 +121,20 @@
 		font-style: normal;
 		font-display: swap;
 	}
-	/* Map all weights of the UI font to the regular face so it can never render bold. */
+	/* UI face. Self-hosted, OFL (static/fonts/LibreFranklin-OFL.txt); replaced
+	   Courier New on 2026-10-21, because monospace labels read as generated. */
 	@font-face {
-		font-family: 'CWC-UI';
-		src: local('Courier New');
+		font-family: 'Libre Franklin';
+		src: url('/fonts/libre-franklin-latin-wght.woff2') format('woff2');
 		font-weight: 100 900;
 		font-style: normal;
+		font-display: swap;
 	}
 
 	:global(:root) {
 		/* Fonts */
 		--font-prose: 'Kalinga', Georgia, serif;
-		--font-ui:    'CWC-UI', 'Courier New', Courier, monospace;
+		--font-ui:    'Libre Franklin', 'Helvetica Neue', Arial, sans-serif;
 
 		/* Typography */
 		--lh-prose: 1.9;

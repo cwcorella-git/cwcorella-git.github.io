@@ -127,6 +127,20 @@ switching between dark and light text as the sky crosses its midpoint.
   `cwc-direction`. Renders: home and reading at 1280px, reading at 390px; C is shown by day
   and by night.
 
-## Open for the operator
+- **Direction: none of A, B or C.** The operator found the flat renders "my first website"
+  and missed the old look. A middle ground was rendered on the real site (`cwc-middle`)
+  and the operator picked option 4:
+  - today's sky and glass, kept;
+  - template tells removed: monospace UI face replaced by self-hosted Libre Franklin,
+    author/year meta in Kalinga italic, "Author · year" now "Author, year", one edge of
+    light along the top of each glass panel;
+  - the real western skyline from downtown Reno (Slide Mountain, Mt Rose, Peavine) behind
+    the glass, traced from SRTM 90m;
+  - letter guides in the alphabetical reading list, like card-catalogue tabs. Titles now
+    sort ignoring leading quotes, so "Just Get to Know Your Neighbors" files under J.
 
-1. Which direction? Picked in the ops Media tab (`cwc-direction`).
+## Not done
+
+- ALL-CAPS tracked labels remain in about 25 components (library, links, admin panels).
+  They are the next tell to remove.
+- The ridge heights are exaggerated (about 6× at a 1280px-wide window, more on phones, where the sides are cropped) so the shape reads; the outline is real.

@@ -1,13 +1,8 @@
 <script lang="ts">
 	import { themeState, PALETTES, type PaletteName } from '$lib/admin/theme.svelte';
 
-	// Two columns: light palettes left, dark right (row-major order interleaves them).
-	const ORDER: PaletteName[] = [
-		'sky', 'amber',
-		'neutral', 'dusk',
-		'sage', 'forest',
-		'dawn', 'ink',
-	];
+	// sky is the site; ink shows library bodies the way VG renders them (rulings R8).
+	const ORDER: PaletteName[] = ['sky', 'ink'];
 </script>
 
 <div class="panel" role="dialog" aria-label="Theme palette picker">
@@ -49,8 +44,6 @@
 	.panel-label {
 		font-family: var(--font-ui);
 		font-size: 0.52rem;
-		letter-spacing: 0.14em;
-		text-transform: uppercase;
 		color: var(--clr-dark-text);
 		opacity: 0.5;
 		margin: 0 0 0.55rem;

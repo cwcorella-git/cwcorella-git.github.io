@@ -3,6 +3,7 @@
 	import allBooksStatic from '$lib/books.json';
 	import { adminState, bookFormState, booksState, writeQueue } from '$lib/admin/state.svelte';
 	import { linksFor } from '$lib/bookDocLogic';
+	import { bookMeta, guideLetter, sortByTitle } from '$lib/readingLogic';
 	import BookView from '$lib/components/BookView.svelte';
 
 	// Derive from shared booksState so BookForm updates are visible here
@@ -37,9 +38,10 @@
 		ro.observe(searchBarEl);
 		return () => ro.disconnect();
 	});
-	// Courier New is monospace: ~7px/char at 0.62rem + 0.1em letter-spacing
+	// Libre Franklin averages ~6px/char at 0.62rem + 0.1em letter-spacing (an
+	// overestimate is safe: it shows one pill fewer, never an overflowing row).
 	// Pill overhead: 2×0.65rem padding + border ≈ 24px. Gap: 0.5rem ≈ 8px.
-	const CHAR_W = 7, PILL_PAD = 24, PILL_GAP = 8, INPUT_MIN = 100, OVERFLOW_W = 30;
+	const CHAR_W = 6, PILL_PAD = 24, PILL_GAP = 8, INPUT_MIN = 100, OVERFLOW_W = 30;
 	let maxPills = $derived.by(() => {
 		if (!searchBarWidth || !tagSuggestions.length) return 3;
 		let available = searchBarWidth - INPUT_MIN;
@@ -53,7 +55,7 @@
 		return Math.max(1, count);
 	});
 
-	let filtered = $derived(
+	let filtered = $derived(sortByTitle(
 		activeTag
 			? books.filter((b) => b.category === activeTag)
 			: searchQuery.trim()
@@ -63,7 +65,7 @@
 							b.author.toLowerCase().includes(searchQuery.trim().toLowerCase())
 					)
 				: books
-	);
+	));
 
 	function setTag(cat: string) { activeTag = cat; searchQuery = ''; }
 	function clearTag() { activeTag = ''; }
@@ -203,7 +205,11 @@
 		</div>
 
 		<ul class="list">
-			{#each filtered as book (book.id)}
+			{#each filtered as book, i (book.id)}
+				{#if i === 0 || guideLetter(book.title) !== guideLetter(filtered[i - 1].title)}
+					<!-- Letter guide, like the tabs in a card-catalogue drawer -->
+					<li class="guide" aria-hidden="true"><span>{guideLetter(book.title)}</span></li>
+				{/if}
 				<li class:done={book.read}>
 					<div class="row-wrap">
 						<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -216,7 +222,7 @@
 							onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleRowClick(book); }}
 						>
 							<span class="title">{book.title}</span>
-							<span class="meta">{book.author}{book.year ? ` · ${book.year}` : ''}</span>
+							<span class="meta">{bookMeta(book.author, book.year)}</span>
 						</div>
 						{#if adminState.active}
 							{#if confirmingId === book.id}
@@ -265,6 +271,7 @@
 		backdrop-filter: var(--glass-blur);
 		-webkit-backdrop-filter: var(--glass-blur);
 		border: 1px solid var(--glass-border);
+		box-shadow: var(--glass-edge, none);
 		will-change: background, border-color;
 	}
 
@@ -398,10 +405,31 @@
 		line-height: 1.4;
 	}
 	.meta {
-		font-family: var(--font-ui);
-		font-size: 0.62rem;
-		letter-spacing: 0.06em;
+		font-family: var(--font-prose);
+		font-style: italic;
+		font-size: 0.86rem;
 		color: var(--clr-meta);
+	}
+
+	.guide {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		margin: 2.2rem 0 0.4rem;
+	}
+	.guide:first-child { margin-top: 0; }
+	.guide span {
+		font-family: var(--font-ui);
+		font-weight: 600;
+		font-size: 1.5rem;
+		line-height: 1;
+		color: var(--clr-meta);
+	}
+	.guide::after {
+		content: '';
+		flex: 1;
+		border-top: 1px solid var(--clr-meta);
+		opacity: 0.35;
 	}
 
 	.row-action-btn {
