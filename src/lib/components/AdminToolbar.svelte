@@ -12,8 +12,10 @@
 	let navPanelOpen = $state(false);
 
 	async function handleSync() {
+		const wasError = writeQueue.status === 'error';
 		await writeQueue.flush();
-		if (writeQueue.status === 'error') {
+		// The queue toasts on entering error; a manual retry that fails again still deserves one.
+		if (wasError && writeQueue.status === 'error') {
 			toast.error(writeQueue.error || 'Sync failed.');
 		}
 	}

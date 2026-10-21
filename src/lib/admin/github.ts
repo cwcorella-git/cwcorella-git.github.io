@@ -84,6 +84,7 @@ export async function commitFiles(
 
 	// 1. Current HEAD commit SHA
 	const refRes = await fetch(`${API}/repos/${REPO}/git/ref/heads/main`, { headers });
+	if (refRes.status === 401 || refRes.status === 403) throw new Error('GITHUB_AUTH', { cause: refRes.status });
 	if (!refRes.ok) throw new Error(`Failed to get ref: ${refRes.status}`);
 	const headSha: string = (await refRes.json()).object.sha;
 

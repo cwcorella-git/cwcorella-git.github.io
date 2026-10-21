@@ -2,6 +2,7 @@ import type { Book, JournalMeta, LinkMeta } from '$lib/types';
 import allBooksStatic from '$lib/books.json';
 import { commitFiles } from '$lib/admin/github';
 import { draftStore } from '$lib/admin/draft';
+import { toast } from '$lib/admin/toast.svelte';
 import {
 	encryptDoc, decryptDoc,
 	importRawKey, encryptDocWithKey, decryptDocWithKey,
@@ -27,6 +28,8 @@ let _syncStatus = $state<SyncStatus>('idle');
 let _syncError = $state('');
 let _debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let _flushing = false;
+// Set when GitHub rejects the PAT: auto-flush stops until updatePAT(), drafts keep saving.
+let _authBlocked = $state(false);
 
 async function _commitDomain(payload: DomainPayload, pat: string): Promise<void> {
 	if (payload.domain === 'books') {
@@ -62,6 +65,7 @@ export const writeQueue = {
 	get status(): SyncStatus { return _syncStatus; },
 	get error(): string { return _syncError; },
 	get isDirty(): boolean { return _pending.size > 0; },
+	get authBlocked(): boolean { return _authBlocked; },
 
 	push(payload: DomainPayload): void {
 		// Journals: merge extraUpdates/deletions so rapid saves don't drop earlier .enc files
@@ -89,6 +93,7 @@ export const writeQueue = {
 		_syncStatus = 'dirty';
 		draftStore.save(payload.domain, payload);
 		if (_debounceTimer !== null) clearTimeout(_debounceTimer);
+		if (_authBlocked) return;
 		_debounceTimer = setTimeout(() => { writeQueue.flush(); }, 10_000);
 	},
 
@@ -101,6 +106,7 @@ export const writeQueue = {
 			return;
 		}
 		_flushing = true;
+		const wasError = _syncStatus === 'error';
 		_syncStatus = 'saving';
 		if (_debounceTimer !== null) { clearTimeout(_debounceTimer); _debounceTimer = null; }
 
@@ -132,7 +138,13 @@ export const writeQueue = {
 				draftStore.save(domain, payload);
 			}
 			_syncStatus = 'error';
-			_syncError = e instanceof Error ? e.message : 'Sync failed.';
+			if (e instanceof Error && e.message === 'GITHUB_AUTH') {
+				_authBlocked = true;
+				_syncError = `GitHub rejected the token (${e.cause}). Update the PAT in admin settings (⊙) — your changes are saved locally.`;
+			} else {
+				_syncError = e instanceof Error ? e.message : 'Sync failed.';
+			}
+			if (!wasError) toast.error(_syncError);
 		} finally {
 			_flushing = false;
 		}
@@ -299,6 +311,10 @@ export const adminState = {
 	updatePAT(newPat: string) {
 		_pat = newPat.trim();
 		localStorage.setItem('cwc-admin-pat', _pat);
+		if (_authBlocked) {
+			_authBlocked = false;
+			writeQueue.flush();
+		}
 	},
 
 	/** Update library API token mid-session. */

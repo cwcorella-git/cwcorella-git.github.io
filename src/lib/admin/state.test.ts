@@ -37,4 +37,32 @@ describe('writeQueue.flush', () => {
 		// that point silently lost the pending book entry.
 		expect(draftStore.load('books')).not.toBeNull();
 	});
+
+	it('stops auto-flushing on a rejected PAT and resumes when it is updated', async () => {
+		vi.useFakeTimers();
+		try {
+			commitFiles.mockRejectedValueOnce(new Error('GITHUB_AUTH', { cause: 401 }));
+			writeQueue.push({ domain: 'books', books: [{ name: 'Blocked Book', url: '' } as any] });
+			await writeQueue.flush();
+
+			expect(writeQueue.status).toBe('error');
+			expect(writeQueue.authBlocked).toBe(true);
+			expect(writeQueue.error).toMatch(/PAT/);
+			expect(draftStore.load('books')).not.toBeNull();
+
+			commitFiles.mockReset();
+			writeQueue.push({ domain: 'books', books: [{ name: 'Another', url: '' } as any] });
+			await vi.advanceTimersByTimeAsync(20_000);
+			expect(commitFiles).not.toHaveBeenCalled();
+
+			commitFiles.mockResolvedValueOnce(undefined);
+			adminState.updatePAT('new-pat');
+			await vi.runAllTimersAsync();
+			expect(commitFiles).toHaveBeenCalledTimes(1);
+			expect(writeQueue.authBlocked).toBe(false);
+			expect(writeQueue.status).toBe('idle');
+		} finally {
+			vi.useRealTimers();
+		}
+	});
 });
