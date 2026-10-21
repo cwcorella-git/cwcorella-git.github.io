@@ -119,7 +119,14 @@ switching between dark and light text as the sky crosses its midpoint.
 - All three avoid ALL-CAPS eyebrows, middle-dot meta strings, `→` on links, and any
   single border radius used everywhere.
 
+## Decided (2026-10-21)
+
+- **The eight palettes go.** The site gets one committed look, and `ink` stays as the VG
+  formatting check.
+- **All three directions were rendered** and sent to the ops Media tab as group
+  `cwc-direction`. Renders: home and reading at 1280px, reading at 390px; C is shown by day
+  and by night.
+
 ## Open for the operator
 
-1. Do the eight palettes go? Each direction above is a single committed look, plus `ink`.
-2. Which two or three directions should be rendered?
+1. Which direction? Picked in the ops Media tab (`cwc-direction`).
