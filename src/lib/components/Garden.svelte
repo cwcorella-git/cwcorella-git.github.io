@@ -6,6 +6,7 @@
 	import { adminState } from '$lib/admin/state.svelte';
 	import { isUnlockDay } from '$lib/admin/tlock';
 	import { toast } from '$lib/admin/toast.svelte';
+	import { renderMeadow, renderRange, renderNoiseCloud, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
 
 	// ── constants ─────────────────────────────────────────────────────────────
 	const HORIZON_FRAC = 0.68;   // horizon at 68% down canvas
@@ -193,7 +194,7 @@
 		alpha:         number;
 		prngseed:      number;
 		speed:         number;   // px / minute
-		cache:         HTMLCanvasElement | null;
+		cache:         { canvas: HTMLCanvasElement; baseY: number; w: number; h: number } | null;
 		cacheColorKey: string;
 	}
 
@@ -205,6 +206,8 @@
 		alpha:    number;
 		prngseed: number;
 		speed:    number;   // px / minute (slow)
+		cache:    HTMLCanvasElement | null;
+		cacheColorKey: string;
 	}
 
 	const SPECTRAL: Array<{ color: string; weight: number }> = [
@@ -228,6 +231,8 @@
 	let treeLeanAngle               = 0;       // stable per-seed foreground tree lean (±4°)
 	let W = 0, H = 0, horizonY = 0;
 	let dpr = 1;   // devicePixelRatio — canvas works in physical pixels so zoom has no effect
+	let meadow: HTMLCanvasElement | null = null;   // multiply layer over the ground band
+	let grain: CanvasPattern | null = null;
 
 	function buildScene(cw: number, ch: number, hy: number): void {
 		const rng = makePRNG(0xCAFEBABE);
@@ -295,8 +300,15 @@
 				alpha:    0.22 + cirrng() * 0.30,
 				prngseed: Math.floor(cirrng() * 0x7FFFFFFF),
 				speed:    2 + cirrng() * 5,
+				cache:    null,
+				cacheColorKey: '',
 			});
 		}
+
+		buildRangeHeights();
+		rangeCache = { key: '', layers: [] };
+		shadowCache = { key: '', canvas: null };
+		meadow = renderMeadow(cw, ch - hy, dpr);
 
 		// ── plants ──────────────────────────────────────────────────────────────────────────
 		const prng = makePRNG(0xBADC0FFE);
@@ -567,34 +579,154 @@
 	}
 
 	// ── draw: mountains & hills ────────────────────────────────────────────────
-	function drawTerrain(ctx: CanvasRenderingContext2D, altDeg: number): void {
-		const isTwilight = altDeg > -10 && altDeg < 12;
-		const isNight    = altDeg < -14;
+	// Four ranges far to near, then the hills (2026-10-22). Each range is mixed
+	// toward the horizon sky by 1 − e^(−βd), so distance reads as haze the way it
+	// does outdoors, and slopes facing the sun take its colour. Ranges render
+	// offscreen and rebuild only when the sun moves about a degree. The two
+	// original silhouettes (seeds 2.3 and 5.7) are kept.
+	const RANGES = [
+		{ seed: 11.7, freq: 2.0, h: 0.30, ridged: true,  dist: 1.00, snow: true  },
+		{ seed: 2.3,  freq: 3.5, h: 0.20, ridged: true,  dist: 0.50, snow: true  },
+		{ seed: 5.7,  freq: 3.5, h: 0.26, ridged: true,  dist: 0.24, snow: false },
+		{ seed: 9.4,  freq: 6.0, h: 0.07, ridged: false, dist: 0.18, snow: false },
+	];
+	let rangeHeights: Float32Array[] = [];
+	let rangeCache: { key: string; layers: { canvas: HTMLCanvasElement; top: number }[] } = { key: '', layers: [] };
 
-		// Aerial perspective haze: ramps from near-zero at night to ~0.36 at midday.
-		// Each layer uses a fraction of hazeBase — far = most, hills = least.
-		const hazeBase = isNight
-			? 0.03
-			: Math.max(0.06, Math.min(0.36, (altDeg + 8) / 28));
-		const { horizon } = getSkyColors(altDeg);
+	function buildRangeHeights(): void {
+		rangeHeights = RANGES.map((r) => {
+			const a = new Float32Array(W);
+			for (let x = 0; x < W; x++) {
+				const n = r.ridged ? ridged1D((x / W) * r.freq + r.seed) : fbm1D((x / W) * r.freq + r.seed);
+				a[x] = n * horizonY * r.h;
+			}
+			return a;
+		});
+	}
 
-		// Far mountains — fully opaque fill; haze overlay handles aerial perspective separately
-		const farColor = isNight    ? 'rgb(14,18,35)'
-		               : isTwilight ? 'rgb(112,98,120)'
-		               :              'rgb(170,158,142)';
-		fillMountainRange(ctx, 2.3, horizonY * 0.20, farColor, horizon, Math.min(0.95, hazeBase * 1.30));
+	const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
-		// Near mountains
-		const nearColor = isNight    ? 'rgb(8,10,22)'
-		                : isTwilight ? 'rgb(58,46,62)'
-		                :              'rgb(95,82,62)';
-		fillMountainRange(ctx, 5.7, horizonY * 0.26, nearColor, horizon, Math.min(0.72, hazeBase * 0.58));
+	function drawTerrain(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
+		const dl     = clamp01((altDeg + 8) / 16);                       // 0 night → 1 day
+		const golden = altDeg > -4 ? clamp01(1 - Math.abs(altDeg - 3) / 9) : 0;
+		const { horizon, zenith } = getSkyColors(altDeg);
 
-		// Rolling hills
-		const hillColor = isNight    ? 'rgb(6,8,16)'
-		                : isTwilight ? 'rgb(40,44,32)'
-		                :              'rgb(70,82,46)';
-		fillHillRange(ctx, 8.1, horizonY * 0.14, hillColor, horizon, hazeBase * 0.24);
+		const key = `${W}x${H}|${Math.round(altDeg)}|${Math.round(sxn * 40)}`;
+		if (rangeCache.key !== key) {
+			const rock: RGB = dl < 0.5 ? lerpRGB([14, 18, 35], [104, 90, 112], dl * 2) : lerpRGB([104, 90, 112], [126, 116, 102], (dl - 0.5) * 2);
+			const sunCol: RGB = lerpRGB([255, 244, 220], [255, 168, 92], golden);
+			const beta = 0.3 + 0.75 * dl;
+			const month = new Date().getMonth();
+			const snowy = month >= 10 || month <= 4;                         // Nov–May on the Sierra
+			rangeCache = {
+				key,
+				layers: RANGES.map((r, i) => renderRange(W, horizonY + 2, rangeHeights[i], {
+					base:   rock,
+					lit:    lerpRGB(rock, sunCol, dl * (0.45 + 0.35 * golden)),
+					shade:  lerpRGB(rock, lerpRGB(zenith, [0, 0, 0], 0.5), 0.35 * dl),
+					fog:    horizon,
+					fogAmt: 1 - Math.exp(-beta * r.dist),
+					sunX:   sxn * W,
+					snow:   snowy && r.snow ? lerpRGB([30, 34, 52], [236, 238, 244], dl) : null,
+				})),
+			};
+		}
+		for (const l of rangeCache.layers) ctx.drawImage(l.canvas, 0, l.top);
+
+		// Rolling hills, filled to the bottom: this is the ground the meadow multiplies over.
+		const hill: RGB = dl < 0.5 ? lerpRGB([6, 8, 16], [52, 54, 40], dl * 2) : lerpRGB([52, 54, 40], [150, 148, 98], (dl - 0.5) * 2);
+		const warm = lerpRGB(hill, [190, 140, 80], golden * 0.25);
+		fillHillRange(ctx, 8.1, horizonY * 0.14, css(warm), horizon, (1 - Math.exp(-(0.3 + 0.75 * dl) * 0.08)));
+	}
+
+	// ── draw: meadow ──────────────────────────────────────────────────────────
+	function drawMeadow(ctx: CanvasRenderingContext2D): void {
+		if (!meadow) return;
+		ctx.save();
+		ctx.globalCompositeOperation = 'multiply';
+		ctx.drawImage(meadow, 0, horizonY);
+		ctx.restore();
+	}
+
+	// ── draw: cloud shadows ───────────────────────────────────────────────────
+	// Soft shadows drifting over the ground with their clouds. Overhead clouds
+	// shade the foreground; clouds near the horizon shade the far field.
+	function drawCloudShadows(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
+		const sun = clamp01((altDeg - 2) / 12);
+		if (sun < 0.02) return;
+		const minutes = Date.now() / 60000;
+		const sunX = sxn * W;
+		ctx.save();
+		ctx.beginPath(); ctx.rect(0, horizonY, W, H - horizonY); ctx.clip();
+		for (const cloud of clouds) {
+			const w    = cloud.cache?.w ?? cloud.size;
+			const cx   = (cloud.xFrac * W + minutes * cloud.speed) % (W + w);
+			const near = clamp01(1 - cloud.yFrac / 0.38);
+			const gx   = cx + (cx - sunX) * 0.15;
+			const gy   = horizonY + (0.12 + 0.8 * near) * (H - horizonY);
+			const rx   = cloud.size * (0.7 + 0.9 * near);
+			const ry   = rx * (0.10 + 0.12 * near);
+			const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+			g.addColorStop(0,   `rgba(10,16,30,${(0.24 * sun * cloud.alpha).toFixed(3)})`);
+			g.addColorStop(0.6, `rgba(10,16,30,${(0.12 * sun * cloud.alpha).toFixed(3)})`);
+			g.addColorStop(1,   'rgba(10,16,30,0)');
+			ctx.save();
+			ctx.translate(gx, gy);
+			ctx.scale(rx, ry);
+			ctx.fillStyle = g;
+			ctx.beginPath(); ctx.arc(0, 0, 1, 0, Math.PI * 2); ctx.fill();
+			ctx.restore();
+		}
+		ctx.restore();
+	}
+
+	// ── draw: foreground tree's cast shadow ───────────────────────────────────
+	// The tree redrawn flat on the ground, sheared away from the sun and longer
+	// as the sun drops. Baked offscreen (with a slight blur) per sun position.
+	let shadowCache: { key: string; canvas: HTMLCanvasElement | null } = { key: '', canvas: null };
+
+	function drawTreeCastShadow(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
+		const sunFactor = clamp01((altDeg - 1) / 8);
+		if (sunFactor < 0.03 || fgTreeSegs.length === 0) return;
+		const bx = W * 0.28;
+		const key = `${W}x${H}|${altDeg.toFixed(1)}|${Math.round(sxn * 100)}|${fgTreeSegs.length}|${gardenAgeUnits}`;
+		if (shadowCache.key !== key) {
+			const L    = Math.min(3.5, 1 / Math.tan(Math.max(4, altDeg) * Math.PI / 180));
+			const fy   = 0.16 * L;                                   // ground foreshortening
+			const away = Math.sign(bx - sxn * W) || 1;               // +1: sun on the left
+			const m    = away * Math.min(1.4, 0.35 * L) * clamp01(Math.abs(sxn * W - bx) / (W * 0.4) + 0.2);
+			const raw = document.createElement('canvas');
+			raw.width = W; raw.height = H;
+			const rctx = raw.getContext('2d')!;
+			// (x, y) → (x + m·(hy − y), hy + fy·(hy − y))
+			rctx.setTransform(1, 0, -m, -fy, m * horizonY, horizonY * (1 + fy));
+			rctx.translate(bx, horizonY);
+			rctx.rotate(treeLeanAngle);
+			rctx.translate(-bx, -horizonY);
+			drawTree(rctx, fgTreeSegs, W, H, '#000');
+			drawLeaves(rctx, fgTreeSegs, W, H, '#000', 1);
+			const out = document.createElement('canvas');
+			out.width = W; out.height = H;
+			const octx = out.getContext('2d')!;
+			octx.filter = `blur(${Math.round(1.5 * dpr)}px)`;
+			octx.drawImage(raw, 0, 0);
+			shadowCache = { key, canvas: out };
+		}
+		if (!shadowCache.canvas) return;
+		ctx.save();
+		ctx.globalAlpha = 0.26 * sunFactor;
+		ctx.drawImage(shadowCache.canvas, 0, 0);
+		ctx.restore();
+	}
+
+	// ── draw: grain ───────────────────────────────────────────────────────────
+	function drawGrain(ctx: CanvasRenderingContext2D): void {
+		if (!grain) {
+			grain = ctx.createPattern(makeGrainTile(), 'repeat');
+			if (!grain) return;
+		}
+		ctx.fillStyle = grain;
+		ctx.fillRect(0, 0, W, H);
 	}
 
 	function fillMountainRange(
@@ -951,241 +1083,48 @@
 
 		const minutesSinceEpoch = Date.now() / 60000;
 		const { top } = getCloudColors(altDeg);
+		const colorKey = quantizeColorKey(top, top);
 
 		ctx.save();
-		ctx.lineCap = 'round';
-
+		ctx.globalAlpha = alphaBase;
 		for (const c of cirrus) {
-			const rawX = (c.xFrac * W + minutesSinceEpoch * c.speed) % (W + c.width * 2);
-			const cx   = rawX - c.width;
-			const cy   = c.yFrac * horizonY;
-
-			ctx.save();
-			ctx.translate(cx, cy);
-			ctx.rotate(c.angle);
-
-			const rng = makePRNG(c.prngseed);
-			// 8 strands per cluster — varying length, angle, origin
-			for (let i = 0; i < 8; i++) {
-				const x0   = (rng() - 0.5) * c.width * 0.80;
-				const y0   = (rng() - 0.5) * 14;
-				const len  = c.width * (0.28 + rng() * 0.58);
-				const cpx  = x0 + len * 0.45 + (rng() - 0.5) * len * 0.30;
-				const cpy  = y0 + (rng() - 0.5) * 12;
-				const x1   = x0 + len;
-				const y1   = y0 + (rng() - 0.5) * 10;
-				const strandAlpha = c.alpha * alphaBase * (0.40 + rng() * 0.60);
-
-				// Three passes: core (narrow) → mid → halo (wide, faint)
-				const passes = [
-					{ w: 0.8 + rng() * 1.2, a: strandAlpha },
-					{ w: 2.0 + rng() * 1.5, a: strandAlpha * 0.38 },
-					{ w: 4.0 + rng() * 2.0, a: strandAlpha * 0.14 },
-				];
-				for (const p of passes) {
-					ctx.beginPath();
-					ctx.moveTo(x0, y0);
-					ctx.quadraticCurveTo(cpx, cpy, x1, y1);
-					ctx.strokeStyle = css(top);
-					ctx.lineWidth   = p.w;
-					ctx.globalAlpha = p.a;
-					ctx.stroke();
-				}
+			if (!c.cache || c.cacheColorKey !== colorKey) {
+				c.cache = renderNoiseCirrus(c.width * 1.4, c.prngseed, top, Math.min(1, c.alpha * 1.6));
+				c.cacheColorKey = colorKey;
 			}
+			const rawX = (c.xFrac * W + minutesSinceEpoch * c.speed) % (W + c.width * 2);
+			ctx.save();
+			ctx.translate(rawX - c.width, c.yFrac * horizonY);
+			ctx.rotate(c.angle);
+			ctx.drawImage(c.cache, -c.cache.width / 2, -c.cache.height / 2);
 			ctx.restore();
 		}
 		ctx.restore();
 	}
 
-	// ── cloud: offscreen renderer ─────────────────────────────────────────────
-	// Path-based silhouette: ONE continuous bezier shape — flat base + bumpy top.
-	// No individual circles. The bumpy outline IS the cloud edge, drawn as a
-	// connected series of quadratic bezier curves through generated peak points.
-	// Perspective baked via aspectRatio: near-horizon ~0.10, overhead ~0.42.
-	function renderCloudToCanvas(cloud: CloudDef, topRGB: RGB, shadowRGB: RGB): HTMLCanvasElement {
-		const rng    = makePRNG(cloud.prngseed);
-		const totalW = cloud.size;
-		const totalH = Math.max(cloud.size * cloud.aspectRatio, 10);
-
-		// Small top buffer (peaks are path points, not extended circles);
-		// generous bottom padding for base-fade.
-		const padX = totalW * 0.15;
-		const padT = Math.max(totalH * 0.12, 6);
-		const padB = Math.max(totalH * 0.42, 10);
-
-		const CW    = Math.ceil(totalW + padX * 2);
-		const CH    = Math.ceil(totalH + padT + padB);
-		const baseY = CH - padB;
-
-		const c  = document.createElement('canvas');
-		c.width  = CW;
-		c.height = CH;
-		const ctx = c.getContext('2d')!;
-
-		// ── Generate bump peaks ──────────────────────────────────────────────────
-		// One dominant primary lobe + 2–4 shorter secondary lobes at random x.
-		// This breaks the uniform-scallop look: each cloud has a clear tallest turret.
-		const peaks: Array<{ x: number; y: number }> = [];
-
-		// Primary peak — tallest, 30–70% from left
-		const primaryXFrac = 0.30 + rng() * 0.40;
-		const primaryH     = totalH * (0.88 + rng() * 0.12);
-		peaks.push({ x: padX + primaryXFrac * totalW, y: baseY - primaryH });
-
-		// Secondary peaks — 2–4 more, height decreases with distance from primary
-		const numSecondary = 2 + Math.floor(rng() * 3);
-		for (let i = 0; i < numSecondary; i++) {
-			const xFrac  = 0.04 + rng() * 0.92;
-			const px     = padX + xFrac * totalW;
-			const distFrac = Math.abs(xFrac - primaryXFrac);
-			const h      = totalH * (0.28 + rng() * 0.48) * (1 - distFrac * 0.52);
-			peaks.push({ x: px, y: baseY - Math.max(h, totalH * 0.14) });
-		}
-		peaks.sort((a, b) => a.x - b.x);
-
-		const leftX  = padX * 0.3;
-		const rightX = CW - padX * 0.3;
-		const lastP  = peaks[peaks.length - 1];
-
-		// ── Build silhouette path ────────────────────────────────────────────────
-		ctx.beginPath();
-		ctx.moveTo(leftX, baseY);
-
-		// Sweep up from left edge to first peak
-		ctx.quadraticCurveTo(
-			leftX + (peaks[0].x - leftX) * 0.42, baseY - totalH * 0.30,
-			peaks[0].x, peaks[0].y
-		);
-
-		// Walk through peaks; each pair shares a valley
-		for (let i = 0; i < peaks.length - 1; i++) {
-			const p1 = peaks[i], p2 = peaks[i + 1];
-			// Valley 28–50% of the way down toward base — deep enough for distinct puff silhouette
-			const valX  = (p1.x + p2.x) / 2 + (rng() - 0.5) * (p2.x - p1.x) * 0.18;
-			const lower = Math.max(p1.y, p2.y);
-			const valY  = lower + (baseY - lower) * (0.48 + rng() * 0.24);
-			ctx.quadraticCurveTo(p1.x + (valX - p1.x) * 0.58, p1.y, valX, valY);
-			ctx.quadraticCurveTo(valX + (p2.x - valX) * 0.42, p2.y, p2.x, p2.y);
-		}
-
-		// Sweep down from last peak to right edge
-		ctx.quadraticCurveTo(
-			rightX - (rightX - lastP.x) * 0.42, baseY - totalH * 0.30,
-			rightX, baseY
-		);
-		ctx.lineTo(leftX, baseY);
-		ctx.closePath();
-
-		// Fill unified shape — all shading applied on top of this flat fill
-		ctx.fillStyle = css(topRGB, 0.92);
-		ctx.fill();
-
-		// ── Directional shading (source-atop) ────────────────────────────────────
-		ctx.save();
-		ctx.globalCompositeOperation = 'source-atop';
-		const shadeTop = Math.max(0, baseY - totalH);
-		const shade    = ctx.createLinearGradient(0, shadeTop, 0, baseY);
-		shade.addColorStop(0.00, css(shadowRGB, 0.00));
-		shade.addColorStop(0.50, css(shadowRGB, 0.00));
-		shade.addColorStop(0.75, css(shadowRGB, 0.28));
-		shade.addColorStop(1.00, css(shadowRGB, 0.60));
-		ctx.fillStyle = shade;
-		ctx.fillRect(0, 0, CW, CH);
-		ctx.restore();
-
-		// ── Shadow pockets at bump valleys (source-atop) ─────────────────────────
-		ctx.save();
-		ctx.globalCompositeOperation = 'source-atop';
-		for (let i = 0; i < peaks.length - 1; i++) {
-			const p1    = peaks[i], p2 = peaks[i + 1];
-			const valX  = (p1.x + p2.x) / 2;
-			const lower = Math.max(p1.y, p2.y);
-			const valY  = lower + (baseY - lower) * 0.35;
-			const rr    = (p2.x - p1.x) * 0.22;
-			const vg    = ctx.createRadialGradient(valX, valY, 0, valX, valY, rr);
-			vg.addColorStop(0, css(shadowRGB, 0.40));
-			vg.addColorStop(1, css(shadowRGB, 0));
-			ctx.beginPath();
-			ctx.ellipse(valX, valY, rr * 1.3, rr * 0.65, 0, 0, Math.PI * 2);
-			ctx.fillStyle = vg;
-			ctx.fill();
-		}
-		ctx.restore();
-
-		// ── Highlight spots on peak tops (source-atop) ───────────────────────────
-		// Bright radial glow at each bump apex — gives clouds their lit-turret look.
-		ctx.save();
-		ctx.globalCompositeOperation = 'source-atop';
-		for (const p of peaks) {
-			const peakH = baseY - p.y;   // how tall this peak is above base
-			const hr    = peakH * 0.28;  // highlight radius ~28% of peak height
-			const hg    = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, hr);
-			hg.addColorStop(0,   'rgba(255,255,255,0.40)');
-			hg.addColorStop(0.5, 'rgba(255,255,255,0.16)');
-			hg.addColorStop(1,   'rgba(255,255,255,0)');
-			ctx.beginPath();
-			ctx.arc(p.x, p.y, hr, 0, Math.PI * 2);
-			ctx.fillStyle = hg;
-			ctx.fill();
-		}
-		ctx.restore();
-
-		// ── Feather base edge (destination-out) ──────────────────────────────────
-		ctx.save();
-		ctx.globalCompositeOperation = 'destination-out';
-		const fTop = baseY - Math.max(totalH * 0.30, 8);
-		const fade = ctx.createLinearGradient(0, fTop, 0, baseY + padB * 0.55);
-		fade.addColorStop(0.00, 'rgba(0,0,0,0)');
-		fade.addColorStop(0.42, 'rgba(0,0,0,0.35)');
-		fade.addColorStop(1.00, 'rgba(0,0,0,1)');
-		ctx.fillStyle = fade;
-		ctx.fillRect(0, fTop, CW, baseY + padB * 0.55 - fTop);
-		ctx.restore();
-
-		// ── Feather sides (destination-out) ──────────────────────────────────────
-		ctx.save();
-		ctx.globalCompositeOperation = 'destination-out';
-		const sw = padX * 0.65;
-		const lf = ctx.createLinearGradient(0, 0, sw, 0);
-		lf.addColorStop(0, 'rgba(0,0,0,1)'); lf.addColorStop(1, 'rgba(0,0,0,0)');
-		ctx.fillStyle = lf; ctx.fillRect(0, 0, sw, CH);
-		const rf = ctx.createLinearGradient(CW - sw, 0, CW, 0);
-		rf.addColorStop(0, 'rgba(0,0,0,0)'); rf.addColorStop(1, 'rgba(0,0,0,1)');
-		ctx.fillStyle = rf; ctx.fillRect(CW - sw, 0, sw, CH);
-		ctx.restore();
-
-		return c;
-	}
 	// ── draw: clouds ───────────────────────────────────────────────────────────
-	function drawClouds(ctx: CanvasRenderingContext2D, altDeg: number): void {
+	// Noise-density clouds lit from the sun's side (detail.ts, 2026-10-22).
+	// Perspective is baked in via aspectRatio: near-horizon slivers, overhead domes.
+	function drawClouds(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
 		const cloudAlpha = Math.max(0, Math.min(1, (altDeg + 14) / 6));
 		if (cloudAlpha <= 0) return;
 
 		const minutesSinceEpoch = Date.now() / 60000;
 		const { top, shadow } = getCloudColors(altDeg);
-		const colorKey = quantizeColorKey(top, shadow);
+		const sunSide  = sxn < 0.5 ? -1 : 1;
+		const colorKey = quantizeColorKey(top, shadow) + sunSide;
 
 		ctx.save();
 		for (const cloud of clouds) {
 			if (!cloud.cache || cloud.cacheColorKey !== colorKey) {
-				cloud.cache = renderCloudToCanvas(cloud, top, shadow);
+				cloud.cache = renderNoiseCloud(cloud.size, cloud.aspectRatio, cloud.prngseed, top, shadow, sunSide, 1);
 				cloud.cacheColorKey = colorKey;
 			}
-
-			// Compute where in the offscreen canvas the flat base sits, so we can
-			// align it to the cloud's vertical position in the main canvas.
-			const totalH = Math.max(cloud.size * cloud.aspectRatio, 8);
-			const padB   = Math.max(totalH * 0.42, 10);
-			const CH     = cloud.cache.height;
-			const baseY  = CH - padB;   // base y within offscreen canvas
-
-			const rawX = (cloud.xFrac * W + minutesSinceEpoch * cloud.speed) % (W + cloud.cache.width);
-			const drawX = rawX - cloud.cache.width / 2;
-			const skyY  = cloud.yFrac * horizonY * 0.84;   // base sits at this y in main canvas
-			const drawY = skyY - baseY;
-
+			const { canvas: img, baseY, w, h } = cloud.cache;
+			const rawX = (cloud.xFrac * W + minutesSinceEpoch * cloud.speed) % (W + w);
+			const skyY = cloud.yFrac * horizonY * 0.84;   // base sits at this y in main canvas
 			ctx.globalAlpha = cloud.alpha * cloudAlpha;
-			ctx.drawImage(cloud.cache, drawX, drawY);
+			ctx.drawImage(img, rawX - w / 2, skyY - baseY, w, h);
 		}
 		ctx.restore();
 	}
@@ -1299,13 +1238,16 @@
 		drawPurpleLight(ctx, altDeg, sxn);
 		drawGround(ctx, altDeg);
 		drawGroundContours(ctx, altDeg);
-		drawTerrain(ctx, altDeg);
+		drawTerrain(ctx, altDeg, sxn);
+		drawMeadow(ctx);
+		drawCloudShadows(ctx, altDeg, sxn);
 		drawBgTree(ctx, altDeg);            // space-colonization silhouette — far right background
 		drawMidgroundTrees(ctx, altDeg);
 		drawHorizonBlend(ctx, altDeg);
-		drawPlants(ctx, bgPlants, horizonY, H);   // far grass — behind tree
+		drawPlants(ctx, bgPlants, horizonY, H, 1 - clamp01((altDeg + 6) / 12));   // far grass — behind tree
 		drawCirrus(ctx, altDeg);
-		drawClouds(ctx, altDeg);
+		drawClouds(ctx, altDeg, sxn);
+		drawTreeCastShadow(ctx, altDeg, sxn);
 		drawTreeShadow(ctx, altDeg);
 		if (fgTreeSegs.length > 0) {
 			// Apply seeded trunk lean — rotate the whole tree around its base
@@ -1317,11 +1259,18 @@
 			ctx.translate(bx, horizonY);
 			ctx.rotate(treeLeanAngle);
 			ctx.translate(-bx, -horizonY);
-			drawTree(ctx, fgTreeSegs, W, H);
-			drawLeaves(ctx, fgTreeSegs, W, H, 'rgb(62,84,40)', leafAlpha);
+			// After sunset the tree goes to silhouette instead of keeping its daylight bark.
+			drawTree(ctx, fgTreeSegs, W, H, altDeg < -2 ? css(lerpRGB([16, 18, 26], [60, 52, 46], clamp01((altDeg + 8) / 6))) : undefined);
+			const golden = altDeg > -4 ? clamp01(1 - Math.abs(altDeg - 3) / 9) : 0;
+			drawLeaves(ctx, fgTreeSegs, W, H, 'rgb(62,84,40)', leafAlpha, {
+				dark:  'rgb(30,42,24)',
+				light: css(lerpRGB([112, 134, 62], [196, 160, 78], golden)),
+				sunDx: sxn * W < bx ? -1 : 1,
+			});
 			ctx.restore();
 		}
-		drawPlants(ctx, fgPlants, horizonY, H);   // near grass — in front of everything
+		drawPlants(ctx, fgPlants, horizonY, H, 1 - clamp01((altDeg + 6) / 12));   // near grass — in front of everything
+		drawGrain(ctx);
 		drawVignette(ctx);
 
 		animFrame = requestAnimationFrame(draw);

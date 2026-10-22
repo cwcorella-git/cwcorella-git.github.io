@@ -16,6 +16,14 @@ export interface TreeSegment {
 	color: string;
 }
 
+// Grey-brown bark (2026-10-22): the earlier browns read as orange in the scene.
+function barkColor(thick: number): string {
+	return thick > 8   ? '#3d3128'
+	     : thick > 3.5 ? '#54463a'
+	     : thick > 1.5 ? '#6b5b4c'
+	     :                '#7d6e5f';
+}
+
 // ── seeded PRNG (mulberry32) ───────────────────────────────────────────────
 function makePRNG(seed: number): () => number {
 	let s = seed >>> 0;
@@ -187,10 +195,7 @@ export function generateBgTree(W: number, H: number, horizonY: number, ageFracti
 			thick = Math.max(0.5, 5.2 * gf * Math.pow(0.80, crownDepth * 0.14));
 		}
 
-		const color = thick > 8  ? '#4A2C17'
-		            : thick > 3.5 ? '#6B4423'
-		            : thick > 1.5 ? '#8B5E3C'
-		            :                '#9B7050';
+		const color = barkColor(thick);
 
 		segments.push({
 			x1f: nodeX[pi] / W,  y1f: nodeY[pi] / H,
@@ -242,12 +247,6 @@ export function generateFgTree(W: number, H: number, horizonY: number, ageFracti
 	const thkBase = Math.max(3, 18 * Math.sqrt(gf));
 	const thkTop  = Math.max(1.5, 5 * Math.sqrt(gf));
 
-	function barkColor(thick: number): string {
-		return thick > 8   ? '#4A2C17'
-		     : thick > 3.5 ? '#6B4423'
-		     : thick > 1.5 ? '#8B5E3C'
-		     :                '#9B7050';
-	}
 
 	// Recursive crown — s0/sR: spread base+range; r0/rR: length-ratio base+range
 	function addBranch(
@@ -333,25 +332,44 @@ export function clearFgTreeCache(): void {
 // ── leaves ─────────────────────────────────────────────────────────────────
 // Draws foliage blobs at the tips of fine twigs (thick ≤ 1.8).
 // Overlapping semi-transparent circles build a pointillist foliage cloud.
+// With `shade`, each blob gets a darker underside and a lit cap toward the sun
+// (sunDx: -1 sun to the left, +1 to the right), so the crown reads as a mass.
 export function drawLeaves(
 	ctx: CanvasRenderingContext2D,
 	segments: TreeSegment[],
 	W: number, H: number,
 	leafColor: string,
 	alpha: number,
+	shade?: { dark: string; light: string; sunDx: number },
 ): void {
 	if (alpha < 0.01) return;
 	ctx.save();
-	ctx.fillStyle = leafColor;
+	const blobs: [number, number, number, number][] = [];
 	let n = 0;
 	for (const seg of segments) {
 		if (seg.thick > 1.8) continue;
 		n++;
 		if (n % 3 !== 0) continue;  // every 3rd twig — balances density vs perf
-		ctx.globalAlpha = alpha * (0.22 + (n % 7) * 0.04);
-		ctx.beginPath();
-		ctx.arc(seg.x2f * W, seg.y2f * H, 7 + (n % 5) * 0.8, 0, Math.PI * 2);
-		ctx.fill();
+		blobs.push([seg.x2f * W, seg.y2f * H, 7 + (n % 5) * 0.8, alpha * (0.22 + (n % 7) * 0.04)]);
+	}
+	if (shade) {
+		ctx.fillStyle = shade.dark;
+		for (const [x, y, r, a] of blobs) {
+			ctx.globalAlpha = a * 0.9;
+			ctx.beginPath(); ctx.arc(x - shade.sunDx * r * 0.2, y + r * 0.4, r * 1.1, 0, Math.PI * 2); ctx.fill();
+		}
+	}
+	ctx.fillStyle = leafColor;
+	for (const [x, y, r, a] of blobs) {
+		ctx.globalAlpha = a;
+		ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+	}
+	if (shade) {
+		ctx.fillStyle = shade.light;
+		for (const [x, y, r, a] of blobs) {
+			ctx.globalAlpha = a * 0.8;
+			ctx.beginPath(); ctx.arc(x + shade.sunDx * r * 0.3, y - r * 0.35, r * 0.55, 0, Math.PI * 2); ctx.fill();
+		}
 	}
 	ctx.restore();
 }
@@ -364,6 +382,7 @@ export function drawTree(
 	ctx: CanvasRenderingContext2D,
 	segments: TreeSegment[],
 	W: number, H: number,
+	color?: string,   // one colour for every segment — used for the cast shadow
 ): void {
 	ctx.save();
 	ctx.lineCap  = 'round';
@@ -373,7 +392,8 @@ export function drawTree(
 		ctx.moveTo(seg.x1f * W, seg.y1f * H);
 		ctx.lineTo(seg.x2f * W, seg.y2f * H);
 		ctx.lineWidth   = seg.thick;
-		ctx.strokeStyle = seg.color;
+		// From thickness, not seg.color: trees cached in localStorage carry the old browns.
+		ctx.strokeStyle = color ?? barkColor(seg.thick);
 		ctx.stroke();
 	}
 
@@ -386,7 +406,7 @@ export function drawTree(
 		const by   = base.y1f * H;
 		const hw   = base.thick / 2;   // half trunk width at the base (~9px)
 
-		ctx.fillStyle = '#4A2C17';
+		ctx.fillStyle = color ?? barkColor(99);
 		ctx.beginPath();
 		// Top edge sits just above the round cap so there's no visible gap
 		ctx.moveTo(bx - hw,       by - hw * 0.5);

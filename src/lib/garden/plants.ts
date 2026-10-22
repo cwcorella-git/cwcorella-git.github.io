@@ -171,14 +171,32 @@ export function tickWind(
 
 // ── drawing ───────────────────────────────────────────────────────────────
 // parentDir: degrees, -90 = pointing straight up
+// Plant colours dimmed toward a night silhouette, memoised per (colour, step).
+const DIM_TO = [14, 18, 24];
+const dimmed = new Map<string, string>();
+function dimColor(hex: string, dim: number): string {
+	const step = Math.round(dim * 20);
+	if (step === 0) return hex;
+	const key = hex + step;
+	let out = dimmed.get(key);
+	if (!out) {
+		const t = step / 20;
+		const c = [1, 3, 5].map((i, k) => Math.round(parseInt(hex.slice(i, i + 2), 16) * (1 - t) + DIM_TO[k] * t));
+		out = `rgb(${c[0]},${c[1]},${c[2]})`;
+		dimmed.set(key, out);
+	}
+	return out;
+}
+
 function drawSeg(
 	ctx: CanvasRenderingContext2D,
 	x: number, y: number,
 	parentDir: number,
 	seg: PlantSegment,
+	dim = 0,
 ): void {
 	if (seg.len === 0) {
-		for (const child of seg.children) drawSeg(ctx, x, y, parentDir, child);
+		for (const child of seg.children) drawSeg(ctx, x, y, parentDir, child, dim);
 		return;
 	}
 	const dir    = parentDir + seg.angle;
@@ -191,12 +209,12 @@ function drawSeg(
 	ctx.beginPath();
 	ctx.moveTo(x, y);
 	ctx.lineTo(ex, ey);
-	ctx.strokeStyle = seg.color;
+	ctx.strokeStyle = dimColor(seg.color, dim);
 	ctx.lineWidth   = seg.thick;
 	ctx.lineCap     = 'round';
 	ctx.stroke();
 
-	for (const child of seg.children) drawSeg(ctx, ex, ey, dir, child);
+	for (const child of seg.children) drawSeg(ctx, ex, ey, dir, child, dim);
 }
 
 export function drawPlants(
@@ -204,6 +222,7 @@ export function drawPlants(
 	plants: PlantInstance[],
 	horizonY: number,
 	H: number,
+	dim = 0,   // 0 day colours → 1 night silhouette
 ): void {
 	ctx.save();
 	const depthBand = (H - horizonY) * 0.80;
@@ -213,7 +232,7 @@ export function drawPlants(
 		// Far plants (near horizon) fade to 0.55 alpha; foreground is fully opaque.
 		const t = depthBand > 0 ? Math.max(0, Math.min(1, (plant.y - horizonY) / depthBand)) : 1;
 		ctx.globalAlpha = 0.55 + t * 0.45;
-		for (const child of plant.root.children) drawSeg(ctx, plant.x, plant.y, -90, child);
+		for (const child of plant.root.children) drawSeg(ctx, plant.x, plant.y, -90, child, dim);
 	}
 	ctx.globalAlpha = 1;
 	ctx.restore();
