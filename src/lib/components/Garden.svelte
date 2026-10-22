@@ -633,7 +633,7 @@
 			// Sun direction: left–right from its screen position, up from altitude,
 			// and a little from beyond the ranges (it sits in the sky in front of us).
 			const alt = Math.max(2, altDeg) * Math.PI / 180;
-			const sx = (sxn - 0.5) * 2, sz = 0.35;
+			const sx = (sxn - 0.5) * 2, sz = 0.15;
 			const hl = Math.hypot(sx, sz) || 1;
 			const sun: [number, number, number] = [(sx / hl) * Math.cos(alt), Math.sin(alt), (sz / hl) * Math.cos(alt)];
 			const beta = 0.3 + 0.75 * dl;

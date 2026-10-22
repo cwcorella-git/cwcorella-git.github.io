@@ -128,32 +128,38 @@ export interface RangeField {
 	depthPx: number;      // world depth the Z rows span, for the slope normal
 }
 
-const Z_ROWS = 64;
+const Z_ROWS = 96;
 
 export function buildRangeField(W: number, crest: Float32Array, seed: number, gullyPx: number): RangeField {
 	const Z = Z_ROWS;
 	const h = new Float32Array(W * Z), fx = new Float32Array(W * Z);
-	let maxH = 0;
+	let maxH = 0, mean = 0;
+	for (const c of crest) mean += c;
+	mean /= W;
+	// Spurs scale with the range: a tall range has broad ridges, not pinstripes.
+	const spacing = Math.max(gullyPx, mean * 0.9);
 	for (let x = 0; x < W; x++) {
 		const c = crest[x];
-		const u = x / gullyPx;
+		const u = x / spacing;
 		for (let zi = 0; zi < Z; zi++) {
 			const z = zi / (Z - 1);
-			// Gullies: ridged noise, high frequency across, low frequency downslope.
-			const warp = (noise2D(u * 0.3 + seed, z * 2) - 0.5) * 1.5;
-			const r = 1 - Math.abs(noise2D(u + warp + seed * 3.1, z * 1.6 + seed) * 2 - 1);
-			const fine = fbm2(u * 3 + seed, z * 6, 3) - 0.5;
-			// Gullies fade out toward the crest, so the skyline stays the crest line
-			// instead of growing a spike on every spur.
-			const v = c * Math.pow(z, 1.25) * (1 - 0.22 * (1 - r * r) * Math.sqrt(1 - z)) + c * 0.04 * fine * z * (1 - z);
+			// Spurs and gullies: two octaves of ridged noise, stretched downslope and
+			// warped so they branch. They cut deep at the foot and fade toward the
+			// crest, so the skyline stays the crest line while the face below breaks
+			// into ridges that come toward the viewer.
+			const warp = (noise2D(u * 0.25 + seed, z * 1.5) - 0.5) * 2.2;
+			const r1 = 1 - Math.abs(noise2D(u + warp + seed * 3.1, z * 1.2 + seed) * 2 - 1);
+			const r2 = 1 - Math.abs(noise2D(u * 2.3 + warp * 1.7 + seed * 5.3, z * 2.4) * 2 - 1);
+			const spur = 0.65 * smooth(0.15, 0.95, r1) + 0.35 * smooth(0.2, 1, r2);   // rounded shoulders, not knife edges
+			const fine = fbm2(u * 4 + seed, z * 8, 3) - 0.5;
+			const cut = 0.55 * Math.pow(1 - z, 0.7);
+			const v = c * Math.pow(z, 1.1) * (1 - cut * (1 - spur)) + c * 0.05 * fine * z * (1 - z);
 			h[x * Z + zi] = v;
 			fx[x * Z + zi] = fbm2(u * 1.7 + seed * 7, z * 5 + seed, 3);
 			if (v > maxH) maxH = v;
 		}
 	}
-	let mean = 0;
-	for (const c of crest) mean += c;
-	return { W, Z, h, fx, maxH, depthPx: (mean / W) * 1.6 };
+	return { W, Z, h, fx, maxH, depthPx: mean * 1.2 };
 }
 
 export interface RangeLight {
@@ -174,7 +180,7 @@ const SNOW: RGB = [236, 238, 244];
 
 export function renderRangeField(f: RangeField, baseY: number, L: RangeLight): { canvas: HTMLCanvasElement; top: number } {
 	const { W, Z, h, fx, maxH } = f;
-	const tilt = maxH * 0.12;                    // a little of the slope seen from above
+	const tilt = maxH * 0.3;                     // a little of the slope seen from above
 	const top = Math.max(0, Math.floor(baseY - maxH - tilt - 2));
 	const CH = Math.ceil(baseY - top + 2);
 	const c = makeCanvas(W, CH);
@@ -184,6 +190,26 @@ export function renderRangeField(f: RangeField, baseY: number, L: RangeLight): {
 	const dz = f.depthPx / (Z - 1);
 	const [lx, ly, lz] = L.sun;
 
+	// Cast shadows: sweep each depth row away from the sun, carrying the
+	// shadow line down at the sun's slope. A peak darkens the slope behind it.
+	const lit = new Uint8Array(W * Z).fill(1);
+	const run = Math.hypot(lx, lz);
+	if (run > 1e-3 && Math.abs(lx) > 0.05) {
+		const drop = ly / Math.abs(lx);           // height lost per px of x travelled
+		const dir = lx > 0 ? -1 : 1;              // walk from the sun's side
+		for (let zi = 0; zi < Z; zi++) {
+			let sh = -Infinity;
+			for (let k = 0; k < W; k++) {
+				const x = dir > 0 ? k : W - 1 - k;
+				const hv = h[x * Z + zi];
+				sh -= drop;
+				if (hv < sh - 0.5) lit[x * Z + zi] = 0;
+				else sh = hv;
+			}
+		}
+	}
+
+	const RELIEF = 2.2;                          // exaggerate slopes for lighting only
 	for (let x = 0; x < W; x++) {
 		let ybuf = CH;
 		const xl = Math.max(0, x - 1) * Z, xr = Math.min(W - 1, x + 1) * Z, xo = x * Z;
@@ -191,31 +217,32 @@ export function renderRangeField(f: RangeField, baseY: number, L: RangeLight): {
 			const hv = h[xo + zi];
 			const yt = Math.round(baseY - top - hv - (zi / (Z - 1)) * tilt);
 			if (yt >= ybuf) continue;
-			// Normal from the heightfield gradient.
 			const dhdx = (h[xr + zi] - h[xl + zi]) / 2;
 			const dhdz = (h[xo + Math.min(Z - 1, zi + 1)] - h[xo + Math.max(0, zi - 1)]) / (2 * dz);
-			let nx = -dhdx, ny = 1, nz = -dhdz;
+			let nx = -dhdx * RELIEF, ny = 1, nz = -dhdz * RELIEF * 0.35;
 			const nl = Math.hypot(nx, ny, nz);
 			nx /= nl; ny /= nl; nz /= nl;
 
-			// Material by height, broken up by noise.
 			const m = fx[xo + zi];
 			const hf = hv / maxH + (m - 0.5) * 0.18;
 			let alb = SAGE;
 			const forest = smooth(0.22, 0.32, hf) * (1 - smooth(0.6, 0.7, hf)) * smooth(0.42, 0.58, m);
 			alb = mixRGB(alb, PINE, forest);
-			alb = mixRGB(alb, ROCK, Math.max(smooth(0.62, 0.78, hf), smooth(0.75, 0.55, ny) * 0.8));
-			if (L.snow) alb = mixRGB(alb, SNOW, smooth(0.7, 0.8, hf) * smooth(0.5, 0.7, ny));
+			alb = mixRGB(alb, ROCK, Math.max(smooth(0.62, 0.78, hf), smooth(0.75, 0.5, ny) * 0.8));
+			if (L.snow) alb = mixRGB(alb, SNOW, smooth(0.66, 0.78, hf) * smooth(0.45, 0.7, ny));
 
-			const diff = Math.max(0, nx * lx + ny * ly + nz * lz);
-			const amb = 0.35 + 0.25 * ny;
+			let diff = Math.max(0, nx * lx + ny * ly + nz * lz);
+			if (!lit[xo + zi]) diff *= 0.2;
+			const amb = 0.3 + 0.2 * ny;
 			let col: RGB = [
-				(alb[0] / 255) * (L.sunCol[0] * diff * 0.85 + L.sky[0] * amb),
-				(alb[1] / 255) * (L.sunCol[1] * diff * 0.85 + L.sky[1] * amb),
-				(alb[2] / 255) * (L.sunCol[2] * diff * 0.85 + L.sky[2] * amb),
+				(alb[0] / 255) * (L.sunCol[0] * diff * 1.15 + L.sky[0] * amb),
+				(alb[1] / 255) * (L.sunCol[1] * diff * 1.15 + L.sky[1] * amb),
+				(alb[2] / 255) * (L.sunCol[2] * diff * 1.15 + L.sky[2] * amb),
 			];
 			col = mixRGB(L.night, col, L.dl);
-			col = mixRGB(col, L.fog, L.fogAmt);
+			// Haze sits low: valleys and the foot fog more than the peaks.
+			const zf = 1 - hv / maxH;
+			col = mixRGB(col, L.fog, Math.min(1, L.fogAmt * (0.7 + 0.6 * zf * zf)));
 
 			for (let y = Math.max(0, yt); y < ybuf; y++) {
 				const i = (y * W + x) * 4;
