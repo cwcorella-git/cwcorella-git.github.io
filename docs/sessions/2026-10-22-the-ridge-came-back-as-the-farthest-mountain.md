@@ -20,7 +20,10 @@ trees and picked every option: four for the mountains and four for the trees.
 | 10 | Range bases sat flat on the field (operator). Three reshapes of the range profile (concave apron, knolls, skylight by up-facing) still read as a wall, because with the sun behind the range the face is a shadowed wall either way. Fixed with a separate 3-row foothill layer (`renderFoothills`), which the operator picked | **reverted**: `c63e581`, reverted in `e6f805e`. Operator: "foothills are terrible" |
 | 11 | Row 5: tree cast shadow drawn from the TreeArt crown | **done**: `c498400` |
 | 12 | Operator: "we need an alternative rendering method for the mountains altogether". Real terrain chosen: `scripts/bake-terrain.py` ray-marches AWS Terrarium elevation (z11) from downtown Reno over azimuths 180–340 and bakes normals, distance, elevation and 8-direction horizon angles into `static/garden/terrain.png` (526 KB). `src/lib/garden/terrain.ts` re-lights it from the real sun, with terrain shadows, distance haze and a monthly snow line. The noise ranges remain only as the load fallback | **done**: `c94a1ac`. Seen at 10:00, 15:30, sunset, Jan 15 and on a phone (dev). Not seen live. Re-light cost on a phone not measured (216k px per half-degree of sun) |
-| 13 | Remove the noise-range code (`buildRangeField`/`renderRangeField`, `RANGES`, `reno-ridge.json`) if the fallback is not wanted | **proposed** |
+| 13 | Remove the noise-range code (`buildRangeField`/`renderRangeField`, `RANGES`, `reno-ridge.json`) if the fallback is not wanted | **in progress**: removed in the working tree, uncommitted (see 14) |
+| 14 | Operator on `c94a1ac`: "we lost the full range (horizontal fill) and it's just one mountain. nothing in the background. no layers." Then: "i dont even want it to be reno. can we pick another range? it could be fiction. idc." Approved plan: `~/.claude/plans/crystalline-whistling-music.md` | **in progress**: steps 1, 3 and 4 written and uncommitted; step 2 baking; step 5 not started |
+| 15 | Step 2: bake the top 3 sites, render them through the page, send to Media as group `cwc-range`, operator picks one, commit only that atlas | **in progress**: background bake running |
+| 16 | Step 5: time the re-light and atlas decode on a throttled phone; try lossless WebP | **proposed** |
 
 Renders went to the ops Media tab without a group. There was nothing to pick, only to look at.
 
@@ -106,19 +109,73 @@ These were pre-existing; I fixed them while touching the code.
 - **The dev server on port 5191 may still be running.** `pkill` returned exit 144 both times,
   and nobody checked whether it stopped.
 
+## 6. From Reno there was nothing behind the first ridge
+
+The real-terrain bake (`c94a1ac`) gave true 3D, but the operator saw "just one mountain". A read
+of the atlas confirmed it: from 30 m over downtown, every visible pixel was within about 14 km.
+The Carson Range front and Peavine hide everything behind them, so no amount of lighting could
+add layers. The view, not the renderer, was the limit. The operator released the scene from
+Reno, so `bake-terrain.py --score` now ranks candidate viewpoints at low resolution by layers
+(depth jumps of more than 3 km per column), fill, relief and mean distance:
+
+| site | layers | relief° |
+|---|---|---|
+| mitchell (Blue Ridge) | 4.30 | 0.94 |
+| rigi (Alps) | 2.68 | 2.69 |
+| sierra-east (White Mtns) | 2.24 | 2.50 |
+| niederhorn (Bernese Alps) | 2.00 | 4.39 |
+| pinedale | 1.77 | 3.58 |
+| sauk | 1.56 | 2.26 |
+| reno-raised (800 m) | 0.90 | 3.01 |
+| shadow (Tetons) | 0.61 | 6.52 |
+| seceda | 0.43 | 6.94 |
+
+`fill` scored 1.00 almost everywhere, so it does not discriminate; treat it as unvalidated.
+Mitchell was skipped despite having the most layers, because its relief is under 1°. Rigi,
+Niederhorn and Sierra-east were baked.
+
+Lessons from the earlier, discarded tries: three reshapes of the noise heightfield and a
+separate painted foothill layer all failed ("foothills are terrible", reverted `e6f805e`).
+With the sun behind a range, its face reads as a wall whatever the profile. The terrain
+loader was first wired into `resize()` instead of `onMount`, because a text replace matched
+the first `buildScene` call. The terrain then never loaded, and nothing in the console said so.
+
+## Open (rows 13–16)
+
+- **UNCOMMITTED, would break the live site if committed as-is.** The working tree holds:
+  - `scripts/bake-terrain.py`, rewritten with sites, `--score` and `--site`, and writing
+    `terrain.json`;
+  - `src/lib/garden/terrain.ts`, which reads `terrain.json` and adds valley haze (`pool`) and
+    `snowLineFor`;
+  - `Garden.svelte`, which lights from where the sun is drawn, uses a centred slice and
+    `loadTerrain(base + '/garden')`, with the noise ranges removed;
+  - `detail.ts` with the range code removed, and `reno-ridge.json` `git rm`'d.
+
+  **The committed `static/garden/terrain.png` is the old Reno-format atlas with no
+  `terrain.json`.** The new loader would fail, and the garden would show no mountains. Commit
+  the code only together with a picked bake's `terrain.png` and `terrain.json`.
+- Type-check was clean after these edits (0 errors). The tests were not re-run. Nothing new
+  has been rendered.
+- The valley-haze `pool` and the sun-follows-drawn-sun lighting have never been seen rendered.
+- `c94a1ac` (Reno terrain) is what's live, and has never been checked on cwcorella.com.
+
 ## Resume here
 
-- `main` = `0d2af5b`, pushed. Nothing is unlanded.
-- First, check the deploy: `gh run list -R cwcorella-git/cwcorella-git.github.io -L 3`, then
-  open cwcorella.com.
-- Then check for a leftover dev server: `ss -ltnp | grep 5191`, and kill it if found.
-- To render: `npx vite dev --port 5191`, then
-  `node /tmp/claude-1000/-home-user-Projects-cwcorella-git-github-io/a292417d-d3e3-4aba-ad17-fa902c0e6aba/scratchpad/renders/live.cjs <name> / <width> <iso-time-07:00> sky`.
-  For winter, use a January date such as `2027-01-15T14:00:00-08:00`.
-- Code map:
-  - `src/lib/garden/detail.ts`: meadow, heightfield ranges, clouds, cirrus, grain.
-  - `src/lib/garden/treeArt.ts`: species, clumps, seasons.
-  - `src/lib/components/Garden.svelte`: `RANGES`, `MIDGROUND`, `treeArts()` and the draw
-    order in `draw()`.
-- The next row, if continuing, is **5** (re-cast the shadow from the `TreeArt` sprites) or
-  **6** (time it on a phone). Both are proposed, not started.
+- `main` = the last pushed doc commit; code `c94a1ac` live. The working tree is dirty with
+  rows 13–14 (see Open). **Do not `git add` the code without a new atlas.**
+- **Background bake**: task `bbq7sa7dd` runs `bake-terrain.py --site {rigi,niederhorn,sierra-east}`
+  in sequence, writing `/tmp/claude-1000/-home-user-Projects-cwcorella-git-github-io/a292417d-d3e3-4aba-ad17-fa902c0e6aba/scratchpad/bakes/<site>/terrain.{png,json}`.
+  Tiles are cached in `.../scratchpad/tiles`. If a folder is missing, re-run
+  `python3 scripts/bake-terrain.py --site <site> --cache <scratchpad>/tiles --out <scratchpad>/bakes/<site>`.
+- **Next row: 15.** For each site:
+  1. Copy its `terrain.png` and `terrain.json` into `static/garden/`.
+  2. Render with `node <scratchpad>/renders/live.cjs <name> / 1280 2026-10-22T15:30:00-07:00 sky`
+     (and 10:00). The dev server is `npx vite dev --port 5191`, which may still be up. The
+     script now waits 4 s and logs page errors.
+  3. Send to Media with `mcp__ops__ops_send_file`, `group: "cwc-range"` and `label: <place>`.
+  4. Read the pick with `ops_pick`.
+- Then copy the picked atlas and JSON into `static/garden/`, run `npm run check` and
+  `npx vitest run` (325), render 10:00, 15:30, sunset, Jan 15 and 390 px, and commit the code,
+  atlas, JSON and the `reno-ridge.json` removal together. Push with
+  `git -c credential.helper='!gh auth git-credential' push -q https://github.com/cwcorella-git/cwcorella-git.github.io.git main`.
+- Then row 16 (phone timing, WebP), per the plan file.
