@@ -467,7 +467,7 @@ After that, rows 28 and 29 per `~/.claude/plans/crystalline-whistling-music.md`.
 | 29 | movement: drift and form/fade | **done**: `9856965` |
 | 30 | UI without glass, text coloured per line | **dropped**: the operator, on the mocks: "i dont like the rounded rows for items. i feel like i'd prefer to go back to the glass background" |
 | 31 | glass sliders in admin settings; first paint from the garden's average colour | **done**: `8aaafe5` |
-| 32 | site-wide glass: admin 'save for everyone' commits `static/glass.json`, fetched on load; the browser's own settings win | **done**: see the commit after `443edb8`. The operator sets the values himself, on the live site |
+| 32 | site-wide glass: admin 'save for everyone' commits `static/glass.json`, fetched on load; the browser's own settings win | **done**: `792a3f1`. The operator sets the values himself, on the live site |
 
 - **The flash on load did not come from the garden.** `src/app.html` still held the boot script for the six retired palettes, and it fell back to `neutral`, whose `--body-bg` is #d8d8d8. Now `Garden.svelte` saves its average colour (a 16×16 downsample, every 20 s, to `cwc-paint-bg`) and `Sky.svelte` saves its text and glass vars (every 30 s, to `cwc-paint-vars`). `app.html` paints these before anything mounts. When they are more than 2 h old, or missing, it guesses from the hour. Checked on dev with page scripts blocked: the first paint was the saved rgb(109,149,152).
 - **The sliders (`src/lib/admin/glassTune.svelte.ts`) multiply Sky.svelte's per-frame alphas**, so the lightFrame contrast floor is still the starting point. Pushing card opacity below 1× can drop the text under 4.5:1, and `contrast.test.ts` does not cover that.
@@ -479,9 +479,11 @@ After that, rows 28 and 29 per `~/.claude/plans/crystalline-whistling-music.md`.
 - Media `cwc-clouds3` holds rows 27–29: two sunsets, three weather kinds and the 5-min drift pair. No pick has been read.
 - Never measured: `timing.cjs` cloud-bake cost on a throttled phone, now that busy days have up to 11 cumulus and each reseeds every 10–20 min. Only a desktop dev render has been looked at. The phone width has not been looked at.
 - Never checked: the drift as actual motion. The only evidence is two still frames.
+- **'save for everyone' has never been clicked.** The commit through `commitFiles` is untested. Verified on dev only: a hand-placed `static/glass.json` reached a fresh visitor (blur 9px, card 1.8×), and a browser's own setting overrode it. Not seen on the live site.
 
 ## Resume here
 
 - **Before any local push, `git pull` first.** 'save for everyone' commits `static/glass.json` to main from the browser, so origin can move ahead of this tree.
 - Read `ops_pick cwc-clouds3` once, and act on any notes.
-- Nothing is unlanded. Main is pushed through `9856965`. The dev server was restarted on :5191 in the background.
+- Nothing is unlanded. Main is pushed through `eefea8f` and the commit after it. The dev server on :5191 runs as a background task of the previous context; if it is gone, restart it with `npx vite dev --port 5191 --strictPort`.
+- Next item: none is queued. Wait for the operator's `cwc-clouds3` notes or his glass save.
