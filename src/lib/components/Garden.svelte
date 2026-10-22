@@ -710,7 +710,7 @@
 
 	function drawTreeCastShadow(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
 		const sunFactor = clamp01((altDeg - 1) / 8);
-		if (sunFactor < 0.03 || fgTreeSegs.length === 0) return;
+		if (sunFactor < 0.03 || fgTreeSegs.length === 0 || !treeArts(altDeg, sxn).fg) return;
 		const bx = W * 0.28;
 		const key = `${W}x${H}|${altDeg.toFixed(1)}|${Math.round(sxn * 100)}|${fgTreeSegs.length}|${gardenAgeUnits}`;
 		if (shadowCache.key !== key) {
@@ -726,8 +726,14 @@
 			rctx.translate(bx, horizonY);
 			rctx.rotate(treeLeanAngle);
 			rctx.translate(-bx, -horizonY);
-			drawTree(rctx, fgTreeSegs, W, H, '#000');
-			drawLeaves(rctx, fgTreeSegs, W, H, '#000', 1);
+			// Cast from the same trunk and leaf clumps the tree is drawn with, so the
+			// shadow has the crown's gaps and lumps, then flattened to black.
+			const art = treeArts(altDeg, sxn).fg;
+			if (art) drawTreeArt(rctx, art, 0);
+			rctx.setTransform(1, 0, 0, 1, 0, 0);
+			rctx.globalCompositeOperation = 'source-in';
+			rctx.fillStyle = '#000';
+			rctx.fillRect(0, 0, W, H);
 			const out = document.createElement('canvas');
 			out.width = W; out.height = H;
 			const octx = out.getContext('2d')!;
