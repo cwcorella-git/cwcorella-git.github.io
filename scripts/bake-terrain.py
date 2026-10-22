@@ -250,7 +250,8 @@ def bake(name, site, cache, outdir, ncol=1600, nrow_top=280, nrow_bot=160):
     n = np.stack([-gx, -gy, np.ones_like(gx)], axis=-1)
     n /= np.linalg.norm(n, axis=-1, keepdims=True)
     hz = np.zeros(mask.shape + (HDIRS,))
-    steps = np.concatenate([np.arange(60, 1000, 60), np.arange(1000, HRANGE + 1, 250)])
+    # The near steps let a meadow swell shade the ground just behind it.
+    steps = np.concatenate([[6, 12, 24, 40], np.arange(60, 1000, 60), np.arange(1000, HRANGE + 1, 250)])
     for k in range(HDIRS):
         a = math.radians(k * 45)
         best = np.zeros(mask.shape)

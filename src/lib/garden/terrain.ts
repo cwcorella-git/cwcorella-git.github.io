@@ -151,7 +151,8 @@ export function relightTerrain(t: Terrain, L: TerrainLight, out?: HTMLCanvasElem
 			if (L.snowLine !== null) alb = mix(alb, SNOW, sm(L.snowLine, L.snowLine + 250, e + g * 150) * (1 - sm(0.4, 0.65, slope)));
 		}
 
-		const amb = 0.18 + 0.32 * nz * nz;
+		// The meadow is open to the whole sky; at dusk it still reads as grass.
+		const amb = 0.18 + 0.32 * nz * nz + (t.meadow[i] ? 0.22 : 0);
 		let col: RGB = [
 			(alb[0] / 255) * (L.sunCol[0] * diff * 1.05 + L.sky[0] * amb),
 			(alb[1] / 255) * (L.sunCol[1] * diff * 1.05 + L.sky[1] * amb),

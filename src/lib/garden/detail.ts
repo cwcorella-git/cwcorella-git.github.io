@@ -90,13 +90,14 @@ export function renderMeadow(W: number, bandH: number, scale: number): HTMLCanva
 	// Blades: uniform on screen, so they crowd and shrink toward the horizon.
 	const rng = makePRNG(0x6EAD0);
 	const count = Math.round((W * bandH) / (34 * scale * scale));
+	const near = Math.round(count * 0.5);                // extra blades in the bottom quarter
 	ctx.lineCap = 'round';
 	const BLADE: RGB[] = [[120, 140, 82], [150, 160, 96], [96, 116, 70], [214, 196, 140], [176, 168, 110]];
-	for (let i = 0; i < count; i++) {
-		const t = Math.pow(rng(), 0.85);
+	for (let i = 0; i < count + near; i++) {
+		const t = i < count ? Math.pow(rng(), 0.85) : 0.75 + 0.25 * rng();
 		const x = rng() * W;
 		const y = t * bandH;
-		const size = (0.12 + 1.5 * Math.pow(t, 1.4)) * scale;
+		const size = (0.12 + 1.7 * Math.pow(t, 1.1)) * scale;
 		const h = (3 + rng() * 6) * size;
 		const lean = (rng() - 0.35) * h * 0.6;
 		ctx.globalAlpha = 0.35 + rng() * 0.35;
@@ -108,6 +109,13 @@ export function renderMeadow(W: number, bandH: number, scale: number): HTMLCanva
 		ctx.stroke();
 	}
 	ctx.globalAlpha = 1;
+
+	// The nearest ground falls off a little, as a lens's lower edge does.
+	const fall = ctx.createLinearGradient(0, bandH * 0.7, 0, bandH);
+	fall.addColorStop(0, 'rgba(255,255,255,0)');
+	fall.addColorStop(1, 'rgba(150,150,140,0.55)');
+	ctx.fillStyle = fall;
+	ctx.fillRect(0, bandH * 0.7, W, bandH * 0.3);
 	return c;
 }
 
