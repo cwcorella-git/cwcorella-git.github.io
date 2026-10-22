@@ -510,5 +510,24 @@ The first try at the seed heads was invisible: 1.3 px olive stems on olive grass
 - Rows 33–35 are blockout quality. The pine tufts still read a little like cauliflower up close.
 - The cloud fix has not been watched as motion on the live site.
 
-## Resume here (supersedes the one above)
+## Resume here (superseded by the one at the end)
 Read `ops_pick cwc-trees` once and act on the notes. Otherwise take row 36 (crown colour at sunset: `renderClump` mixes `own` toward `sunCol` at only 0.08/0.45; warm it with `golden`). Pull before pushing (`static/glass.json` is committed from the browser).
+
+## 17. A bake was taking most of a second on overcast days
+
+Row 29 recorded the cloud bake as "about 70 ms". The first real measurement (`$S/renders/treetime.cjs`, 4× CPU throttle, 390 px at dpr 2) found 139 ms per cumulus and **869 ms per overcast sheet**. The colour key re-bakes each cloud every whole degree of sun altitude, so an overcast day froze the frame for nearly a second every few minutes. The clouds are soft, so they now bake at `min(0.55, 200/size)` of full size and are scaled up when drawn. That gives cumulus 79 ms and sheets 58–76 ms, and a side-by-side render shows only slightly softer edges. The trees cost about 134 ms in total, mostly from unique clump sprites (75 on the large cottonwood). Clumps now share up to 4 variants per 3 px size bucket, bringing the total to about 100 ms. The measurement rig is noisy (±15 ms between runs on a busy workstation).
+
+| # | item | state |
+|---|---|---|
+| 36 | crowns and bark take golden-hour light (`ArtLight.warm`) | **done**: `b902e62`; strip in Media `cwc-crowns` |
+| 37 | read `cwc-trees` once | **done**: no verdict, read once while planning and once after row 36, not polled further |
+| 38 | bake cost: reduced-size cloud bakes, shared clump sprites | **done**: see sha below |
+| 39 | trees still bake all at once (~100 ms, six trees in one frame) | **proposed**: spread the bake over frames as the clouds do, if it shows up as a hitch |
+
+## Open
+- The timings are emulated throttling on the workstation, not a real phone.
+- The fg/bg trees were timed by proxy (a 380 px `broadleafShape`), not the real `tree.ts` segments.
+- `cwc-trees` and `cwc-crowns` have no verdict.
+
+## Resume here
+Nothing is queued. If the operator leaves notes, read `ops_pick cwc-crowns` / `cwc-trees` once. Pull before pushing.
