@@ -9,7 +9,7 @@
 	import renoRidge from '$lib/garden/reno-ridge.json';
 	import type { RangeField } from '$lib/garden/detail';
 	import { renderTreeArt, drawTreeArt, clumpsFromTips, broadleafShape, pineShape, juniperShape, cottonwoodFoliage, PINE_FOLIAGE, JUNIPER_FOLIAGE, type TreeArt, type Seg } from '$lib/garden/treeArt';
-	import { renderMeadow, buildRangeField, renderRangeField, renderFoothills, renderNoiseCloud, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
+	import { renderMeadow, buildRangeField, renderRangeField, renderNoiseCloud, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
 
 	// ── constants ─────────────────────────────────────────────────────────────
 	const HORIZON_FRAC = 0.68;   // horizon at 68% down canvas
@@ -651,8 +651,6 @@
 				key,
 				layers: RANGES.map((r, i) => renderRangeField(rangeFields[i], horizonY + 2, {
 					...light, fogAmt: 1 - Math.exp(-beta * r.dist), snow: snowy && r.snow,
-				})).concat(renderFoothills(W, horizonY + 2, horizonY * 0.13, 4.1, {
-					...light, fogAmt: 1 - Math.exp(-beta * 0.12), snow: false,
 				})),
 			};
 		}
