@@ -124,7 +124,8 @@ const SNOW: RGB = [238, 240, 246];
 const sm = (a: number, b: number, x: number) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const mix = (a: RGB, b: RGB, t: number): RGB => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 
-export function relightTerrain(t: Terrain, L: TerrainLight, out?: HTMLCanvasElement): HTMLCanvasElement {
+/** `cols` limits the work to the columns on screen (a phone shows a slice). */
+export function relightTerrain(t: Terrain, L: TerrainLight, out?: HTMLCanvasElement, cols?: [number, number]): HTMLCanvasElement {
 	const { ncol, nrow, forest } = t.meta;
 	const c = out ?? document.createElement('canvas');
 	c.width = ncol; c.height = nrow;
@@ -140,7 +141,9 @@ export function relightTerrain(t: Terrain, L: TerrainLight, out?: HTMLCanvasElem
 	const sunUp = sm(-1, 3, L.alt);
 	const [f0, f1] = forest;
 
-	for (let i = 0; i < ncol * nrow; i++) {
+	const x0 = Math.max(0, cols?.[0] ?? 0), x1 = Math.min(ncol, cols?.[1] ?? ncol);
+	for (let y = 0; y < nrow; y++) for (let x = x0; x < x1; x++) {
+		const i = y * ncol + x;
 		if (!t.mask[i]) continue;
 		const nz = t.nz[i];
 		let diff = Math.max(0, t.nx[i] * lx + t.ny[i] * ly + nz * lz) * sunUp;

@@ -626,7 +626,12 @@
 		const month = new Date().getMonth();
 		const mid = (m.az0 + m.az1) / 2, half = (m.az1 - m.az0) / 2;
 		const az = mid + (sxn - 0.5) * 2 * half * 1.3;
-		const key = `${Math.round(altDeg * 2)}|${Math.round(az)}|${month}`;
+		const ph = horizonY * 0.36;                                       // panorama height on screen
+		const frame = m.ang1 - m.ang0, total = m.az1 - m.az0;
+		const span = Math.min(total, (4 * W * frame) / ph);              // ≤ 4× vertical exaggeration
+		const cols = (span / total) * m.ncol;
+		const c0 = (m.ncol - cols) / 2;
+		const key = `${Math.round(altDeg * 2)}|${Math.round(az)}|${month}|${Math.round(c0)}`;
 		if (terrainLit.key !== key) {
 			terrainLit = {
 				key,
@@ -639,14 +644,9 @@
 					fog:    horizon,
 					beta:   0.18 + 0.35 * dl,
 					snowLine: snowLineFor(m, month),
-				}, terrainLit.canvas ?? undefined),
+				}, terrainLit.canvas ?? undefined, [Math.floor(c0), Math.ceil(c0 + cols)]),
 			};
 		}
-		const ph = horizonY * 0.36;                                       // panorama height on screen
-		const frame = m.ang1 - m.ang0, total = m.az1 - m.az0;
-		const span = Math.min(total, (4 * W * frame) / ph);              // ≤ 4× vertical exaggeration
-		const cols = (span / total) * m.ncol;
-		const c0 = (m.ncol - cols) / 2;
 		const top = m.nrowTop ?? m.nrow;
 		// Mountains above the horizon; below it, the baked meadow in its own
 		// perspective, down to the bottom of the screen.
@@ -1070,12 +1070,17 @@
 		const sunSide  = sxn < 0.5 ? -1 : 1;
 		const colorKey = quantizeColorKey(top, shadow) + sunSide;
 
+		// One bake per frame (~70 ms on a slow phone): stale clouds keep their
+		// old colours a moment longer, new ones appear a frame apart.
+		let budget = 1;
 		ctx.save();
 		for (const cloud of clouds) {
-			if (!cloud.cache || cloud.cacheColorKey !== colorKey) {
+			if ((!cloud.cache || cloud.cacheColorKey !== colorKey) && budget > 0) {
+				budget--;
 				cloud.cache = renderNoiseCloud(cloud.size, cloud.aspectRatio, cloud.prngseed, top, shadow, sunSide, 1, cloud.haze);
 				cloud.cacheColorKey = colorKey;
 			}
+			if (!cloud.cache) continue;
 			const { canvas: img, baseY, w, h } = cloud.cache;
 			const rawX = (cloud.xFrac * W + minutesSinceEpoch * cloud.speed) % (W + w);
 			let skyY = cloud.yFrac * horizonY * 0.84;     // base sits at this y in main canvas

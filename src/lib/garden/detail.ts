@@ -169,14 +169,29 @@ export function renderNoiseCloud(
 	// Far clouds sit in the air between: flatter light, toward the haze.
 	const far = mixRGB(top, shadow, 0.3);
 
+	// Density on a half-resolution grid, read back smoothly. The light march
+	// reads the grid too instead of re-evaluating the noise; phones need both.
+	const GW = Math.ceil(CW / 2) + 1, GH = Math.ceil(CH / 2) + 1;
+	const G = new Float32Array(GW * GH);
+	for (let gy = 0; gy < GH; gy++) {
+		const y = (baseY - gy * 2) / size;
+		for (let gx = 0; gx < GW; gx++) G[gy * GW + gx] = density((gx * 2 - CW / 2) / size, y);
+	}
+	const at = (px: number, py: number): number => {
+		const fx = px / 2, fy = py / 2;
+		if (fx < 0 || fy < 0 || fx >= GW - 1 || fy >= GH - 1) return -1;
+		const ix = fx | 0, iy = fy | 0, tx = fx - ix, ty = fy - iy, k = iy * GW + ix;
+		const top = G[k] + (G[k + 1] - G[k]) * tx, bot = G[k + GW] + (G[k + GW + 1] - G[k + GW]) * tx;
+		return top + (bot - top) * ty;
+	};
+
 	for (let py = 0; py < CH; py++) {
 		const y = (baseY - py) / size;
 		for (let px = 0; px < CW; px++) {
-			const x = (px - CW / 2) / size;
-			const d = density(x, y);
+			const d = at(px, py);
 			if (d <= 0) continue;
 			let acc = 0;
-			for (const s of STEPS) acc += Math.max(0, density(x + lx * s, y + ly * s)) * s;
+			for (const s of STEPS) acc += Math.max(0, at(px + lx * s * size, py - ly * s * size)) * s;
 			const T = Math.exp(-acc * 6);
 			const powder = 1 - Math.exp(-d * 6);
 			const lift = smooth(0, Math.max(0.05, aspect * 1.2), y);
