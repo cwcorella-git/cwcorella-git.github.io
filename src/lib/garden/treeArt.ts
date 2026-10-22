@@ -14,6 +14,7 @@ export interface ArtLight {
 	sunCol: RGB;
 	dl: number;      // daylight 0–1
 	night: RGB;      // silhouette colour after dark
+	warm?: number;   // 0–1 golden hour: low side light, crown mostly in warm shade
 }
 
 export interface TreeArt {
@@ -34,6 +35,7 @@ function makePRNG(seed: number): () => number {
 }
 
 const mix = (a: RGB, b: RGB, t: number): RGB => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+const shade = (c: RGB, k: number): RGB => [c[0] * k, c[1] * k, c[2] * k];
 const rgb = (c: RGB) => `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
 
 // ── seasons ───────────────────────────────────────────────────────────────
@@ -174,9 +176,10 @@ function renderClump(r: number, f: Foliage, L: ArtLight, seed: number): HTMLCanv
 	const cx = S / 2, cy = S / 2;
 	// Each clump drifts a little in hue, so a crown is never one flat colour.
 	const own = mix(f.mid, [112, 124, 64], rng() * 0.3);
-	const mid = mix(L.night, mix(own, L.sunCol, 0.08), L.dl);
-	const dark = mix(mid, [18, 26, 30], 0.5);
-	const lit = mix(L.night, mix(own, L.sunCol, 0.45), L.dl);
+	const w = L.warm ?? 0;
+	const mid = mix(L.night, shade(mix(own, L.sunCol, 0.08 + 0.25 * w), 1 - 0.3 * w), L.dl);
+	const dark = mix(mix(mid, [18, 26, 30], 0.5), [90, 74, 112], 0.3 * w);   // evening shade goes purple-grey, as the clouds do
+	const lit = mix(L.night, mix(own, L.sunCol, 0.45 + 0.25 * w), L.dl);
 	const blobs = (n: number, ox: number, oy: number, spread: number, r0: number, r1: number, col: RGB) => {
 		ctx.fillStyle = rgb(col);
 		for (let i = 0; i < Math.round(n * f.amount); i++) {
@@ -243,7 +246,7 @@ export function renderTreeArt(segs: Seg[], clumps: Clump[], f: Foliage, L: ArtLi
 		const dx = s.x2 - s.x1, dy = s.y2 - s.y1, len = Math.hypot(dx, dy) || 1;
 		const nx = -dy / len, ny = dx / len;
 		const w0 = s.thick / 2, w1 = (s.thick * 0.7) / 2;
-		const col = mix(L.night, barkFor(s.thick, maxThick), L.dl);
+		const col = mix(L.night, shade(mix(barkFor(s.thick, maxThick), L.sunCol, 0.15 * (L.warm ?? 0)), 1 - 0.3 * (L.warm ?? 0)), L.dl);
 		ctx.fillStyle = rgb(col);
 		ctx.beginPath();
 		ctx.moveTo(s.x1 + nx * w0, s.y1 + ny * w0);

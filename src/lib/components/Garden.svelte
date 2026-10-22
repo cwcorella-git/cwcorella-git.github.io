@@ -927,6 +927,7 @@
 			sunCol: dimSun(lerpRGB([255, 246, 228], [255, 170, 96], golden)),
 			dl,
 			night:  [14, 17, 24] as RGB,
+			warm:   golden,
 		};
 		const sunX = sxn * W;
 		const leaf = cottonwoodFoliage(doy);
