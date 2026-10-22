@@ -7,7 +7,7 @@ export type RGB = [number, number, number];
 
 export interface Seg { x1: number; y1: number; x2: number; y2: number; thick: number }
 export interface Clump { x: number; y: number; r: number }
-export interface Foliage { mid: RGB; amount: number }   // amount: 0 bare → 1 full leaf
+export interface Foliage { mid: RGB; amount: number; needle?: boolean }   // amount: 0 bare → 1 full leaf; needle: tufts, not leaf masses
 
 export interface ArtLight {
 	sunDx: number;   // -1 sun to the left, +1 to the right
@@ -47,7 +47,7 @@ export function cottonwoodFoliage(doy: number): Foliage {
 	if (doy < 272) return { mid: SUMMER, amount: 1 };
 	return { mid: mix(SUMMER, GOLD, ramp(272, 292)), amount: 1 - ramp(305, 332) };
 }
-export const PINE_FOLIAGE: Foliage    = { mid: [52, 74, 50], amount: 1 };
+export const PINE_FOLIAGE: Foliage    = { mid: [52, 74, 50], amount: 1, needle: true };
 export const JUNIPER_FOLIAGE: Foliage = { mid: [84, 104, 86], amount: 1 };
 
 // ── shapes ────────────────────────────────────────────────────────────────
@@ -91,29 +91,49 @@ export function broadleafShape(x: number, y: number, h: number, seed: number): {
 	return { segs, clumps: clumpsFromTips(segs, h * 0.16, h * 0.01) };
 }
 
-/** Jeffrey pine: a straight trunk with irregular drooping tiers, open crown. */
+/** Jeffrey pine, old growth: a clear tapered trunk, then limbs spiralling up
+ *  it that droop low and rise near the top, with needle tufts only at their
+ *  ends, so sky shows between the tiers. Narrow dome on top, ragged middle. */
 export function pineShape(x: number, y: number, h: number, seed: number): { segs: Seg[]; clumps: Clump[] } {
 	const rng = makePRNG(seed);
-	const segs: Seg[] = [{ x1: x, y1: y, x2: x, y2: y - h, thick: h * 0.045 }];
+	const segs: Seg[] = [];
 	const clumps: Clump[] = [];
-	const tiers = 7 + Math.floor(rng() * 3);
-	for (let i = 0; i < tiers; i++) {
-		const t = 0.28 + (i / tiers) * 0.7;
-		if (rng() < 0.15) continue;                       // gaps in the crown
-		const ty = y - t * h;
-		const width = h * (0.07 + 0.2 * Math.pow(Math.sin(Math.PI * Math.min(1, (1 - t) * 1.3)), 0.8));
-		for (const side of [-1, 1]) {
-			const len = width * (0.7 + rng() * 0.5);
-			const ex = x + side * len, ey = ty + len * 0.18;   // limbs droop a little
-			segs.push({ x1: x, y1: ty, x2: ex, y2: ey, thick: h * 0.012 });
-			const n = 1 + Math.floor(len / (h * 0.09));
-			for (let k = 0; k < n; k++) {
-				const f = (k + 1) / n;
-				clumps.push({ x: x + side * len * f, y: ty + len * 0.18 * f - h * 0.01, r: h * (0.05 + rng() * 0.03) });
-			}
+	const lean = (rng() - 0.5) * 0.04;
+	const at = (t: number) => ({ x: x + Math.sin(lean) * t * h, y: y - t * h });
+	// Trunk in four tapering pieces.
+	for (let i = 0; i < 4; i++) {
+		const a = at(i / 4), b = at((i + 1) / 4);
+		segs.push({ x1: a.x, y1: a.y, x2: b.x, y2: b.y, thick: h * 0.05 * (1 - i * 0.2) });
+	}
+	const clear = 0.35 + rng() * 0.05;
+	const limbs = 10 + Math.floor(rng() * 5);
+	let side = rng() < 0.5 ? -1 : 1;
+	for (let i = 0; i < limbs; i++) {
+		const t = clear + (i + rng() * 0.6) / limbs * (0.97 - clear);
+		side = rng() < 0.75 ? -side : side;                       // mostly alternating, as a spiral seen side-on
+		const o = at(t);
+		// Width: ragged and broad through the middle, a narrow dome on top.
+		const u = (t - clear) / (1 - clear);
+		const width = h * (0.06 + 0.24 * Math.pow(Math.sin(Math.PI * Math.min(1, 0.25 + u * 0.95)), 0.7)) * (0.7 + rng() * 0.6);
+		const ang = (-0.35 + u * 0.75) + (rng() - 0.5) * 0.2;      // droop low, rise high (radians from horizontal)
+		const ex = o.x + side * Math.cos(ang) * width, ey = o.y - Math.sin(ang) * width;
+		const thick = h * (0.016 - u * 0.006);
+		segs.push({ x1: o.x, y1: o.y, x2: ex, y2: ey, thick });
+		clumps.push({ x: ex, y: ey - h * 0.008, r: h * (0.08 + rng() * 0.05) });
+		clumps.push({ x: o.x + (ex - o.x) * 0.55, y: o.y + (ey - o.y) * 0.55 - h * 0.01, r: h * (0.05 + rng() * 0.03) });
+		// One or two sub-limbs off the outer half, each with its own tuft.
+		const subs = 1 + (rng() < 0.5 ? 1 : 0);
+		for (let k = 0; k < subs; k++) {
+			const f = 0.45 + rng() * 0.35;
+			const sx = o.x + (ex - o.x) * f, sy = o.y + (ey - o.y) * f;
+			const sl = width * (0.25 + rng() * 0.2), sa = ang + (rng() < 0.5 ? 0.6 : -0.5);
+			const tx = sx + side * Math.cos(sa) * sl, ty = sy - Math.sin(sa) * sl;
+			segs.push({ x1: sx, y1: sy, x2: tx, y2: ty, thick: thick * 0.55 });
+			clumps.push({ x: tx, y: ty, r: h * (0.055 + rng() * 0.035) });
 		}
 	}
-	clumps.push({ x, y: y - h * 0.98, r: h * 0.045 });
+	const top = at(1);
+	clumps.push({ x: top.x, y: top.y + h * 0.03, r: h * 0.08 });
 	return { segs, clumps };
 }
 
@@ -161,6 +181,27 @@ function renderClump(r: number, f: Foliage, L: ArtLight, seed: number): HTMLCanv
 			ctx.fill();
 		}
 	};
+	if (f.needle) {
+		// Tufts of needles: short strokes radiating from the clump, darker under.
+		const tuft = (n: number, oy: number, col: RGB, len0: number, len1: number) => {
+			ctx.strokeStyle = rgb(col);
+			ctx.lineWidth = Math.max(0.8, r * 0.07);
+			ctx.lineCap = 'round';
+			ctx.beginPath();
+			for (let i = 0; i < n; i++) {
+				const a = rng() * Math.PI * 2, d = Math.sqrt(rng()) * r * 0.55;
+				const px = cx + Math.cos(a) * d, py = cy + oy + Math.sin(a) * d * 0.6;
+				const ra = a + (rng() - 0.5) * 0.8, l = r * (len0 + rng() * (len1 - len0));
+				ctx.moveTo(px, py);
+				ctx.lineTo(px + Math.cos(ra) * l, py + Math.sin(ra) * l * 0.7);
+			}
+			ctx.stroke();
+		};
+		tuft(110, r * 0.12, dark, 0.3, 0.55);
+		tuft(90, 0, mid, 0.25, 0.5);
+		if (L.dl > 0.05) tuft(30, -r * 0.15, lit, 0.15, 0.3);
+		return c;
+	}
 	// Many small blobs rather than a few big ones: big circles read as popcorn.
 	blobs(34, -L.sunDx * r * 0.1, r * 0.18, r * 0.85, 0.12, 0.26, dark);
 	blobs(40, 0, -r * 0.05, r * 0.75, 0.1, 0.22, mid);
