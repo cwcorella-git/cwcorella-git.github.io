@@ -151,10 +151,16 @@ export function renderNoiseCloud(
 		const rr = Math.max(r, (1.5 * span) / n);           // neighbours always overlap
 		puffs.push([x, rr * (0.45 + rng() * 0.35), rr]);
 	}
-	// A few smaller turrets riding on the big ones.
-	for (let i = 0; i < 3; i++) {
+	// Turrets in two tiers: some riding on the big puffs, a few more on those.
+	const t1 = 3 + Math.floor(rng() * 3);
+	for (let i = 0; i < t1; i++) {
 		const [px, py, pr] = puffs[1 + Math.floor(rng() * (n - 2))];
 		puffs.push([px + (rng() - 0.5) * pr, py + pr * 0.6, pr * (0.4 + rng() * 0.25)]);
+	}
+	const t2 = 2 + Math.floor(rng() * 2);
+	for (let i = 0; i < t2; i++) {
+		const [px, py, pr] = puffs[n + Math.floor(rng() * t1)];
+		puffs.push([px + (rng() - 0.5) * pr * 0.8, py + pr * 0.55, pr * (0.45 + rng() * 0.2)]);
 	}
 
 	const density = (x: number, y: number): number => {
@@ -166,7 +172,7 @@ export function renderNoiseCloud(
 		if (d < -0.35) return d;
 		// Erosion: coarse lumps, then fine billows at the edge only.
 		d += (fbm2(x * 6 + ox, y * 6 + oy, 3) - 0.5) * 0.45;
-		d += (fbm2(x * 22 + oy, y * 22 + ox, 3) - 0.5) * 0.22 * (1 - smooth(0, 0.4, d));
+		d += (fbm2(x * 22 + oy, y * 22 + ox, 3) - 0.5) * 0.22 * (1 - smooth(0, 0.4, d)) * (x * sunSide > 0 ? 1.3 : 1);
 		if (y < 0) d += y * 14;                          // flat base
 		return d;
 	};
@@ -205,6 +211,8 @@ export function renderNoiseCloud(
 			const powder = 1 - Math.exp(-d * 6);
 			const lift = smooth(0, Math.max(0.05, aspect * 1.2), y);
 			let col = mixRGB(shadow, top, Math.min(1, 0.15 + T * (0.6 + 0.4 * powder) + lift * 0.35));
+			// The flat underside stays grey even where light gets through.
+			col = mixRGB(col, shadow, 0.35 * (1 - smooth(0, 0.18 * aspect, y)));
 			// Silver lining: thin edge, lit side.
 			const thin = 1 - smooth(0, 0.12, d);
 			col = mixRGB(col, rim, thin * T * 0.6);
