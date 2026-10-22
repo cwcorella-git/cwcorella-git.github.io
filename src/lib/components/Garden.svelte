@@ -1,17 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { base } from '$app/paths';
-	import { loadTerrain, relightTerrain, sunAzimuthDeg, NCOL, NROW, ANG0, ANG1, type Terrain } from '$lib/garden/terrain';
+	import { loadTerrain, relightTerrain, snowLineFor, type Terrain } from '$lib/garden/terrain';
 	import { makeGrassTuft, makeFern, tickWind, drawPlants, applyMouseForce, type PlantInstance } from '$lib/garden/plants';
 	import { generateFgTree, loadFgTreeFromCache, saveFgTreeToCache, clearFgTreeCache, generateBgTree, loadBgTreeFromCache, saveBgTreeToCache, drawTree, drawLeaves, type TreeSegment } from '$lib/garden/tree';
 	import { loadGardenState, saveGardenState, creditVisit, accrueElapsedDays, growthFactor, treeGrowthFactor, addAgeUnits } from '$lib/garden/state';
 	import { adminState } from '$lib/admin/state.svelte';
 	import { isUnlockDay } from '$lib/admin/tlock';
 	import { toast } from '$lib/admin/toast.svelte';
-	import renoRidge from '$lib/garden/reno-ridge.json';
-	import type { RangeField } from '$lib/garden/detail';
 	import { renderTreeArt, drawTreeArt, clumpsFromTips, broadleafShape, pineShape, juniperShape, cottonwoodFoliage, PINE_FOLIAGE, JUNIPER_FOLIAGE, type TreeArt, type Seg } from '$lib/garden/treeArt';
-	import { renderMeadow, buildRangeField, renderRangeField, renderNoiseCloud, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
+	import { renderMeadow, renderNoiseCloud, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
 
 	// ── constants ─────────────────────────────────────────────────────────────
 	const HORIZON_FRAC = 0.68;   // horizon at 68% down canvas
@@ -310,8 +308,7 @@
 			});
 		}
 
-		buildRangeHeights();
-		rangeCache = { key: '', layers: [] };
+		terrainLit = { key: '', canvas: terrainLit.canvas };
 		shadowCache = { key: '', canvas: null };
 		meadow = renderMeadow(cw, ch - hy, dpr);
 
@@ -584,47 +581,12 @@
 	}
 
 	// ── draw: mountains & hills ────────────────────────────────────────────────
-	// Four ranges far to near, then the hills (2026-10-22). The farthest is the
-	// real western skyline from downtown Reno (Slide Mountain, Mt Rose, Peavine;
-	// reno-ridge.json, traced from SRTM in ee7cd4a), exaggerated about 6×. The
-	// other crests are noise; seeds 2.3 and 5.7 are the original silhouettes.
-	// Each range is a lit heightfield (detail.ts), mixed toward the horizon sky by
-	// 1 − e^(−βd) for distance, and re-lit only when the sun moves about a degree.
-	const RANGES = [
-		{ seed: 11.7, freq: 2.0, h: 0.22, crest: 'reno',   dist: 1.00, snow: true  },
-		{ seed: 2.3,  freq: 3.5, h: 0.20, crest: 'ridged', dist: 0.50, snow: true  },
-		{ seed: 5.7,  freq: 3.5, h: 0.26, crest: 'ridged', dist: 0.24, snow: false },
-		{ seed: 9.4,  freq: 6.0, h: 0.07, crest: 'fbm',    dist: 0.18, snow: false },
-	] as const;
-	let rangeFields: RangeField[] = [];
-	// The real terrain (terrain.ts) replaces the noise ranges once its atlas loads.
+	// The mountains are a real terrain panorama (terrain.ts, baked by
+	// scripts/bake-terrain.py), drawn once its atlas loads; until then, or if it
+	// never does, the sky meets the hills. The noise ranges that stood here went
+	// on 2026-10-22: they read as flat cut-outs however they were lit.
 	let terrain: Terrain | null = null;
 	let terrainLit: { key: string; canvas: HTMLCanvasElement | null } = { key: '', canvas: null };
-	let rangeCache: { key: string; layers: { canvas: HTMLCanvasElement; top: number }[] } = { key: '', layers: [] };
-
-	/** The traced skyline (degrees above horizontal), resampled to 0–1 across the screen. */
-	function renoCrest(xFrac: number): number {
-		const sk = renoRidge.skyline;
-		const f = xFrac * (sk.length - 1);
-		const i = Math.min(sk.length - 2, Math.floor(f));
-		const a = sk[i][1] + (sk[i + 1][1] - sk[i][1]) * (f - i);
-		const lo = Math.min(...sk.map((p) => p[1])), hi = Math.max(...sk.map((p) => p[1]));
-		return 0.25 + 0.75 * (a - lo) / (hi - lo);
-	}
-
-	function buildRangeHeights(): void {
-		rangeFields = RANGES.map((r) => {
-			const crest = new Float32Array(W);
-			for (let x = 0; x < W; x++) {
-				const t = x / W;
-				const n = r.crest === 'reno'   ? renoCrest(t) + (ridged1D(t * 40 + r.seed) - 0.3) * 0.04
-				        : r.crest === 'ridged' ? ridged1D(t * r.freq + r.seed)
-				        :                        fbm1D(t * r.freq + r.seed);
-				crest[x] = n * horizonY * r.h;
-			}
-			return buildRangeField(W, crest, r.seed, Math.max(10, 28 * dpr));
-		});
-	}
 
 	const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
@@ -633,37 +595,8 @@
 		const golden = altDeg > -4 ? clamp01(1 - Math.abs(altDeg - 3) / 9) : 0;
 		const { horizon, zenith } = getSkyColors(altDeg);
 
-		if (terrain) {
-			drawRealTerrain(ctx, terrain, altDeg, dl, golden, horizon, zenith);
-		} else {
-		const key = `${W}x${H}|${Math.round(altDeg)}|${Math.round(sxn * 40)}`;
-		if (rangeCache.key !== key) {
-			// Sun direction: left–right from its screen position, up from altitude,
-			// and a little from beyond the ranges (it sits in the sky in front of us).
-			const alt = Math.max(2, altDeg) * Math.PI / 180;
-			const sx = (sxn - 0.5) * 2, sz = 0.15;
-			const hl = Math.hypot(sx, sz) || 1;
-			const sun: [number, number, number] = [(sx / hl) * Math.cos(alt), Math.sin(alt), (sz / hl) * Math.cos(alt)];
-			const beta = 0.3 + 0.75 * dl;
-			const month = new Date().getMonth();
-			const snowy = month >= 10 || month <= 4;                         // Nov–May on the Sierra
-			const light = {
-				sun,
-				sunCol: lerpRGB([255, 246, 228], [255, 170, 96], golden),
-				sky:    lerpRGB(zenith, horizon, 0.5),
-				night:  [14, 18, 35] as RGB,
-				dl,
-				fog:    horizon,
-			};
-			rangeCache = {
-				key,
-				layers: RANGES.map((r, i) => renderRangeField(rangeFields[i], horizonY + 2, {
-					...light, fogAmt: 1 - Math.exp(-beta * r.dist), snow: snowy && r.snow,
-				})),
-			};
-		}
-		for (const l of rangeCache.layers) ctx.drawImage(l.canvas, 0, l.top);
-		}
+		if (terrain) drawRealTerrain(ctx, terrain, altDeg, sxn, dl, golden, horizon, zenith);
+		if (terrain?.meta.nrowTop) return;                               // the bake carries its own ground
 
 		// Rolling hills, filled to the bottom: this is the ground the meadow multiplies over.
 		const hill: RGB = dl < 0.5 ? lerpRGB([6, 8, 16], [52, 54, 40], dl * 2) : lerpRGB([52, 54, 40], [150, 148, 98], (dl - 0.5) * 2);
@@ -671,13 +604,16 @@
 		fillHillRange(ctx, 8.1, horizonY * 0.14, css(warm), horizon, (1 - Math.exp(-(0.3 + 0.75 * dl) * 0.08)));
 	}
 
-	/** The baked panorama, re-lit about every half degree of sun and drawn with
-	 *  angle 0 on the horizon. Narrow screens show a slice around Mt Rose
-	 *  instead of squeezing all 160° in, so the slopes keep their shape. */
-	function drawRealTerrain(ctx: CanvasRenderingContext2D, t: Terrain, altDeg: number, dl: number, golden: number, horizon: RGB, zenith: RGB): void {
-		const now = new Date();
-		const az = sunAzimuthDeg(now);
-		const month = now.getMonth();
+	/** The baked panorama (terrain.ts), re-lit about every half degree of sun,
+	 *  standing on the horizon. The light comes from where the garden draws the
+	 *  sun (sunrise right, sunset left), whichever way the bake faces, so the
+	 *  lit faces always agree with the sky. Narrow screens show a centred slice
+	 *  instead of squeezing the whole span in, so the slopes keep their shape. */
+	function drawRealTerrain(ctx: CanvasRenderingContext2D, t: Terrain, altDeg: number, sxn: number, dl: number, golden: number, horizon: RGB, zenith: RGB): void {
+		const m = t.meta;
+		const month = new Date().getMonth();
+		const mid = (m.az0 + m.az1) / 2, half = (m.az1 - m.az0) / 2;
+		const az = mid + (sxn - 0.5) * 2 * half * 1.3;
 		const key = `${Math.round(altDeg * 2)}|${Math.round(az)}|${month}`;
 		if (terrainLit.key !== key) {
 			terrainLit = {
@@ -690,16 +626,20 @@
 					dl,
 					fog:    horizon,
 					beta:   0.18 + 0.35 * dl,
-					snowLine: month >= 10 || month <= 4 ? (month === 11 || month <= 2 ? 2100 : 2500) : null,
+					snowLine: snowLineFor(m, month),
 				}, terrainLit.canvas ?? undefined),
 			};
 		}
-		const ph = horizonY * 0.34;                                // panorama height on screen
-		const span = Math.min(160, (4 * W * (ANG1 - ANG0)) / ph);  // ≤ 4× vertical exaggeration
-		const cols = (span / 160) * NCOL;
-		const c0 = Math.max(0, Math.min(NCOL - cols, ((255 - 180) / 160) * NCOL - cols / 2));
-		const y0 = horizonY - ph * (ANG1 / (ANG1 - ANG0));
-		ctx.drawImage(terrainLit.canvas!, c0, 0, cols, NROW, 0, y0, W, ph);
+		const ph = horizonY * 0.36;                                       // panorama height on screen
+		const frame = m.ang1 - m.ang0, total = m.az1 - m.az0;
+		const span = Math.min(total, (4 * W * frame) / ph);              // ≤ 4× vertical exaggeration
+		const cols = (span / total) * m.ncol;
+		const c0 = (m.ncol - cols) / 2;
+		const top = m.nrowTop ?? m.nrow;
+		// Mountains above the horizon; below it, the baked meadow in its own
+		// perspective, down to the bottom of the screen.
+		ctx.drawImage(terrainLit.canvas!, c0, 0, cols, top, 0, horizonY - ph, W, ph);
+		if (top < m.nrow) ctx.drawImage(terrainLit.canvas!, c0, top, cols, m.nrow - top, 0, horizonY, W, H - horizonY);
 	}
 
 	// ── draw: meadow ──────────────────────────────────────────────────────────
@@ -1310,7 +1250,7 @@
 		treeLeanAngle = (makePRNG(gs.seed)() - 0.5) * 0.14; // ±4° windward lean
 
 		buildScene(W, H, horizonY);
-		loadTerrain(`${base}/garden/terrain.png`).then((t) => { terrain = t; }).catch(() => {});   // noise ranges stay if it fails
+		loadTerrain(`${base}/garden`).then((t) => { terrain = t; }).catch(() => {});   // noise ranges stay if it fails
 
 		animFrame = requestAnimationFrame(draw);
 		window.addEventListener('resize', resize);

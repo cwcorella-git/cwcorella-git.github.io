@@ -1,0 +1,27 @@
+{
+	"site": "niederhorn",
+	"label": "Bernese Alps from Niederhorn",
+	"lat": 46.7104,
+	"lng": 7.774,
+	"az0": 80.0,
+	"az1": 220.0,
+	"ncol": 1600,
+	"nrow": 440,
+	"nrowTop": 280,
+	"ang0": -6.0,
+	"ang1": 5.0547,
+	"tan0": -0.1051,
+	"tan1": -0.38844,
+	"d0": 0.003,
+	"d1": 120.0,
+	"emin": 600.0,
+	"emax": 4800.0,
+	"forest": [
+		700,
+		1950
+	],
+	"snow": [
+		1300,
+		2300
+	]
+}
