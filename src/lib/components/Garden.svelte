@@ -932,11 +932,11 @@
 		const leaf = cottonwoodFoliage(doy);
 		const bake = (segs: Seg[], cell: number, seed: number) => {
 			const xs = segs.length ? segs[0].x1 : 0;
-			const clumps = clumpsFromTips(segs, cell);
+			const clumps = clumpsFromTips(segs, cell, 1.8, 1);
 			return renderTreeArt(segs, clumps, leaf, { ...L, sunDx: sunX < xs ? -1 : 1 }, seed);
 		};
-		const fg = fgTreeSegs.length ? bake(segsFromTree(fgTreeSegs), 20 * dpr, 101) : null;
-		const bg = bgTreeSegs.length ? bake(segsFromTree(bgTreeSegs), 26 * dpr, 211) : null;
+		const fg = fgTreeSegs.length ? bake(segsFromTree(fgTreeSegs), 12 * dpr, 101) : null;
+		const bg = bgTreeSegs.length ? bake(segsFromTree(bgTreeSegs), 15 * dpr, 211) : null;
 		const mid = MIDGROUND.map((m, i) => {
 			const gf = treeGrowthFactor(Math.max(0, gardenAgeUnits + m.bornAgo));
 			const x = m.xf * W, h = Math.max(12, m.h * gf * dpr);

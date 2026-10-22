@@ -52,19 +52,24 @@ export const JUNIPER_FOLIAGE: Foliage = { mid: [84, 104, 86], amount: 1 };
 
 // ── shapes ────────────────────────────────────────────────────────────────
 /** Group branch tips into clumps on a grid of `cell` px. */
-export function clumpsFromTips(segs: Seg[], cell: number, maxThick = 1.8): Clump[] {
+export function clumpsFromTips(segs: Seg[], cell: number, maxThick = 1.8, minTips = 2): Clump[] {
 	const cells = new Map<string, { sx: number; sy: number; n: number }>();
-	for (const s of segs) {
-		if (s.thick > maxThick) continue;
-		const k = `${Math.floor(s.x2 / cell)},${Math.floor(s.y2 / cell)}`;
+	const add = (x: number, y: number) => {
+		const k = `${Math.floor(x / cell)},${Math.floor(y / cell)}`;
 		const c = cells.get(k) ?? { sx: 0, sy: 0, n: 0 };
-		c.sx += s.x2; c.sy += s.y2; c.n++;
+		c.sx += x; c.sy += y; c.n++;
 		cells.set(k, c);
+	};
+	for (const s of segs) {
+		if (s.thick <= maxThick) add(s.x2, s.y2);
+		// Leaves along the inner limbs too (minTips 1, broadleaf), so the crown
+		// fills in rather than ringing its tips like an umbrella.
+		else if (minTips === 1 && s.thick <= maxThick * 4) add((s.x1 + s.x2) / 2, (s.y1 + s.y2) / 2);
 	}
 	const out: Clump[] = [];
 	for (const c of cells.values()) {
-		if (c.n < 2) continue;
-		out.push({ x: c.sx / c.n, y: c.sy / c.n, r: cell * (0.55 + Math.min(0.35, c.n * 0.03)) });
+		if (c.n < minTips) continue;
+		out.push({ x: c.sx / c.n, y: c.sy / c.n, r: cell * (0.95 + Math.min(0.35, c.n * 0.03)) });
 	}
 	return out;
 }
@@ -88,7 +93,7 @@ export function broadleafShape(x: number, y: number, h: number, seed: number): {
 	branch(tx, ty, Math.PI / 2 + lean + 0.5, h * 0.3, h * 0.035, 6);
 	branch(tx, ty, Math.PI / 2 + lean - 0.45, h * 0.32, h * 0.035, 6);
 	branch(tx, ty, Math.PI / 2 + lean, h * 0.3, h * 0.03, 5);
-	return { segs, clumps: clumpsFromTips(segs, h * 0.16, h * 0.01) };
+	return { segs, clumps: clumpsFromTips(segs, h * 0.09, h * 0.01, 1) };
 }
 
 /** Jeffrey pine, old growth: a clear tapered trunk, then limbs spiralling up
@@ -177,7 +182,7 @@ function renderClump(r: number, f: Foliage, L: ArtLight, seed: number): HTMLCanv
 		for (let i = 0; i < Math.round(n * f.amount); i++) {
 			const a = rng() * Math.PI * 2, d = Math.sqrt(rng()) * spread;
 			ctx.beginPath();
-			ctx.arc(cx + ox + Math.cos(a) * d, cy + oy + Math.sin(a) * d * 0.85, r * (r0 + rng() * (r1 - r0)), 0, Math.PI * 2);
+			ctx.arc(cx + ox + Math.cos(a) * d * 1.15, cy + oy + Math.sin(a) * d * 0.6, r * (r0 + rng() * (r1 - r0)), 0, Math.PI * 2);   // wider than tall
 			ctx.fill();
 		}
 	};
@@ -209,8 +214,8 @@ function renderClump(r: number, f: Foliage, L: ArtLight, seed: number): HTMLCanv
 	blobs(18, 0, 0, r * 1.05, 0.03, 0.07, mid);     // loose leaves at the edge
 	// A few gaps where the sky shows through.
 	ctx.globalCompositeOperation = 'destination-out';
-	for (let i = 0; i < 3; i++) {
-		const a = rng() * Math.PI * 2, d = (0.3 + rng() * 0.4) * r;
+	for (let i = 0, n = 5 + Math.floor(rng() * 3); i < n; i++) {
+		const a = rng() * Math.PI * 2, d = (0.3 + rng() * 0.5) * r;
 		ctx.beginPath();
 		ctx.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, r * (0.08 + rng() * 0.08), 0, Math.PI * 2);
 		ctx.fill();
