@@ -275,6 +275,7 @@
 		}
 		terrainLit = { key: '', canvas: terrainLit.canvas };
 		treeCache.key = '';
+		treePending = null;
 	}
 
 	function buildScene(cw: number, ch: number, hy: number): void {
@@ -916,10 +917,35 @@
 		return t.map((s) => ({ x1: s.x1f * W, y1: s.y1f * H, x2: s.x2f * W, y2: s.y2f * H, thick: s.thick }));
 	}
 
+	// A light change (each degree of sun) re-bakes one tree per frame and swaps
+	// them in together; ~100 ms in one frame on a throttled phone hitched.
+	// A geometry change (resize, growth, first load) bakes all at once.
+	let treePending: { key: string; jobs: (() => void)[]; next: typeof treeCache; frame: number } | null = null;
+
 	function treeArts(altDeg: number, sxn: number): typeof treeCache {
 		const doy = dayOfYear(new Date());
-		const key = `${W}x${H}|${Math.round(altDeg)}|${Math.round(sxn * 40)}|${doy}|${gardenAgeUnits}|${fgTreeSegs.length}|${bgTreeSegs.length}`;
+		const geom = `${W}x${H}|${gardenAgeUnits}|${fgTreeSegs.length}|${bgTreeSegs.length}`;
+		const key = `${geom}|${Math.round(altDeg)}|${Math.round(sxn * 40)}|${doy}`;
 		if (treeCache.key === key) return treeCache;
+		if (treePending?.key !== key) {
+			const next: typeof treeCache = { key, fg: null, bg: null, mid: [] };
+			treePending = { key, jobs: treeJobs(altDeg, sxn, doy, next), next, frame: -1 };
+		}
+		const P = treePending;
+		if (!treeCache.key.startsWith(geom + '|')) {
+			for (const j of P.jobs) j();
+			P.jobs = [];
+		} else if (P.frame !== frameCount) {
+			P.frame = frameCount;     // several draws call this per frame; one job per frame
+			P.jobs.shift()?.();
+		}
+		if (P.jobs.length) return treeCache;
+		treeCache = P.next;
+		treePending = null;
+		return treeCache;
+	}
+
+	function treeJobs(altDeg: number, sxn: number, doy: number, next: typeof treeCache): (() => void)[] {
 		const dl     = clamp01((altDeg + 6) / 12);
 		const golden = altDeg > -4 ? clamp01(1 - Math.abs(altDeg - 3) / 9) : 0;
 		const L = {
@@ -936,9 +962,11 @@
 			const clumps = clumpsFromTips(segs, cell, 1.8, 1);
 			return renderTreeArt(segs, clumps, leaf, { ...L, sunDx: sunX < xs ? -1 : 1 }, seed);
 		};
-		const fg = fgTreeSegs.length ? bake(segsFromTree(fgTreeSegs), 12 * dpr, 101) : null;
-		const bg = bgTreeSegs.length ? bake(segsFromTree(bgTreeSegs), 15 * dpr, 211) : null;
-		const mid = MIDGROUND.map((m, i) => {
+		const jobs: (() => void)[] = [
+			() => { next.fg = fgTreeSegs.length ? bake(segsFromTree(fgTreeSegs), 12 * dpr, 101) : null; },
+			() => { next.bg = bgTreeSegs.length ? bake(segsFromTree(bgTreeSegs), 15 * dpr, 211) : null; },
+		];
+		MIDGROUND.forEach((m, i) => jobs.push(() => {
 			const gf = treeGrowthFactor(Math.max(0, gardenAgeUnits + m.bornAgo));
 			const x = m.xf * W, h = Math.max(12, m.h * gf * dpr);
 			const seed = Math.floor(m.xf * 0x7FFFFFFF);
@@ -946,10 +974,9 @@
 			            : m.kind === 'juniper' ? juniperShape(x, horizonY, h, seed)
 			            : broadleafShape(x, horizonY, h, seed);
 			const f = m.kind === 'pine' ? PINE_FOLIAGE : m.kind === 'juniper' ? JUNIPER_FOLIAGE : leaf;
-			return renderTreeArt(shape.segs, shape.clumps, f, { ...L, sunDx: sunX < x ? -1 : 1 }, seed + i);
-		});
-		treeCache = { key, fg, bg, mid };
-		return treeCache;
+			next.mid[i] = renderTreeArt(shape.segs, shape.clumps, f, { ...L, sunDx: sunX < x ? -1 : 1 }, seed + i);
+		}));
+		return jobs;
 	}
 
 	function drawMidgroundTrees(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number, windPx: number): void {
