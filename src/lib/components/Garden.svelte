@@ -125,7 +125,7 @@
 	const CLOUD_KF: Array<{ alt: number; top: RGB; shadow: RGB }> = [
 		{ alt: -14, top: [72,  82, 110] as RGB, shadow: [ 34,  40,  66] as RGB },  // deep night
 		{ alt:  -6, top: [148, 122, 162] as RGB, shadow: [ 62,  50,  98] as RGB },  // pre-dawn purple
-		{ alt:   0, top: [255, 140,  70] as RGB, shadow: [165,  72, 128] as RGB },  // sunset: orange top, magenta shadow
+		{ alt:   0, top: [255, 140,  70] as RGB, shadow: [120, 118, 150] as RGB },  // sunset: orange-lit bases, grey-blue tops
 		{ alt:   8, top: [255, 228, 168] as RGB, shadow: [ 90,  74, 112] as RGB },  // golden hour: amber top, purple-grey shadow
 		{ alt:  22, top: [252, 250, 246] as RGB, shadow: [148, 160, 184] as RGB },  // midday: white top, cool blue-grey shadow
 	];
@@ -1054,7 +1054,7 @@
 		const minutesSinceEpoch = Date.now() / 60000;
 		const { top, shadow } = getCloudColors(altDeg);
 		const sunSide  = sxn < 0.5 ? -1 : 1;
-		const colorKey = quantizeColorKey(top, shadow) + sunSide;
+		const colorKey = quantizeColorKey(top, shadow) + sunSide + ':' + Math.round(altDeg);
 
 		// One bake per frame (~70 ms on a slow phone): stale clouds keep their
 		// old colours a moment longer, new ones appear a frame apart.
@@ -1063,7 +1063,7 @@
 		for (const cloud of clouds) {
 			if ((!cloud.cache || cloud.cacheColorKey !== colorKey) && budget > 0) {
 				budget--;
-				cloud.cache = renderNoiseCloud(cloud.size, cloud.aspectRatio, cloud.prngseed, top, shadow, sunSide, 1, cloud.haze);
+				cloud.cache = renderNoiseCloud(cloud.size, cloud.aspectRatio, cloud.prngseed, top, shadow, sunSide, 1, cloud.haze, altDeg);
 				cloud.cacheColorKey = colorKey;
 			}
 			if (!cloud.cache) continue;

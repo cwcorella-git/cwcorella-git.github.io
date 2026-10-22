@@ -130,7 +130,7 @@ export function renderMeadow(W: number, bandH: number, scale: number): HTMLCanva
 // `haze` (0 near, 1 at the horizon) flattens and fades the far ones.
 export function renderNoiseCloud(
 	size: number, aspect: number, seed: number,
-	top: RGB, shadow: RGB, sunSide: number, alpha: number, haze = 0,
+	top: RGB, shadow: RGB, sunSide: number, alpha: number, haze = 0, sunAlt = 30,
 ): { canvas: HTMLCanvasElement; baseY: number; w: number; h: number } {
 	const CW = Math.ceil(size * 2.4), CH = Math.ceil(size * (aspect * 2.2 + 0.35));
 	const baseY = CH - Math.ceil(size * 0.12);
@@ -177,8 +177,11 @@ export function renderNoiseCloud(
 		return d;
 	};
 
-	const len = Math.hypot(sunSide * 0.7, 1);
-	const lx = (sunSide * 0.7) / len, ly = 1 / len;
+	// Light angle above the horizontal: near-overhead at midday, from the side
+	// at sunset, and from below once the sun is down, when only the bases are lit.
+	const e = (sunAlt >= 0 ? Math.min(80, sunAlt * 3.2) : Math.max(-18, sunAlt * 3)) * Math.PI / 180;
+	const lx = sunSide * Math.cos(e), ly = Math.sin(e);
+	const under = 1 - smooth(-1, 4, sunAlt);
 	const STEPS = [0.02, 0.045, 0.08, 0.13, 0.2, 0.3];
 	const rim = mixRGB(top, [255, 255, 255], 0.6);
 	// Far clouds sit in the air between: flatter light, toward the haze.
@@ -209,10 +212,11 @@ export function renderNoiseCloud(
 			for (const s of STEPS) acc += Math.max(0, at(px + lx * s * size, py - ly * s * size)) * s;
 			const T = Math.exp(-acc * 6);
 			const powder = 1 - Math.exp(-d * 6);
-			const lift = smooth(0, Math.max(0.05, aspect * 1.2), y);
+			const up = smooth(0, Math.max(0.05, aspect * 1.2), y);
+			const lift = up + (1 - 2 * up) * under;   // a low sun lifts the base instead of the top
 			let col = mixRGB(shadow, top, Math.min(1, 0.15 + T * (0.6 + 0.4 * powder) + lift * 0.35));
 			// The flat underside stays grey even where light gets through.
-			col = mixRGB(col, shadow, 0.35 * (1 - smooth(0, 0.18 * aspect, y)));
+			col = mixRGB(col, shadow, 0.35 * (1 - under) * (1 - smooth(0, 0.18 * aspect, y)));
 			// Silver lining: thin edge, lit side.
 			const thin = 1 - smooth(0, 0.12, d);
 			col = mixRGB(col, rim, thin * T * 0.6);
