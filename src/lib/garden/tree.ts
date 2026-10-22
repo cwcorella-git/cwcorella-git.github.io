@@ -6,7 +6,7 @@ const SEG_LEN     = 7;    // px — growth step length (at generation canvas)
 const INFLUENCE_R = 90;   // px — attractor influence radius
 const KILL_DIST   = 14;   // px — attractor consumed within this distance of a tip
 const BG_CACHE_KEY = 'cwc:tree-v3';
-const FG_CACHE_KEY = 'cwc:fg-tree-v1';
+const FG_CACHE_KEY = 'cwc:fg-tree-v2';   // v2 (2026-10-22): vase form, no stacked scaffolds
 
 // ── types ─────────────────────────────────────────────────────────────────
 export interface TreeSegment {
@@ -268,43 +268,48 @@ export function generateFgTree(W: number, H: number, horizonY: number, ageFracti
 			addBranch(x2, y2, angle + bias * 0.3, length * ratio * 0.72, thick * 0.50, depth - 2, s0, sR, r0, rR);
 	}
 
-	// Trunk: segmented with organic x-jitter
-	const steps = Math.max(5, Math.floor(trunkH / 7));
+	// Fremont cottonwood, open-grown: the trunk forks at about half height into
+	// 2–3 leaders that splay out like a vase, giving one broad continuous crown.
+	// (Until 2026-10-22 three stacked scaffold limbs made a lower blob under the
+	// top crown: two balls on a stick.)
+	const forkT = 0.45 + rng() * 0.1;
+	const steps = Math.max(5, Math.floor(trunkH * forkT / 7));
 	let tx = bx;
 	for (let i = 0; i < steps; i++) {
-		const t1  = i / steps;
-		const t2  = (i + 1) / steps;
+		const t1  = i / steps * forkT;
+		const t2  = (i + 1) / steps * forkT;
 		const x1  = tx + (rng() - 0.5) * 2;
 		const x2  = tx + (rng() - 0.5) * 2;
 		const y1  = by - t1 * trunkH;
 		const y2  = by - t2 * trunkH;
-		const thk = Math.max(thkTop, thkBase - t1 * (thkBase - thkTop));
+		const thk = Math.max(thkTop, thkBase - (t1 / forkT) * (thkBase - thkTop) * 0.6);
 		segments.push({ x1f: x1/W, y1f: y1/H, x2f: x2/W, y2f: y2/H, thick: thk, color: barkColor(thk) });
 		tx = x2;
 	}
-	const topX = tx;
-	const topY = by - trunkH;
+	const forkX = tx, forkY = by - forkT * trunkH;
+	const forkThk = Math.max(thkTop, thkBase * 0.55);
 
-	// Scaffold branches at 3 heights — open-grown trees retain lower limbs
-	if (gf >= 0.3) {
-		const scaffolds = [
-			{ t: 0.35, depth: 8, dir:  1 },
-			{ t: 0.52, depth: 8, dir: -1 },
-			{ t: 0.67, depth: 7, dir:  1 },
-		];
-		for (const s of scaffolds) {
-			const sx  = bx + (rng() - 0.5) * 4;
-			const sy  = by - s.t * trunkH;
-			const thk = Math.max(1.5, thkTop * (1.3 - s.t * 0.4));
-			const len = trunkH * (0.34 + rng() * 0.12) * gf;
-			addBranch(sx, sy, Math.PI / 2 + s.dir * (0.44 + rng() * 0.20), len, thk, s.depth);
-			if (rng() < 0.65)
-				addBranch(sx, sy, Math.PI / 2 - s.dir * (0.38 + rng() * 0.18), len * 0.60, thk * 0.72, s.depth - 1);
-		}
+	// One low limb at most: short, nearly level.
+	if (gf >= 0.3 && rng() < 0.7) {
+		const dir = rng() < 0.5 ? -1 : 1;
+		const ly = by - forkT * 0.8 * trunkH;
+		addBranch(bx, ly, Math.PI / 2 + dir * (1.05 + rng() * 0.2), trunkH * 0.3 * gf, forkThk * 0.4, 6, 0.45, 0.2, 0.68, 0.08);
 	}
 
-	// Main crown from trunk top
-	addBranch(topX, topY, Math.PI / 2, trunkH * 0.44 * gf, thkTop * 0.9, 10);
+	// Leaders: each a long, gently curving limb, then the recursive crown.
+	const leaders = 2 + (rng() < 0.5 ? 1 : 0);
+	for (let i = 0; i < leaders; i++) {
+		const splay = ((i + 0.5) / leaders - 0.5) * 1.1 + (rng() - 0.5) * 0.15;   // ±0.55 rad ≈ ±32°
+		let x = forkX, y = forkY, ang = Math.PI / 2 + splay, thk = forkThk * (0.75 - Math.abs(splay) * 0.2);
+		const legLen = trunkH * (0.32 + rng() * 0.1) * gf;
+		for (let k = 0; k < 3; k++) {
+			const x2 = x + Math.cos(ang) * legLen / 3, y2 = y - Math.sin(ang) * legLen / 3;
+			segments.push({ x1f: x/W, y1f: y/H, x2f: x2/W, y2f: y2/H, thick: thk, color: barkColor(thk) });
+			x = x2; y = y2; thk *= 0.85;
+			ang += (rng() - 0.5) * 0.12 + splay * 0.08;                // leaders bow outward
+		}
+		addBranch(x, y, ang, trunkH * 0.36 * gf, thk, 8, 0.5, 0.24, 0.7, 0.08);
+	}
 
 	return segments;
 }
