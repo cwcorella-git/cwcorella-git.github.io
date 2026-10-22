@@ -14,7 +14,7 @@
 	import BookForm from '$lib/components/BookForm.svelte';
 	import Toasts from '$lib/components/Toasts.svelte';
 	import Sky from '$lib/components/Sky.svelte';
-	import Ridge from '$lib/components/Ridge.svelte';
+	import Garden from '$lib/components/Garden.svelte';
 
 	let { children } = $props();
 
@@ -63,7 +63,8 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <Sky />
-<Ridge />
+<!-- ink is the VG-fidelity palette (rulings R8): nothing behind its panels. -->
+{#if themeState.active !== 'ink'}<Garden />{/if}
 <AdminDrawer bind:this={drawerRef} />
 <Toasts />
 

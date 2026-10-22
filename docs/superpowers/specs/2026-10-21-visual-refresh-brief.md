@@ -139,8 +139,16 @@ switching between dark and light text as the sky crosses its midpoint.
   - letter guides in the alphabetical reading list, like card-catalogue tabs. Titles now
     sort ignoring leading quotes, so "Just Get to Know Your Neighbors" files under J.
 
+- **The ridge was replaced by the original garden** the same day. The operator asked for the
+  nature background back "as it was": `Garden.svelte` and `src/lib/garden/` from
+  `garden-archive` (removed in `04176ba`, 2026-03-06). The garden only draws; its old
+  per-frame colour writer was dropped so Sky.svelte's contrast-tested colours stay in charge.
+  Restoring it exposed a real failure: the garden's sky darkens from 6° below the horizon,
+  while the flat ground the text was picked against stays light, so dusk text fell to 1.5:1.
+  Text is now picked against the garden's sky bands, and the glass thickens at sunset only
+  as far as 4.5:1 needs. The traced ridge (`ee7cd4a`) stays in history.
+
 ## Not done
 
 - ALL-CAPS tracked labels remain in about 25 components (library, links, admin panels).
   They are the next tell to remove.
-- The ridge heights are exaggerated (about 6× at a 1280px-wide window, more on phones, where the sides are cropped) so the shape reads; the outline is real.

@@ -96,17 +96,31 @@ export interface LightFrame {
  * twilight, and the text is whichever of day/night reads better on the
  * panel actually shown — so there is no cross-fade through illegible.
  */
-export function lightFrame(p: LightPaletteSeeds, dl: number): LightFrame {
+export function lightFrame(p: LightPaletteSeeds, dl: number, backdrops?: readonly RGB[]): LightFrame {
 	const night = 1 - dl;
 	const glass = mix(p.glassDay, p.glassNight, night);
-	const glassAlpha = 0.22 * dl + 0.42 * night;
 	// The ground switches at twilight instead of fading: any continuous fade from a
 	// light to a dark ground passes a mid-grey on which neither the day nor the
 	// night text reaches 4.5:1 (~3.7:1 at worst for these seeds). The 1.5s
 	// --t-theme CSS transition smooths the switch on screen.
 	const ground = dl < TWILIGHT ? mix(p.glassNight, [0, 0, 0], 0.25) : parseColor(p.bodyBg).rgb;
-	const panel = composite(glass, glassAlpha, ground);
-	const text = contrast(p.textDay, panel) >= contrast(p.textNight, panel) ? p.textDay : p.textNight;
+	// What the glass actually sits on. With the garden drawn (2026-10-21) that is
+	// the garden's sky, which darkens well before the flat ground switches; the
+	// panel spans more than one sky band, so text must read on every one of them.
+	const behind = backdrops?.length ? backdrops : [ground];
+	// The glass thickens only when a moment needs it (sunset, where the sky is
+	// orange low and violet high), and only as far as 4.5:1 requires.
+	let glassAlpha = 0.22 * dl + 0.42 * night;
+	let text: RGB = p.textDay;
+	let panel: RGB = ground;
+	for (;;) {
+		const panels = behind.map((b) => composite(glass, glassAlpha, b));
+		const worst = (t: RGB) => Math.min(...panels.map((q) => contrast(t, q)));
+		text = worst(p.textDay) >= worst(p.textNight) ? p.textDay : p.textNight;
+		panel = panels.reduce((a, q) => (contrast(text, q) < contrast(text, a) ? q : a));
+		if (worst(text) >= 4.5 || glassAlpha >= 0.9) break;
+		glassAlpha = Math.min(0.9, glassAlpha + 0.02);
+	}
 	const accent = legibleAccent(parseColor(p.accent).rgb, text, panel);
 	return { ground, glass, glassAlpha, panel, text, meta: metaFor(text, panel), accent };
 }

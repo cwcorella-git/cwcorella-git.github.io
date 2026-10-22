@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { themeState } from '$lib/admin/theme.svelte';
 	import { lightFrame, rgbCss } from '$lib/admin/contrast';
+	import { skyColorsAt } from '$lib/garden/backdrop';
 
 	// ── constants ─────────────────────────────────────────────────────────────
 	const HORIZON_FRAC = 0.68;
@@ -414,7 +415,9 @@
 
 		// Ground, glass, text and meta for this frame: one pure function, tested
 		// for contrast in contrast.test.ts.
-		const f = lightFrame(themeState.palette, dl);
+		// The glass sits on Garden.svelte's sky, so text is picked against its bands.
+		const { mid, lower } = skyColorsAt(altDeg);
+		const f = lightFrame(themeState.palette, dl, [mid, lower]);
 		const [gr, gg, gb] = f.glass;
 		r.style.setProperty('--body-bg',      rgbCss(f.ground));
 		r.style.setProperty('--glass-bg',     `rgba(${gr},${gg},${gb},${f.glassAlpha.toFixed(2)})`);

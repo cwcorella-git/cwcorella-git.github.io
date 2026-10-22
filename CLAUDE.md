@@ -68,7 +68,7 @@ npm test          # vitest
 
 **Library** (`/library`) — the one server-backed page; see "The one acknowledged exception" above. Admin-gated in full. Detail below under "Library subsystem".
 
-**Theme**: one look, `sky` (2026-10-21; the other palettes retired, see `docs/superpowers/specs/2026-10-21-visual-refresh-brief.md`), following the day via Sky.svelte, with the real Reno skyline behind the glass (`Ridge.svelte`, traced by `scripts/trace-ridge.mjs` into `src/lib/ridge.json`). UI face is self-hosted Libre Franklin; no monospace labels. Plus `ink`, solid and opaque: VG's colours, the palette for judging formatting as VG shows it (rulings R8); it hides the ridge.
+**Theme**: one look, `sky` (2026-10-21; the other palettes retired, see `docs/superpowers/specs/2026-10-21-visual-refresh-brief.md`), following the day via Sky.svelte, over the original nature scene (`Garden.svelte` + `src/lib/garden/`, restored 2026-10-21 from `garden-archive`; it only draws, Sky.svelte owns the colours). Text is picked against the garden's own sky bands (`src/lib/garden/backdrop.ts`), and the glass thickens at sunset only as far as 4.5:1 needs; `contrast.test.ts` checks every quarter-degree of sun altitude. UI face is self-hosted Libre Franklin; no monospace labels. Plus `ink`, solid and opaque: VG's colours, the palette for judging formatting as VG shows it (rulings R8); it hides the garden.
 
 **tlock time-capsule**: Content key sealed 2026-06-11 to drand Quicknet round 751,863,412 (unlocks 2095-02-13). Stored at `static/docs/private/content-key.tlock`. `archiveState.tryUnlock()` called on page load when `isUnlockDay()`. SettingsPanel has a time capsule section showing seal status; auto-reseals when content key is updated.
 
