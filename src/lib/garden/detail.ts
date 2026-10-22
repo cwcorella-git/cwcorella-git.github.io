@@ -111,49 +111,82 @@ export function renderMeadow(W: number, bandH: number, scale: number): HTMLCanva
 }
 
 // ── clouds ────────────────────────────────────────────────────────────────
-// Density is a noisy dome with a flat base. Light is a few density samples
-// toward the sun (up, and to the sun's side): thick cloud between a point and
-// the sun leaves it in shadow, so bases come out dark and turrets lit.
+// A cumulus is a cluster of puffs on a flat base: the middle puffs largest,
+// each one's edge eroded by fine noise so the outline billows instead of
+// reading as one dome. Light is a short march toward the sun (up, and to the
+// sun's side): thick cloud between a point and the sun leaves it in shadow,
+// so bases come out dark and turrets lit. Two terms on top of that: "powder"
+// darkens the thin outer skin on the shadow side, and thin cloud facing the
+// sun glows (the silver lining). Rendered at full size, so it stays crisp.
 export function renderNoiseCloud(
 	size: number, aspect: number, seed: number,
 	top: RGB, shadow: RGB, sunSide: number, alpha: number,
 ): { canvas: HTMLCanvasElement; baseY: number; w: number; h: number } {
-	const S = 0.75;                                    // render scale; drawn back up
-	const CW = Math.ceil(size * 1.3 * S), CH = Math.ceil(size * (aspect * 1.25 + 0.3) * S);
-	const baseY = CH - Math.ceil(size * 0.12 * S);
+	const CW = Math.ceil(size * 1.9), CH = Math.ceil(size * (aspect * 2.2 + 0.35));
+	const baseY = CH - Math.ceil(size * 0.12);
 	const c = makeCanvas(CW, CH);
 	const ctx = c.getContext('2d')!;
 	const img = ctx.createImageData(CW, CH);
 	const ox = (seed % 997) * 1.37, oy = (seed % 541) * 0.91;
-	const lobes = 0.55 + (seed % 7) * 0.05;
+	const rng = makePRNG(seed);
+
+	// Puffs across the base, tallest near the middle.
+	const span = 0.5 + rng() * 0.12;
+	const n = 5 + Math.floor(rng() * 4);
+	const puffs: [number, number, number][] = [];
+	for (let i = 0; i < n; i++) {
+		const x = -span + (2 * span * (i + 0.2 + rng() * 0.6)) / n;
+		const mid = Math.sqrt(Math.max(0, 1 - (x / (span * 1.1)) ** 2));
+		const r = (0.08 + aspect * 0.6) * (0.4 + 0.6 * mid) * (0.75 + rng() * 0.45);
+		puffs.push([x, r * (0.45 + rng() * 0.35), r]);
+	}
+	// A few smaller turrets riding on the big ones.
+	for (let i = 0; i < 3; i++) {
+		const [px, py, pr] = puffs[1 + Math.floor(rng() * (n - 2))];
+		puffs.push([px + (rng() - 0.5) * pr, py + pr * 0.6, pr * (0.4 + rng() * 0.25)]);
+	}
 
 	const density = (x: number, y: number): number => {
-		const prof = aspect * Math.sqrt(Math.max(0, 1 - (x / lobes) ** 2)) * (0.65 + 0.5 * fbm2(x * 3 + ox, oy, 3));
-		let d = prof - y + (fbm2(x * 7 + ox, y * 7 + oy, 4) - 0.5) * 0.22;
-		if (y < 0) d += y * 6;                           // flat base
+		let d = -1;
+		for (const [px, py, pr] of puffs) {
+			const q = 1 - Math.hypot(x - px, (y - py) * 1.1) / pr;
+			if (q > d) d = q;
+		}
+		if (d < -0.35) return d;
+		// Erosion: coarse lumps, then fine billows at the edge only.
+		d += (fbm2(x * 6 + ox, y * 6 + oy, 3) - 0.5) * 0.45;
+		d += (fbm2(x * 22 + oy, y * 22 + ox, 3) - 0.5) * 0.22 * (1 - smooth(0, 0.4, d));
+		if (y < 0) d += y * 14;                          // flat base
 		return d;
 	};
-	const len = Math.hypot(sunSide * 0.6, 1);
-	const lx = (sunSide * 0.6) / len, ly = 1 / len;
+
+	const len = Math.hypot(sunSide * 0.7, 1);
+	const lx = (sunSide * 0.7) / len, ly = 1 / len;
+	const STEPS = [0.02, 0.045, 0.08, 0.13, 0.2, 0.3];
+	const rim = mixRGB(top, [255, 255, 255], 0.6);
 
 	for (let py = 0; py < CH; py++) {
-		const y = (baseY - py) / (size * S);
+		const y = (baseY - py) / size;
 		for (let px = 0; px < CW; px++) {
-			const x = (px - CW / 2) / (size * S);
+			const x = (px - CW / 2) / size;
 			const d = density(x, y);
 			if (d <= 0) continue;
 			let acc = 0;
-			for (const s of [0.03, 0.07, 0.13, 0.22]) acc += Math.max(0, density(x + lx * s, y + ly * s));
-			const T = Math.exp(-acc * 7);
-			const lift = Math.max(0, Math.min(1, y / Math.max(0.05, aspect)));
-			const col = mixRGB(shadow, top, Math.min(1, T * 0.85 + lift * 0.25));
-			const a = smooth(0, 0.07, d) * alpha;
+			for (const s of STEPS) acc += Math.max(0, density(x + lx * s, y + ly * s)) * s;
+			const T = Math.exp(-acc * 6);
+			const powder = 1 - Math.exp(-d * 6);
+			const lift = smooth(0, Math.max(0.05, aspect * 1.2), y);
+			let col = mixRGB(shadow, top, Math.min(1, 0.15 + T * (0.6 + 0.4 * powder) + lift * 0.35));
+			// Silver lining: thin edge, lit side.
+			const thin = 1 - smooth(0, 0.12, d);
+			col = mixRGB(col, rim, thin * T * 0.6);
+			const a = smooth(0, 0.1, d) * alpha;
 			const i = (py * CW + px) * 4;
 			img.data[i] = col[0]; img.data[i + 1] = col[1]; img.data[i + 2] = col[2]; img.data[i + 3] = a * 255;
 		}
 	}
 	ctx.putImageData(img, 0, 0);
-	return { canvas: c, baseY: baseY / S, w: CW / S, h: CH / S };
+	return { canvas: c, baseY, w: CW, h: CH };
 }
 
 /** Cirrus: noise stretched along the wind and thresholded into fibres. */

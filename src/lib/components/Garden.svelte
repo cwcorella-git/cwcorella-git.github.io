@@ -1067,7 +1067,7 @@
 			const { canvas: img, baseY, w, h } = cloud.cache;
 			const rawX = (cloud.xFrac * W + minutesSinceEpoch * cloud.speed) % (W + w);
 			const skyY = cloud.yFrac * horizonY * 0.84;   // base sits at this y in main canvas
-			ctx.globalAlpha = cloud.alpha * cloudAlpha;
+			ctx.globalAlpha = Math.min(1, 0.3 + cloud.alpha) * cloudAlpha;   // cores read opaque; edges stay soft in the bake
 			ctx.drawImage(img, rawX - w / 2, skyY - baseY, w, h);
 		}
 		ctx.restore();
