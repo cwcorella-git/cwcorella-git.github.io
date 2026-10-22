@@ -17,6 +17,7 @@ trees and picked every option: four for the mountains and four for the trees.
 | 7 | Rows 10 and 11 of the 2026-10-21 doc (ALL-CAPS labels, re-push `garden-archive`) | **proposed**: still the operator's call |
 | 8 | Mountains still read 2D (operator): spur ridges scaled per range, relief-exaggerated side light, cast shadows, haze thicker at the base | **done**: `65c6aa2`. Seen at 10:00, 15:30, sunset, Jan 15, and on a phone. Not checked on the live site |
 | 9 | Winter snowfields read as pale vertical walls; they should follow the gullies | **proposed** |
+| 10 | Range bases sat flat on the field (operator). Three reshapes of the range profile (concave apron, knolls, skylight by up-facing) still read as a wall, because with the sun behind the range the face is a shadowed wall either way. Fixed with a separate 3-row foothill layer (`renderFoothills`), which the operator picked | **done**: `c63e581`. Seen at 15:30, 10:00, sunset, Jan 15 and on a phone |
 
 Renders went to the ops Media tab without a group. There was nothing to pick, only to look at.
 
