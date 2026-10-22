@@ -1118,7 +1118,12 @@
 			const { a: life, k } = cloudLife(cloud, minutesSinceEpoch);
 			if ((!cloud.cache || cloud.cacheColorKey !== colorKey) && budget > 0) {
 				budget--;
-				cloud.cache = renderNoiseCloud(cloud.size, cloud.aspectRatio, cloud.prngseed, cloud.grey ? lerpRGB(top, shadow, 0.55) : top, shadow, sunSide, 1, cloud.haze, altDeg);
+				// Bake at most ~200 px across and scale up when drawn: clouds are soft,
+				// and full size cost 140 ms per cumulus, 870 ms per overcast sheet on a
+				// 4×-throttled phone (2026-10-22).
+				const q = Math.min(0.55, 200 / cloud.size);
+				const r = renderNoiseCloud(cloud.size * q, cloud.aspectRatio, cloud.prngseed, cloud.grey ? lerpRGB(top, shadow, 0.55) : top, shadow, sunSide, 1, cloud.haze, altDeg);
+				cloud.cache = { ...r, w: r.w / q, h: r.h / q, baseY: r.baseY / q };
 				cloud.cacheColorKey = colorKey;
 			}
 			if (!cloud.cache) continue;

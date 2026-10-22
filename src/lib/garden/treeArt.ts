@@ -270,8 +270,18 @@ export function renderTreeArt(segs: Seg[], clumps: Clump[], f: Foliage, L: ArtLi
 		}
 	}
 	const height = Math.max(1, baseY - y0);
+	// Clumps share sprites: a few variants per 3 px size bucket, picked by
+	// index. A crown of 75 unique clumps cost ~70 ms on a throttled phone.
+	const pool = new Map<number, HTMLCanvasElement[]>();
+	const spriteFor = (r: number, i: number) => {
+		const b = Math.max(1, Math.round(r / 3));
+		const list = pool.get(b) ?? [];
+		pool.set(b, list);
+		if (list.length < 4) list.push(renderClump(b * 3, f, L, seed + b * 7919 + list.length * 104729));
+		return list[i % list.length];
+	};
 	const sprites = f.amount > 0.02
-		? clumps.map((c, i) => ({ x: c.x, y: c.y, img: renderClump(c.r, f, L, seed + i * 7919), sway: Math.max(0, (baseY - c.y) / height) }))
+		? clumps.map((c, i) => ({ x: c.x, y: c.y, img: spriteFor(c.r, i), sway: Math.max(0, (baseY - c.y) / height) }))
 		: [];
 	return { trunk, ox: x0 - pad, oy: y0 - pad, sprites };
 }
