@@ -234,7 +234,7 @@ The renders are `$S/renders/live-{rigi,niederhorn}-v2{,-am,-phone}.png`, at 15:3
 
 | 19 | Meadow still reads flat after the bake: raise MEADOW_WAVES amplitude and/or add baked albedo patches, then re-render | **proposed** |
 
-## Resume here
+## Resume here (superseded by the one at the end)
 
 Row 17/18. Steps 1–3 below are DONE (renders and Media sent, 2026-10-22 08:45). **Resume at step 4**: read the pick with `ops_pick` group `cwc-range-2`, then commit. Then row 19.
 
@@ -284,3 +284,54 @@ Row 17/18. Steps 1–3 below are DONE (renders and Media sent, 2026-10-22 08:45)
 | 16 | phone timing | **done**: `897564a` (re-light is still ~230 ms when throttled, left as is) |
 | 19 | meadow relief | **done**: `33e4ce7` |
 | 20 | clouds full pass + pass two | **done**: `b8e22fe`, `c9d00f9` |
+
+## 10. Every render today was seven hours early, and the sun was an hour fast
+
+- **Screenshot tool bug (correction to §9 and everything before it).**
+  - `$S/renders/live.cjs` built its time with `new Date(iso)` in Node, on this server, which runs on UTC. The browser runs on Pacific time.
+  - So "15:30" was really 08:30 and "10:00" was 03:00. That is why "17:55" never looked like sunset.
+  - Fixed in the scratchpad script: the time is now read as Reno wall time.
+  - Every lighting judgement made from earlier renders was made at the wrong hour.
+- **Site bug** `de8bcf1`:
+  - Garden, Sky and terrain each turned the clock hour straight into the sun's position. In daylight saving that put the sun an hour ahead, so sunset came about an hour early.
+  - New shared `src/lib/garden/sun.ts`. It still uses the visitor's own clock, deliberately, because the site shows each visitor their own time of day. It now removes daylight saving (worked out from the visitor's time zone) and the equation of time.
+  - `sun.test.ts` checks against NOAA times for Reno and passes within 10 minutes: Oct 22 sunset 18:05, Jan 15 sunset 16:50, Jun 21 sunrise 05:33. 329 tests pass in total.
+  - This departs from the approved plan, which said UTC plus Reno's longitude. That would have shown every visitor Reno's sky.
+  - Rendered at the correct times, sunset now has orange peaks and pink cloud undersides.
+- **Faster mountain lighting on phones** `cac9b91`:
+  - When the screen is narrower than 800 CSS px, lighting is done at half resolution: one pixel in four is lit and copied to its neighbours. Pixels whose source would be sky are lit individually, so the skyline stays exact.
+  - With the CPU slowed 4×, lighting the full width went from 229 ms to 95 ms. The target was 70 ms, but a phone only lights the columns on screen.
+  - The phone render shows no visible blockiness, though the mountains there sit mostly behind the text panel.
+- **Foreground: in progress, not committed.**
+  - `scripts/bake-terrain.py`: close shadow-sample distances (6, 12, 24, 40 m), so a swell in the meadow shades the ground behind it.
+  - `detail.ts` `renderMeadow`: 50% more grass blades in the bottom quarter, larger blades up close, and darkening toward the bottom edge.
+  - `terrain.ts`: the meadow gets +0.22 ambient light, because at dusk it was going nearly black.
+  - These pass the type check. Not yet rendered and not committed.
+
+| # | item | state |
+|---|---|---|
+| 21 | sun on solar time + render clock fix | **done**: `de8bcf1` |
+| 22 | half-res terrain relight on phones | **done**: `cac9b91` |
+| 23 | foreground depth (near shadows, near blades, edge darkening, dusk meadow) | **in progress**: uncommitted, rebake running |
+
+## Open
+
+- Row 23 has not been seen rendered at all.
+- The 10:00 and Jan 15 renders after the fix were not looked at closely.
+- Nothing has been checked on a real phone.
+- The earlier Media sets (`cwc-range-2` and the clouds and meadow sets) were all taken at the wrong time of day. The operator's Niederhorn pick was made from 08:30 light.
+
+## Resume here
+
+- **Row 23.** A rebake is running in the background: task `b349kp5h1`.
+  - Output: `$S/bakes4/niederhorn/terrain.{png,json}`.
+  - Log: `/tmp/claude-1000/-home-user-Projects-cwcorella-git-github-io/6a42ab56-838f-4546-83a4-f05667814a49/tasks/b349kp5h1.output`, which prints `wrote …` when done.
+  - If it died, rerun: `python3 scripts/bake-terrain.py --site niederhorn --cache $S/tiles --out $S/bakes4/niederhorn` (about 150 s).
+- Then:
+  1. Copy both files into `static/garden/`.
+  2. Render with `node $S/renders/live.cjs <name> / 1440 2026-10-22T15:30:00 sky` (time is now Reno wall time), plus `…T17:55:00`, `2026-01-15T16:40:00` and width 390.
+  3. Look at each render, then send them to Media with `ops_send_file`.
+  4. Run `npm run check` and `npx vitest run`.
+  5. Commit by explicit path: `scripts/bake-terrain.py`, `src/lib/garden/detail.ts`, `src/lib/garden/terrain.ts`, `static/garden/terrain.png`, `static/garden/terrain.json`.
+  6. Push with `git -c credential.helper='!gh auth git-credential' push -q https://github.com/cwcorella-git/cwcorella-git.github.io.git main`. If it fails with HTTP 408, retry with `-c http.postBuffer=524288000`.
+- `$S` = `/tmp/claude-1000/-home-user-Projects-cwcorella-git-github-io/a292417d-d3e3-4aba-ad17-fa902c0e6aba/scratchpad`. The dev server is on :5191.
