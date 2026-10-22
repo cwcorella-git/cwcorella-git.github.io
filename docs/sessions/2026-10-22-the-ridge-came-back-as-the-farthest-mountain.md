@@ -355,5 +355,31 @@ I re-checked the renders with the corrected clock (Media `cwc-recheck`):
 - Media `cwc-foreground` and `cwc-recheck` are both waiting on the operator.
 - Not yet tried on a real phone.
 
-## Resume here
+## Resume here (superseded by the one at the end)
 Rows 24 and 25 are proposed and not started; the operator chooses. Nothing is running in the background.
+
+## 12. The bright tufts came from plants.ts, lit by a different model
+
+The green blades that glowed at dusk were not in the meadow layer, which is a multiply layer and can't be brighter than the ground under it. They were the animated tufts in `plants.ts`, dimmed by `1 - (alt+6)/12`. That formula gives only about 0.3 at 2° altitude, while the terrain's sun-plus-ambient light is already much darker there.
+
+The fix:
+- `terrain.ts` now exports `meadowLight(L)`, built from the same `lightOn` helper that `shade()` uses.
+- Tuft colours are multiplied by it.
+- `meadowSeason(doy)` turns the meadow albedo and the tuft palette to straw from December to February.
+
+I tuned STRAW once, to [192,160,102]; the first value read as olive.
+
+Both rows landed in a single commit, `7894f78`, because they share `terrain.ts`. That is a change from the plan, which had them as two commits. 331 tests pass. The renders are in Media `cwc-season`.
+
+| # | item | state |
+|---|---|---|
+| 24 | meadow follows the season | **done**: `7894f78` |
+| 25 | grass tufts take the ground's light | **done**: `7894f78` |
+
+## Open
+- Media `cwc-foreground`, `cwc-recheck` and `cwc-season` are all waiting on the operator.
+- Spring (Mar–Apr) and autumn (Oct–Nov) transitions have not been rendered.
+- Not yet tried on a real phone.
+
+## Resume here
+No rows open. Nothing is running in the background.
