@@ -6,7 +6,9 @@
 	import { adminState } from '$lib/admin/state.svelte';
 	import { isUnlockDay } from '$lib/admin/tlock';
 	import { toast } from '$lib/admin/toast.svelte';
-	import { renderMeadow, renderRange, renderNoiseCloud, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
+	import renoRidge from '$lib/garden/reno-ridge.json';
+	import type { RangeField } from '$lib/garden/detail';
+	import { renderMeadow, buildRangeField, renderRangeField, renderNoiseCloud, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
 
 	// ── constants ─────────────────────────────────────────────────────────────
 	const HORIZON_FRAC = 0.68;   // horizon at 68% down canvas
@@ -579,28 +581,42 @@
 	}
 
 	// ── draw: mountains & hills ────────────────────────────────────────────────
-	// Four ranges far to near, then the hills (2026-10-22). Each range is mixed
-	// toward the horizon sky by 1 − e^(−βd), so distance reads as haze the way it
-	// does outdoors, and slopes facing the sun take its colour. Ranges render
-	// offscreen and rebuild only when the sun moves about a degree. The two
-	// original silhouettes (seeds 2.3 and 5.7) are kept.
+	// Four ranges far to near, then the hills (2026-10-22). The farthest is the
+	// real western skyline from downtown Reno (Slide Mountain, Mt Rose, Peavine;
+	// reno-ridge.json, traced from SRTM in ee7cd4a), exaggerated about 6×. The
+	// other crests are noise; seeds 2.3 and 5.7 are the original silhouettes.
+	// Each range is a lit heightfield (detail.ts), mixed toward the horizon sky by
+	// 1 − e^(−βd) for distance, and re-lit only when the sun moves about a degree.
 	const RANGES = [
-		{ seed: 11.7, freq: 2.0, h: 0.30, ridged: true,  dist: 1.00, snow: true  },
-		{ seed: 2.3,  freq: 3.5, h: 0.20, ridged: true,  dist: 0.50, snow: true  },
-		{ seed: 5.7,  freq: 3.5, h: 0.26, ridged: true,  dist: 0.24, snow: false },
-		{ seed: 9.4,  freq: 6.0, h: 0.07, ridged: false, dist: 0.18, snow: false },
-	];
-	let rangeHeights: Float32Array[] = [];
+		{ seed: 11.7, freq: 2.0, h: 0.22, crest: 'reno',   dist: 1.00, snow: true  },
+		{ seed: 2.3,  freq: 3.5, h: 0.20, crest: 'ridged', dist: 0.50, snow: true  },
+		{ seed: 5.7,  freq: 3.5, h: 0.26, crest: 'ridged', dist: 0.24, snow: false },
+		{ seed: 9.4,  freq: 6.0, h: 0.07, crest: 'fbm',    dist: 0.18, snow: false },
+	] as const;
+	let rangeFields: RangeField[] = [];
 	let rangeCache: { key: string; layers: { canvas: HTMLCanvasElement; top: number }[] } = { key: '', layers: [] };
 
+	/** The traced skyline (degrees above horizontal), resampled to 0–1 across the screen. */
+	function renoCrest(xFrac: number): number {
+		const sk = renoRidge.skyline;
+		const f = xFrac * (sk.length - 1);
+		const i = Math.min(sk.length - 2, Math.floor(f));
+		const a = sk[i][1] + (sk[i + 1][1] - sk[i][1]) * (f - i);
+		const lo = Math.min(...sk.map((p) => p[1])), hi = Math.max(...sk.map((p) => p[1]));
+		return 0.25 + 0.75 * (a - lo) / (hi - lo);
+	}
+
 	function buildRangeHeights(): void {
-		rangeHeights = RANGES.map((r) => {
-			const a = new Float32Array(W);
+		rangeFields = RANGES.map((r) => {
+			const crest = new Float32Array(W);
 			for (let x = 0; x < W; x++) {
-				const n = r.ridged ? ridged1D((x / W) * r.freq + r.seed) : fbm1D((x / W) * r.freq + r.seed);
-				a[x] = n * horizonY * r.h;
+				const t = x / W;
+				const n = r.crest === 'reno'   ? renoCrest(t) + (ridged1D(t * 40 + r.seed) - 0.3) * 0.04
+				        : r.crest === 'ridged' ? ridged1D(t * r.freq + r.seed)
+				        :                        fbm1D(t * r.freq + r.seed);
+				crest[x] = n * horizonY * r.h;
 			}
-			return a;
+			return buildRangeField(W, crest, r.seed, Math.max(10, 28 * dpr));
 		});
 	}
 
@@ -613,21 +629,27 @@
 
 		const key = `${W}x${H}|${Math.round(altDeg)}|${Math.round(sxn * 40)}`;
 		if (rangeCache.key !== key) {
-			const rock: RGB = dl < 0.5 ? lerpRGB([14, 18, 35], [104, 90, 112], dl * 2) : lerpRGB([104, 90, 112], [126, 116, 102], (dl - 0.5) * 2);
-			const sunCol: RGB = lerpRGB([255, 244, 220], [255, 168, 92], golden);
+			// Sun direction: left–right from its screen position, up from altitude,
+			// and a little from beyond the ranges (it sits in the sky in front of us).
+			const alt = Math.max(2, altDeg) * Math.PI / 180;
+			const sx = (sxn - 0.5) * 2, sz = 0.35;
+			const hl = Math.hypot(sx, sz) || 1;
+			const sun: [number, number, number] = [(sx / hl) * Math.cos(alt), Math.sin(alt), (sz / hl) * Math.cos(alt)];
 			const beta = 0.3 + 0.75 * dl;
 			const month = new Date().getMonth();
 			const snowy = month >= 10 || month <= 4;                         // Nov–May on the Sierra
+			const light = {
+				sun,
+				sunCol: lerpRGB([255, 246, 228], [255, 170, 96], golden),
+				sky:    lerpRGB(zenith, horizon, 0.5),
+				night:  [14, 18, 35] as RGB,
+				dl,
+				fog:    horizon,
+			};
 			rangeCache = {
 				key,
-				layers: RANGES.map((r, i) => renderRange(W, horizonY + 2, rangeHeights[i], {
-					base:   rock,
-					lit:    lerpRGB(rock, sunCol, dl * (0.45 + 0.35 * golden)),
-					shade:  lerpRGB(rock, lerpRGB(zenith, [0, 0, 0], 0.5), 0.35 * dl),
-					fog:    horizon,
-					fogAmt: 1 - Math.exp(-beta * r.dist),
-					sunX:   sxn * W,
-					snow:   snowy && r.snow ? lerpRGB([30, 34, 52], [236, 238, 244], dl) : null,
+				layers: RANGES.map((r, i) => renderRangeField(rangeFields[i], horizonY + 2, {
+					...light, fogAmt: 1 - Math.exp(-beta * r.dist), snow: snowy && r.snow,
 				})),
 			};
 		}

@@ -111,56 +111,120 @@ export function renderMeadow(W: number, bandH: number, scale: number): HTMLCanva
 }
 
 // ── mountain ranges ───────────────────────────────────────────────────────
-export interface RangeLight {
-	base: RGB;     // rock colour at this time of day
-	lit: RGB;      // sun-facing slopes
-	shade: RGB;    // slopes facing away
-	fog: RGB;      // horizon sky colour (aerial perspective)
-	fogAmt: number;
-	sunX: number;  // px
-	snow: RGB | null;
+// Each range is a small heightfield (2026-10-22): columns across the screen,
+// rows running from the range's foot (z = 0) back to its crest (z = 1). Gullies
+// are ridged noise stretched downslope, so they run from the crest to the foot.
+// Rendering marches each column front to back like a voxel landscape, keeping a
+// y-buffer, and lights every sample from the real sun direction. Materials
+// band by height: sage at the foot, a patchy pine belt, bare rock, then snow
+// on flatter ground near the top in winter.
+
+export interface RangeField {
+	W: number;
+	Z: number;
+	h: Float32Array;      // W × Z heights, px above the base line
+	fx: Float32Array;     // W × Z material noise (forest patches, rock streaks)
+	maxH: number;
+	depthPx: number;      // world depth the Z rows span, for the slope normal
 }
 
-/**
- * One range, `heights[x]` px above `baseY` for each column. Slopes facing the
- * sun take the lit colour near the ridge, fading to the base colour lower down;
- * then the whole range is mixed toward the horizon sky by `fogAmt`.
- */
-export function renderRange(W: number, baseY: number, heights: Float32Array, L: RangeLight): { canvas: HTMLCanvasElement; top: number } {
-	let maxH = 0;
-	for (const h of heights) maxH = Math.max(maxH, h);
-	const top = Math.max(0, Math.floor(baseY - maxH - 2));
-	const c = makeCanvas(W, baseY - top + 4);
-	const ctx = c.getContext('2d')!;
-	const depth = Math.max(8, maxH * 0.55);
-	// Slope over a window of about 1% of the width; a narrower one shades the
-	// noise's pixel-scale wiggle and the range turns into vertical stripes.
-	const k = Math.max(3, Math.round(W / 120));
+const Z_ROWS = 64;
 
+export function buildRangeField(W: number, crest: Float32Array, seed: number, gullyPx: number): RangeField {
+	const Z = Z_ROWS;
+	const h = new Float32Array(W * Z), fx = new Float32Array(W * Z);
+	let maxH = 0;
 	for (let x = 0; x < W; x++) {
-		const h = heights[x];
-		const y0 = baseY - h - top;
-		const slope = (heights[Math.min(W - 1, x + k)] - heights[Math.max(0, x - k)]) / (2 * k);
-		const away = Math.sign(x - L.sunX) || 1;           // +1 when the sun is to the left
-		const facing = Math.max(-1, Math.min(1, -slope * away * 1.4));
-		const ridge = facing >= 0 ? mixRGB(L.base, L.lit, facing) : mixRGB(L.base, L.shade, -facing);
-		const g = ctx.createLinearGradient(0, y0, 0, y0 + depth);
-		g.addColorStop(0, rgb(ridge));
-		g.addColorStop(1, rgb(L.base));
-		ctx.fillStyle = g;
-		ctx.fillRect(x, y0, 1, c.height - y0);
-		if (L.snow && h > maxH * 0.7) {
-			const cap = (h - maxH * 0.7) * 0.55;
-			ctx.fillStyle = rgb(mixRGB(L.snow, ridge, facing >= 0 ? 0.05 : 0.35));
-			ctx.fillRect(x, y0, 1, cap);
+		const c = crest[x];
+		const u = x / gullyPx;
+		for (let zi = 0; zi < Z; zi++) {
+			const z = zi / (Z - 1);
+			// Gullies: ridged noise, high frequency across, low frequency downslope.
+			const warp = (noise2D(u * 0.3 + seed, z * 2) - 0.5) * 1.5;
+			const r = 1 - Math.abs(noise2D(u + warp + seed * 3.1, z * 1.6 + seed) * 2 - 1);
+			const fine = fbm2(u * 3 + seed, z * 6, 3) - 0.5;
+			// Gullies fade out toward the crest, so the skyline stays the crest line
+			// instead of growing a spike on every spur.
+			const v = c * Math.pow(z, 1.25) * (1 - 0.22 * (1 - r * r) * Math.sqrt(1 - z)) + c * 0.04 * fine * z * (1 - z);
+			h[x * Z + zi] = v;
+			fx[x * Z + zi] = fbm2(u * 1.7 + seed * 7, z * 5 + seed, 3);
+			if (v > maxH) maxH = v;
 		}
 	}
-	if (L.fogAmt > 0.005) {
-		ctx.globalCompositeOperation = 'source-atop';
-		ctx.fillStyle = `rgba(${L.fog[0] | 0},${L.fog[1] | 0},${L.fog[2] | 0},${L.fogAmt.toFixed(3)})`;
-		ctx.fillRect(0, 0, W, c.height);
-		ctx.globalCompositeOperation = 'source-over';
+	let mean = 0;
+	for (const c of crest) mean += c;
+	return { W, Z, h, fx, maxH, depthPx: (mean / W) * 1.6 };
+}
+
+export interface RangeLight {
+	sun: [number, number, number];  // unit vector: x right, y up, z away from the viewer
+	sunCol: RGB;
+	sky: RGB;      // ambient skylight
+	night: RGB;    // what the range fades to after dark
+	dl: number;    // daylight 0–1
+	fog: RGB;
+	fogAmt: number;
+	snow: boolean;
+}
+
+const SAGE: RGB = [150, 138, 104];
+const PINE: RGB = [50, 64, 46];
+const ROCK: RGB = [128, 120, 110];
+const SNOW: RGB = [236, 238, 244];
+
+export function renderRangeField(f: RangeField, baseY: number, L: RangeLight): { canvas: HTMLCanvasElement; top: number } {
+	const { W, Z, h, fx, maxH } = f;
+	const tilt = maxH * 0.12;                    // a little of the slope seen from above
+	const top = Math.max(0, Math.floor(baseY - maxH - tilt - 2));
+	const CH = Math.ceil(baseY - top + 2);
+	const c = makeCanvas(W, CH);
+	const ctx = c.getContext('2d')!;
+	const img = ctx.createImageData(W, CH);
+	const d = img.data;
+	const dz = f.depthPx / (Z - 1);
+	const [lx, ly, lz] = L.sun;
+
+	for (let x = 0; x < W; x++) {
+		let ybuf = CH;
+		const xl = Math.max(0, x - 1) * Z, xr = Math.min(W - 1, x + 1) * Z, xo = x * Z;
+		for (let zi = 0; zi < Z; zi++) {
+			const hv = h[xo + zi];
+			const yt = Math.round(baseY - top - hv - (zi / (Z - 1)) * tilt);
+			if (yt >= ybuf) continue;
+			// Normal from the heightfield gradient.
+			const dhdx = (h[xr + zi] - h[xl + zi]) / 2;
+			const dhdz = (h[xo + Math.min(Z - 1, zi + 1)] - h[xo + Math.max(0, zi - 1)]) / (2 * dz);
+			let nx = -dhdx, ny = 1, nz = -dhdz;
+			const nl = Math.hypot(nx, ny, nz);
+			nx /= nl; ny /= nl; nz /= nl;
+
+			// Material by height, broken up by noise.
+			const m = fx[xo + zi];
+			const hf = hv / maxH + (m - 0.5) * 0.18;
+			let alb = SAGE;
+			const forest = smooth(0.22, 0.32, hf) * (1 - smooth(0.6, 0.7, hf)) * smooth(0.42, 0.58, m);
+			alb = mixRGB(alb, PINE, forest);
+			alb = mixRGB(alb, ROCK, Math.max(smooth(0.62, 0.78, hf), smooth(0.75, 0.55, ny) * 0.8));
+			if (L.snow) alb = mixRGB(alb, SNOW, smooth(0.7, 0.8, hf) * smooth(0.5, 0.7, ny));
+
+			const diff = Math.max(0, nx * lx + ny * ly + nz * lz);
+			const amb = 0.35 + 0.25 * ny;
+			let col: RGB = [
+				(alb[0] / 255) * (L.sunCol[0] * diff * 0.85 + L.sky[0] * amb),
+				(alb[1] / 255) * (L.sunCol[1] * diff * 0.85 + L.sky[1] * amb),
+				(alb[2] / 255) * (L.sunCol[2] * diff * 0.85 + L.sky[2] * amb),
+			];
+			col = mixRGB(L.night, col, L.dl);
+			col = mixRGB(col, L.fog, L.fogAmt);
+
+			for (let y = Math.max(0, yt); y < ybuf; y++) {
+				const i = (y * W + x) * 4;
+				d[i] = col[0]; d[i + 1] = col[1]; d[i + 2] = col[2]; d[i + 3] = 255;
+			}
+			ybuf = Math.max(0, yt);
+		}
 	}
+	ctx.putImageData(img, 0, 0);
 	return { canvas: c, top };
 }
 
