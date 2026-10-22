@@ -252,3 +252,35 @@ Row 17/18. Steps 1–3 below are DONE (renders and Media sent, 2026-10-22 08:45)
 
 `$S` = `/tmp/claude-1000/-home-user-Projects-cwcorella-git-github-io/a292417d-d3e3-4aba-ad17-fa902c0e6aba/scratchpad`.
 
+
+## 9. After compaction: pick, clouds, timing, meadow
+
+- Media pick for `cwc-range-2`: **Niederhorn**. Committed `0d01737`. `reno-ridge.json` removed.
+- Clouds, full pass `b8e22fe`:
+  - each cloud is a cluster of puffs instead of one dome;
+  - billows at the edges, a bright rim toward the sun;
+  - drawn at full size (they used to be drawn at 0.75 and stretched).
+- Clouds, pass two `c9d00f9`:
+  - far clouds fade into the haze;
+  - a thin high layer of flatter cloud;
+  - cloud tops kept 70 px below the top of the screen, clear of the nav bar.
+- Phone timing (row 16) `897564a`, measured at 390 px wide, pixel ratio 2, CPU throttled 4×:
+  - **Cloud bakes:** 3655 ms → 630 ms in total. Density is now computed on a half-resolution grid, and only one cloud is baked per frame (about 70 ms each).
+  - **Mountain re-light:** 229 ms for all columns. It now only re-lights the columns on screen, but on a phone that is most of them. Not fixed further, because it only runs about every 2 minutes.
+  - **Loading the mountain image:** about 730 ms.
+  - **WebP:** lossless WebP is only 19% smaller than the PNG, so the mountain image stays PNG.
+- Meadow (row 19) `33e4ce7`:
+  - bigger swells in the ground (`MEADOW_WAVES` 14 m / 4 m);
+  - dry and green patches baked into the ground (block 1 B values 128–223), which `terrain.ts` reads;
+  - the painted patches over the ground turned down.
+- Renders sent to Media (15:30, 10:00, 17:55, phone). This is a show-only set: no pick is needed.
+- Not verified:
+  - The "17:55" render does not look like sunset. The render's clock is set to Pacific time while the site follows the sun at the garden, so that time may be the wrong hour for sunset. Not checked.
+  - The foreground near the bottom of the screen is still fairly even.
+  - Not checked on a real phone.
+
+| # | item | state |
+|---|---|---|
+| 16 | phone timing | **done**: `897564a` (re-light is still ~230 ms when throttled, left as is) |
+| 19 | meadow relief | **done**: `33e4ce7` |
+| 20 | clouds full pass + pass two | **done**: `b8e22fe`, `c9d00f9` |
