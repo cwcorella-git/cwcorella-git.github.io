@@ -691,6 +691,13 @@
 		return { a, k: 0.85 + 0.2 * f };
 	}
 
+	// Wrap over a FIXED span. The distance since 1970 is ~1e9 px, so a modulus
+	// that moves with the cloud's growing width throws it across the sky every frame.
+	function driftX(cloud: CloudDef, minutes: number): number {
+		const span = W + cloud.size * 2.6;   // the bake is 2.4 × size wide, ×1.05 at full growth
+		return (cloud.xFrac * W + minutes * cloud.speed) % span - cloud.size * 1.3;
+	}
+
 	// Cloud cover dims the direct sun; overcast light is flat.
 	function dimSun(c: RGB): RGB { const k = 1 - 0.7 * weather.cover; return [c[0] * k, c[1] * k, c[2] * k]; }
 
@@ -704,8 +711,7 @@
 		for (const cloud of clouds) {
 			const { a: life, k } = cloudLife(cloud, minutes);
 			if (life <= 0) continue;
-			const w    = (cloud.cache?.w ?? cloud.size) * k;
-			const cx   = (cloud.xFrac * W + minutes * cloud.speed) % (W + w);
+			const cx   = driftX(cloud, minutes);
 			const near = clamp01(1 - cloud.yFrac / 0.38);
 			const gx   = cx + (cx - sunX) * 0.15;
 			const gy   = horizonY + (0.12 + 0.8 * near) * (H - horizonY);
@@ -1118,7 +1124,7 @@
 			if (life <= 0) continue;
 			const { canvas: img } = cloud.cache;
 			const baseY = cloud.cache.baseY * k, w = cloud.cache.w * k, h = cloud.cache.h * k;
-			const rawX = (cloud.xFrac * W + minutesSinceEpoch * cloud.speed) % (W + w);
+			const rawX = driftX(cloud, minutesSinceEpoch);
 			let skyY = cloud.yFrac * horizonY * 0.84;     // base sits at this y in main canvas
 			skyY = Math.max(skyY, NAV_CLEAR * dpr + baseY * cloud.squash);   // keep the top out from behind the nav bar
 			ctx.globalAlpha = Math.min(1, 0.3 + cloud.alpha) * cloudAlpha * life;   // cores read opaque; edges stay soft in the bake
