@@ -381,5 +381,36 @@ Both rows landed in a single commit, `7894f78`, because they share `terrain.ts`.
 - Spring (Mar–Apr) and autumn (Oct–Nov) transitions have not been rendered.
 - Not yet tried on a real phone.
 
-## Resume here
+## Resume here (superseded by the one at the end)
 No rows open. Nothing is running in the background.
+
+## 13. Clouds round three: the shape landed, the rest is planned
+
+The operator chose "Back to the clouds" and then all four directions: shape, weather, sunset light, and movement. The approved plan is in `~/.claude/plans/crystalline-whistling-music.md`, and it starts with what was found:
+- every day has the same sky, because `buildScene` uses fixed seeds;
+- `renderNoiseCloud` always lights clouds from above (`ly = 1/len`), so a low sun can never light the bases;
+- the clouds drift at 6–22 px/min, too slow to see.
+
+Step 1 (shape) is `fae3df1`. It adds two tiers of turrets, a 0.35 grey band at the base and 1.3× erosion on the lit side. At 15:30 the change is visible but modest (`$S/renders/live-c3-shape.png`). It has not been sent to Media, and `timing.cjs` has not been run since the change.
+
+| # | item | state |
+|---|---|---|
+| 26 | cloud shape: turrets, grey base, crisp lit edge | **done**: `fae3df1` |
+| 27 | sunset light from below (`sunAlt` → light direction, swap `lift`, grey-blue sunset `shadow` in `CLOUD_KF`) | **in progress**: only the signature has changed |
+| 28 | weather per day (`src/lib/garden/weather.ts`, clear/fair/busy/overcast, `cover` dims the sun) + tests | **proposed** (approved in plan) |
+| 29 | movement: 25–60 px/min, a 10–20 min lifecycle for each cloud (grow, fade, reseed), shadows follow | **proposed** (approved in plan) |
+
+## Open
+- Media `cwc-foreground`, `cwc-recheck` and `cwc-season` are waiting on the operator.
+- The new cloud shape has not been checked for timing and has not been seen on a phone.
+
+## Resume here
+**Row 27, stopped mid-edit.** In `src/lib/garden/detail.ts`, `renderNoiseCloud` has gained the parameter `sunAlt = 30`; nothing else has changed, and the edit is uncommitted.
+
+Next:
+1. Replace `const len = Math.hypot(sunSide * 0.7, 1); const lx…, ly = 1 / len;` with a light angle `e = sunAlt >= 0 ? min(80, sunAlt*3.2) : max(-18, sunAlt*3)` degrees, giving `lx = sunSide*cos e` and `ly = sin e`.
+2. Set `under = 1 - smooth(-1, 4, sunAlt)`, swap `lift` by `under`, and scale the grey-base band by `(1 - under)`.
+3. In `Garden.svelte`, set the `CLOUD_KF` `alt: 0` shadow to about [120,118,150]. `drawClouds` passes `altDeg` and adds `Math.round(altDeg)` to `colorKey`.
+4. Render 17:55 Oct 22 and 16:40 Jan 15, send them to Media `cwc-clouds3`, then commit and push.
+
+After that, rows 28 and 29 in the plan's order. Nothing is running in the background. Main is pushed through `fae3df1`.
