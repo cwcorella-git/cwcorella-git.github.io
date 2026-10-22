@@ -161,7 +161,7 @@ the first `buildScene` call. The terrain then never loaded, and nothing in the c
 - The valley-haze `pool` and the sun-follows-drawn-sun lighting have never been seen rendered.
 - `c94a1ac` (Reno terrain) is what's live, and has never been checked on cwcorella.com.
 
-## Resume here
+## Resume here (superseded by the one at the end)
 
 - `main` = the last pushed doc commit; code `c94a1ac` live. The working tree is dirty with
   rows 13–14 (see Open). **Do not `git add` the code without a new atlas.**
