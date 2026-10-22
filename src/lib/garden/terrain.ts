@@ -29,6 +29,7 @@ export interface Terrain {
 	meta: TerrainMeta;
 	mask: Uint8Array;
 	meadow: Uint8Array;                                      // the camera's own ground
+	dry: Float32Array;                                       // 0–1, the meadow's baked dry-grass patches
 	nx: Float32Array; ny: Float32Array; nz: Float32Array;   // east, north, up
 	km: Float32Array;
 	elev: Float32Array;                                      // metres
@@ -51,7 +52,7 @@ export async function loadTerrain(baseUrl: string): Promise<Terrain> {
 	const N = ncol * nrow;
 	const t: Terrain = {
 		meta,
-		mask: new Uint8Array(N), meadow: new Uint8Array(N),
+		mask: new Uint8Array(N), meadow: new Uint8Array(N), dry: new Float32Array(N),
 		nx: new Float32Array(N), ny: new Float32Array(N), nz: new Float32Array(N),
 		km: new Float32Array(N), elev: new Float32Array(N),
 		hz: new Float32Array(N * 8), grain: new Float32Array(N), pool: new Float32Array(N),
@@ -62,6 +63,7 @@ export async function loadTerrain(baseUrl: string): Promise<Terrain> {
 		if (px[b1 + 2] < 128) continue;
 		t.mask[i] = 1;
 		t.meadow[i] = px[b1 + 2] < 224 ? 1 : 0;
+		if (t.meadow[i]) t.dry[i] = (px[b1 + 2] - 128) / 95;   // older bakes wrote 192: a mid patch
 		const b0 = at(0, i);
 		t.nx[i] = px[b0] / 127.5 - 1; t.ny[i] = px[b0 + 1] / 127.5 - 1; t.nz[i] = px[b0 + 2] / 127.5 - 1;
 		t.km[i] = meta.d0 * Math.exp(((px[b1] - 1) / 254) * Math.log(meta.d1 / meta.d0));
@@ -117,7 +119,8 @@ export interface TerrainLight {
 
 const MEADOW: RGB = [150, 146, 104];
 const FOREST: RGB = [48, 64, 46];
-const GRASS: RGB = [128, 136, 80];
+const GRASS: RGB = [118, 134, 72];
+const DRY: RGB = [190, 164, 100];
 const ROCK: RGB = [136, 128, 118];
 const SNOW: RGB = [238, 240, 246];
 
@@ -154,7 +157,7 @@ export function relightTerrain(t: Terrain, L: TerrainLight, out?: HTMLCanvasElem
 		const e = t.elev[i], g = t.grain[i];
 		const slope = 1 - nz;                           // 0 flat … ~1 cliff
 		let alb = MEADOW;
-		if (t.meadow[i]) alb = mix(GRASS, MEADOW, g * 0.5);
+		if (t.meadow[i]) alb = mix(mix(GRASS, MEADOW, g * 0.35), DRY, Math.min(1, t.dry[i] * 1.3));
 		else {
 			const woods = sm(f0, f0 + 150, e) * (1 - sm(f1 - 100, f1 + 100, e + g * 80)) * (0.6 + 0.4 * g) * (1 - sm(0.35, 0.6, slope));
 			alb = mix(alb, FOREST, woods);

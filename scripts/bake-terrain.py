@@ -29,7 +29,8 @@ Atlas layout (RGB, alpha 255 so canvas premultiplication cannot alter it),
 blocks of NCOL x NROW stacked vertically, row 0 = highest angle:
   block 0: normal (east, north, up) * 127.5 + 127.5
   block 1: R = distance (0 = sky; 1..255 log over d0..d1), G = elevation
-           (emin..emax over 0..255), B = 255 terrain / 0 sky
+           (emin..emax over 0..255), B = 255 terrain / 128..223 meadow
+           (its dry-patch amount) / 0 sky
   block 2..4: horizon angle (0..32 deg over 0..255), directions
            N, NE, E, SE, S, SW, W, NW in channel order, last channel unused
 terrain.json carries ang0/ang1, d0/d1, emin/emax and the region's bands.
@@ -143,7 +144,7 @@ def octaves(E, N, waves, foot, ridged):
 
 
 ROCK_WAVES = [(420, 26), (210, 14), (105, 7), (52, 3.5), (26, 1.6)]
-MEADOW_WAVES = [(260, 5), (70, 1.2), (18, 0.3), (5, 0.08), (1.4, 0.025)]
+MEADOW_WAVES = [(260, 14), (70, 4), (18, 0.3), (5, 0.08), (1.4, 0.025)]
 
 
 class Land:
@@ -267,7 +268,10 @@ def bake(name, site, cache, outdir, ncol=1600, nrow_top=280, nrow_bot=160):
     b0 = u8(n * 127.5 + 127.5)
     b0[~mask] = 0
     dcode = np.where(mask, 1 + np.log(np.maximum(m['dist'], D0) / D0) / math.log(D1 / D0) * 254, 0)
-    kind = np.where(mask, np.where(meadow, 192, 255), 0)     # B: 255 terrain, 192 meadow, 0 sky
+    # Meadow colour patches (dry grass vs green), slow noise in ground metres,
+    # carried in the meadow's B code: 128..223 = patch 0..1.
+    patch = np.clip((0.65 * vnoise(E / 150 + 3.3, Nn / 150 - 1.7) + 0.35 * vnoise(E / 40 - 8.1, Nn / 40 + 2.9) - 0.25) * 2, 0, 1)
+    kind = np.where(mask, np.where(meadow, 128 + patch * 95, 255), 0)   # B: 255 terrain, 128..223 meadow, 0 sky
     b1 = np.stack([u8(dcode), u8((m['elev'] - emin) / (emax - emin) * 255) * mask, u8(kind)], axis=-1)
     hb = u8(hz / 32 * 255)
     b4 = np.concatenate([hb[..., 6:8], np.zeros(mask.shape + (1,), np.uint8)], axis=-1)

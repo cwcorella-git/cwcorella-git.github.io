@@ -68,8 +68,9 @@ export function renderMeadow(W: number, bandH: number, scale: number): HTMLCanva
 	const p = makeCanvas(pw, ph);
 	const pctx = p.getContext('2d')!;
 	const img = pctx.createImageData(pw, ph);
-	const green: RGB = [196, 214, 168];
-	const gold:  RGB = [250, 232, 186];
+	// Faint now: the terrain bake carries the real patches (2026-10-22).
+	const green: RGB = [226, 236, 212];
+	const gold:  RGB = [252, 244, 222];
 	for (let y = 0; y < ph; y++) {
 		const t = y / ph;                                  // 0 horizon → 1 foreground
 		// Patches are stretched sideways and shrink toward the horizon.
@@ -77,7 +78,7 @@ export function renderMeadow(W: number, bandH: number, scale: number): HTMLCanva
 		for (let x = 0; x < pw; x++) {
 			const n = fbm2((x / pw) * 7 * sy * 0.35 + 3.1, t * 9 + 7.7);
 			const col = mixRGB(green, gold, smooth(0.42, 0.62, n));
-			const dark = 1 - 0.22 * t - 0.10 * smooth(0.55, 0.8, fbm2(x / pw * 18, t * 30));
+			const dark = 1 - 0.14 * t - 0.06 * smooth(0.55, 0.8, fbm2(x / pw * 18, t * 30));
 			const i = (y * pw + x) * 4;
 			img.data[i] = col[0] * dark; img.data[i + 1] = col[1] * dark; img.data[i + 2] = col[2] * dark; img.data[i + 3] = 255;
 		}
