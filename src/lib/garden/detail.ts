@@ -118,11 +118,12 @@ export function renderMeadow(W: number, bandH: number, scale: number): HTMLCanva
 // so bases come out dark and turrets lit. Two terms on top of that: "powder"
 // darkens the thin outer skin on the shadow side, and thin cloud facing the
 // sun glows (the silver lining). Rendered at full size, so it stays crisp.
+// `haze` (0 near, 1 at the horizon) flattens and fades the far ones.
 export function renderNoiseCloud(
 	size: number, aspect: number, seed: number,
-	top: RGB, shadow: RGB, sunSide: number, alpha: number,
+	top: RGB, shadow: RGB, sunSide: number, alpha: number, haze = 0,
 ): { canvas: HTMLCanvasElement; baseY: number; w: number; h: number } {
-	const CW = Math.ceil(size * 1.9), CH = Math.ceil(size * (aspect * 2.2 + 0.35));
+	const CW = Math.ceil(size * 2.4), CH = Math.ceil(size * (aspect * 2.2 + 0.35));
 	const baseY = CH - Math.ceil(size * 0.12);
 	const c = makeCanvas(CW, CH);
 	const ctx = c.getContext('2d')!;
@@ -138,7 +139,8 @@ export function renderNoiseCloud(
 		const x = -span + (2 * span * (i + 0.2 + rng() * 0.6)) / n;
 		const mid = Math.sqrt(Math.max(0, 1 - (x / (span * 1.1)) ** 2));
 		const r = (0.08 + aspect * 0.6) * (0.4 + 0.6 * mid) * (0.75 + rng() * 0.45);
-		puffs.push([x, r * (0.45 + rng() * 0.35), r]);
+		const rr = Math.max(r, (1.5 * span) / n);           // neighbours always overlap
+		puffs.push([x, rr * (0.45 + rng() * 0.35), rr]);
 	}
 	// A few smaller turrets riding on the big ones.
 	for (let i = 0; i < 3; i++) {
@@ -164,6 +166,8 @@ export function renderNoiseCloud(
 	const lx = (sunSide * 0.7) / len, ly = 1 / len;
 	const STEPS = [0.02, 0.045, 0.08, 0.13, 0.2, 0.3];
 	const rim = mixRGB(top, [255, 255, 255], 0.6);
+	// Far clouds sit in the air between: flatter light, toward the haze.
+	const far = mixRGB(top, shadow, 0.3);
 
 	for (let py = 0; py < CH; py++) {
 		const y = (baseY - py) / size;
@@ -180,7 +184,8 @@ export function renderNoiseCloud(
 			// Silver lining: thin edge, lit side.
 			const thin = 1 - smooth(0, 0.12, d);
 			col = mixRGB(col, rim, thin * T * 0.6);
-			const a = smooth(0, 0.1, d) * alpha;
+			col = mixRGB(col, far, haze * 0.55);
+			const a = smooth(0, 0.1, d) * alpha * (1 - 0.4 * haze);
 			const i = (py * CW + px) * 4;
 			img.data[i] = col[0]; img.data[i + 1] = col[1]; img.data[i + 2] = col[2]; img.data[i + 3] = a * 255;
 		}

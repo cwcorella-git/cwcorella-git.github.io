@@ -14,7 +14,8 @@
 	// ── constants ─────────────────────────────────────────────────────────────
 	const HORIZON_FRAC = 0.68;   // horizon at 68% down canvas
 	const STAR_COUNT   = 700;
-	const CLOUD_COUNT  = 7;
+	const CLOUD_COUNT  = 6;
+	const NAV_CLEAR    = 70;   // CSS px kept clear above clouds
 
 	let canvas = $state<HTMLCanvasElement | undefined>();
 
@@ -195,6 +196,8 @@
 		size:          number;   // body width in px
 		aspectRatio:   number;   // height÷width — near-horizon ~0.10, overhead ~0.42
 		alpha:         number;
+		haze:          number;   // 0 overhead … 1 at the horizon
+		squash:        number;   // drawn height ÷ baked height; <1 flattens the high layer into a sheet
 		prngseed:      number;
 		speed:         number;   // px / minute
 		cache:         { canvas: HTMLCanvasElement; baseY: number; w: number; h: number } | null;
@@ -273,6 +276,14 @@
 
 		const crng = makePRNG(0xC10DE00F);
 		clouds = [];
+		// A thin, wide, high layer first, so the cumulus pass in front of it.
+		for (let i = 0; i < 3; i++) {
+			clouds.push({
+				xFrac: crng(), yFrac: 0.03 + crng() * 0.08, size: 260 + crng() * 160, aspectRatio: 0.12,
+				alpha: 0.12 + crng() * 0.1, haze: 0.4, squash: 0.35, prngseed: Math.floor(crng() * 0x7FFFFFFF),
+				speed: 3 + crng() * 5, cache: null, cacheColorKey: '',
+			});
+		}
 		for (let i = 0; i < CLOUD_COUNT; i++) {
 			const xFrac  = crng();
 			const yFrac  = 0.05 + crng() * 0.33;  // 0 = high, 0.38 = near horizon
@@ -287,6 +298,7 @@
 			const speed      = 6 + crng() * 16;
 			clouds.push({
 				xFrac, yFrac, size, aspectRatio, alpha, prngseed, speed,
+				haze: 1 - perspFrac, squash: 1,
 				cache:         null,
 				cacheColorKey: '',
 			});
@@ -1061,14 +1073,15 @@
 		ctx.save();
 		for (const cloud of clouds) {
 			if (!cloud.cache || cloud.cacheColorKey !== colorKey) {
-				cloud.cache = renderNoiseCloud(cloud.size, cloud.aspectRatio, cloud.prngseed, top, shadow, sunSide, 1);
+				cloud.cache = renderNoiseCloud(cloud.size, cloud.aspectRatio, cloud.prngseed, top, shadow, sunSide, 1, cloud.haze);
 				cloud.cacheColorKey = colorKey;
 			}
 			const { canvas: img, baseY, w, h } = cloud.cache;
 			const rawX = (cloud.xFrac * W + minutesSinceEpoch * cloud.speed) % (W + w);
-			const skyY = cloud.yFrac * horizonY * 0.84;   // base sits at this y in main canvas
+			let skyY = cloud.yFrac * horizonY * 0.84;     // base sits at this y in main canvas
+			skyY = Math.max(skyY, NAV_CLEAR * dpr + baseY * cloud.squash);   // keep the top out from behind the nav bar
 			ctx.globalAlpha = Math.min(1, 0.3 + cloud.alpha) * cloudAlpha;   // cores read opaque; edges stay soft in the bake
-			ctx.drawImage(img, rawX - w / 2, skyY - baseY, w, h);
+			ctx.drawImage(img, rawX - w / 2, skyY - baseY * cloud.squash, w, h * cloud.squash);
 		}
 		ctx.restore();
 	}
