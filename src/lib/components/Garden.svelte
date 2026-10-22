@@ -616,7 +616,7 @@
 					fog:    horizon,
 					beta:   0.18 + 0.35 * dl,
 					snowLine: snowLineFor(m, month),
-				}, terrainLit.canvas ?? undefined, [Math.floor(c0), Math.ceil(c0 + cols)]),
+				}, terrainLit.canvas ?? undefined, [Math.floor(c0), Math.ceil(c0 + cols)], W / dpr < 800 ? 2 : 1),   // phones: half-res light
 			};
 		}
 		const top = m.nrowTop ?? m.nrow;

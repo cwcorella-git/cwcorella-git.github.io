@@ -115,8 +115,8 @@ const SNOW: RGB = [238, 240, 246];
 const sm = (a: number, b: number, x: number) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const mix = (a: RGB, b: RGB, t: number): RGB => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 
-/** `cols` limits the work to the columns on screen (a phone shows a slice). */
-export function relightTerrain(t: Terrain, L: TerrainLight, out?: HTMLCanvasElement, cols?: [number, number]): HTMLCanvasElement {
+/** `cols` limits the work to the columns on screen; `step` 2 lights at half resolution. */
+export function relightTerrain(t: Terrain, L: TerrainLight, out?: HTMLCanvasElement, cols?: [number, number], step = 1): HTMLCanvasElement {
 	const { ncol, nrow, forest } = t.meta;
 	const c = out ?? document.createElement('canvas');
 	c.width = ncol; c.height = nrow;
@@ -133,9 +133,7 @@ export function relightTerrain(t: Terrain, L: TerrainLight, out?: HTMLCanvasElem
 	const [f0, f1] = forest;
 
 	const x0 = Math.max(0, cols?.[0] ?? 0), x1 = Math.min(ncol, cols?.[1] ?? ncol);
-	for (let y = 0; y < nrow; y++) for (let x = x0; x < x1; x++) {
-		const i = y * ncol + x;
-		if (!t.mask[i]) continue;
+	const shade = (i: number) => {
 		const nz = t.nz[i];
 		let diff = Math.max(0, t.nx[i] * lx + t.ny[i] * ly + nz * lz) * sunUp;
 		// Terrain shadow: is the sun below the horizon this point sees toward it?
@@ -164,6 +162,15 @@ export function relightTerrain(t: Terrain, L: TerrainLight, out?: HTMLCanvasElem
 		col = mix(col, L.fog, Math.min(1, haze + (1 - haze) * t.pool[i] * 0.45 * Math.min(1, t.km[i] / 8)));
 		const o = i * 4;
 		d[o] = col[0]; d[o + 1] = col[1]; d[o + 2] = col[2]; d[o + 3] = 255;
+	};
+	// step 2 (phones): light one pixel in four and copy it to its neighbours,
+	// except where the neighbour's anchor is sky, so the skyline stays exact.
+	for (let y = 0; y < nrow; y++) for (let x = x0; x < x1; x++) {
+		const i = y * ncol + x;
+		if (!t.mask[i]) continue;
+		const ax = x - (x % step), a = (y - (y % step)) * ncol + ax;
+		if (a !== i && ax >= x0 && t.mask[a]) { const o = i * 4, q = a * 4; d[o] = d[q]; d[o + 1] = d[q + 1]; d[o + 2] = d[q + 2]; d[o + 3] = 255; }
+		else shade(i);
 	}
 	ctx.putImageData(img, 0, 0);
 	return c;
