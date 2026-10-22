@@ -1212,8 +1212,26 @@
 		drawPlants(ctx, fgPlants, horizonY, H, tuftLight(altDeg), plantGreen);   // near grass — in front of everything
 		drawGrain(ctx);
 		drawVignette(ctx);
+		saveAverage(timestamp);
 
 		animFrame = requestAnimationFrame(draw);
+	}
+
+	// The scene's average colour, for app.html to paint before anything mounts,
+	// so a reload opens on the garden's colour rather than the default theme.
+	let avgCanvas: HTMLCanvasElement | null = null;
+	let lastAvgAt = -1e9;
+	function saveAverage(timestamp: number): void {
+		if (!canvas || !terrain || timestamp - lastAvgAt < 20_000) return;
+		lastAvgAt = timestamp;
+		avgCanvas ??= Object.assign(document.createElement('canvas'), { width: 16, height: 16 });
+		const a = avgCanvas.getContext('2d', { willReadFrequently: true })!;
+		a.drawImage(canvas, 0, 0, 16, 16);
+		const d = a.getImageData(0, 0, 16, 16).data;
+		const sum = [0, 0, 0];
+		for (let i = 0; i < d.length; i += 4) { sum[0] += d[i]; sum[1] += d[i + 1]; sum[2] += d[i + 2]; }
+		const rgb = sum.map((v) => Math.round(v / 256));
+		try { localStorage.setItem('cwc-paint-bg', JSON.stringify({ at: Date.now(), rgb })); } catch { /* ignore */ }
 	}
 
 	function resize(): void {

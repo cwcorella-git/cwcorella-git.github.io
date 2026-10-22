@@ -4,6 +4,7 @@
 	import { themeState } from '$lib/admin/theme.svelte';
 	import { lightFrame, rgbCss } from '$lib/admin/contrast';
 	import { skyColorsAt } from '$lib/garden/backdrop';
+	import { glassTune, tuneAlpha } from '$lib/admin/glassTune.svelte';
 
 	// ── constants ─────────────────────────────────────────────────────────────
 	const HORIZON_FRAC = 0.68;
@@ -365,10 +366,13 @@
 	let lastPaletteVer = -1;
 	let firstFrame     = true;
 	let lastDarkGlass  = false;
+	let lastTuneVer    = -1;
+	let lastSaved      = 0;
 
 	function updateTheme(altDeg: number): void {
-		const paletteChanged = themeState.version !== lastPaletteVer;
+		const paletteChanged = themeState.version !== lastPaletteVer || glassTune.version !== lastTuneVer;
 		if (!paletteChanged && Math.abs(altDeg - lastThemeAlt) < 0.4) return;
+		lastTuneVer    = glassTune.version;
 		lastThemeAlt   = altDeg;
 		lastPaletteVer = themeState.version;
 
@@ -393,23 +397,37 @@
 		const f = lightFrame(themeState.palette, dl, [mid, lower]);
 		const [gr, gg, gb] = f.glass;
 		r.style.setProperty('--body-bg',      rgbCss(f.ground));
-		r.style.setProperty('--glass-bg',     `rgba(${gr},${gg},${gb},${f.glassAlpha.toFixed(2)})`);
-		r.style.setProperty('--glass-border', `rgba(${gr},${gg},${gb},${(0.40*dl + 0.15*(1-dl)).toFixed(2)})`);
-		r.style.setProperty('--glass-nav-bg', `rgba(${gr},${gg},${gb},${(0.30*dl + 0.52*(1-dl)).toFixed(2)})`);
+		const g = glassTune;
+		r.style.setProperty('--glass-bg',     `rgba(${gr},${gg},${gb},${tuneAlpha(f.glassAlpha, g.card)})`);
+		r.style.setProperty('--glass-border', `rgba(${gr},${gg},${gb},${tuneAlpha(0.40*dl + 0.15*(1-dl), g.border)})`);
+		r.style.setProperty('--glass-nav-bg', `rgba(${gr},${gg},${gb},${tuneAlpha(0.30*dl + 0.52*(1-dl), g.card)})`);
+		r.style.setProperty('--glass-blur',       `blur(${g.cardBlur}px)`);
+		r.style.setProperty('--glass-blur-nav',   `blur(${Math.round(g.cardBlur * 0.9)}px)`);
+		r.style.setProperty('--glass-blur-heavy', `blur(${g.menuBlur}px)`);
 		r.style.setProperty('--clr-text', rgbCss(f.text));
 		r.style.setProperty('--clr-meta', rgbCss(f.meta));
 		r.style.setProperty('--pal-lib-link', rgbCss(f.accent));
 
 		// Overlays + panels also track sky so they match the page at all times of day
-		r.style.setProperty('--glass-bg-dark',     `rgba(${gr},${gg},${gb},${(0.72*dl + 0.88*(1-dl)).toFixed(2)})`);
-		r.style.setProperty('--glass-border-dark', `rgba(${gr},${gg},${gb},${(0.38*dl + 0.22*(1-dl)).toFixed(2)})`);
-		r.style.setProperty('--glass-bg-heavy',    `rgba(${gr},${gg},${gb},${(0.78*dl + 0.92*(1-dl)).toFixed(2)})`);
+		r.style.setProperty('--glass-bg-dark',     `rgba(${gr},${gg},${gb},${tuneAlpha(0.72*dl + 0.88*(1-dl), g.menu)})`);
+		r.style.setProperty('--glass-border-dark', `rgba(${gr},${gg},${gb},${tuneAlpha(0.38*dl + 0.22*(1-dl), g.border)})`);
+		r.style.setProperty('--glass-bg-heavy',    `rgba(${gr},${gg},${gb},${tuneAlpha(0.78*dl + 0.92*(1-dl), g.menu)})`);
 
 		r.style.setProperty('--clr-dark-text', rgbCss(f.text));
 
 		if (darkPanelDay && darkPanelNight) {
 			const [pr, pg, pb] = lerpRGB(darkPanelDay as RGB, darkPanelNight as RGB, 1 - dl);
 			r.style.setProperty('--dark-panel-rgb', `${pr},${pg},${pb}`);
+		}
+
+		// app.html replays these on the next load so the first paint is not the default theme.
+		if (Date.now() - lastSaved > 30_000) {
+			lastSaved = Date.now();
+			const vars: Record<string, string> = {};
+			for (const k of ['--clr-text', '--clr-meta', '--clr-dark-text', '--glass-bg', '--glass-border', '--glass-nav-bg',
+				'--glass-bg-dark', '--glass-border-dark', '--glass-bg-heavy', '--glass-blur', '--glass-blur-nav', '--glass-blur-heavy', '--pal-lib-link'])
+				vars[k] = r.style.getPropertyValue(k);
+			try { localStorage.setItem('cwc-paint-vars', JSON.stringify({ at: Date.now(), vars })); } catch { /* ignore */ }
 		}
 
 		// Debug: log what we actually set

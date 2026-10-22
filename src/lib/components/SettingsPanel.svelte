@@ -5,6 +5,15 @@
 	import { importRawKey } from '$lib/admin/crypto';
 	import { sealContentKey } from '$lib/admin/tlock';
 	import { toast } from '$lib/admin/toast.svelte';
+	import { glassTune, setGlass, resetGlass, type GlassTune } from '$lib/admin/glassTune.svelte';
+
+	const GLASS_SLIDERS: { key: keyof GlassTune; label: string; min: number; max: number; step: number; unit: string }[] = [
+		{ key: 'card',     label: 'card opacity', min: 0,   max: 3,  step: 0.05, unit: '×' },
+		{ key: 'cardBlur', label: 'card blur',    min: 0,   max: 48, step: 1,    unit: 'px' },
+		{ key: 'border',   label: 'borders',      min: 0,   max: 3,  step: 0.05, unit: '×' },
+		{ key: 'menu',     label: 'menu opacity', min: 0.2, max: 1.4, step: 0.02, unit: '×' },
+		{ key: 'menuBlur', label: 'menu blur',    min: 0,   max: 48, step: 1,    unit: 'px' },
+	];
 
 	let { onLogoutRequest }: { onLogoutRequest: () => void } = $props();
 
@@ -198,6 +207,20 @@
 		<p class="tlock-hint">locks key to drand · unlocks 2095-02-13</p>
 	</section>
 
+	<!-- Glass -->
+	<section class="section">
+		<p class="section-label">glass</p>
+		{#each GLASS_SLIDERS as sl (sl.key)}
+			<label class="slider-row">
+				<span class="slider-label">{sl.label}</span>
+				<input type="range" min={sl.min} max={sl.max} step={sl.step} value={glassTune[sl.key]}
+					oninput={(e) => setGlass({ [sl.key]: +e.currentTarget.value })} />
+				<span class="slider-val">{glassTune[sl.key]}{sl.unit}</span>
+			</label>
+		{/each}
+		<button class="glass-reset" onclick={resetGlass}>reset</button>
+	</section>
+
 	<!-- Logout -->
 	<section class="section section-logout">
 		<button class="logout-btn" onclick={onLogoutRequest}>logout</button>
@@ -212,9 +235,11 @@
 		z-index: 100;
 		background: var(--glass-bg-dark);
 		border: 1px solid var(--glass-border-dark);
-		backdrop-filter: var(--glass-blur);
-		-webkit-backdrop-filter: var(--glass-blur);
+		backdrop-filter: var(--glass-blur-heavy);
+		-webkit-backdrop-filter: var(--glass-blur-heavy);
 		padding: 0.85rem 0.9rem;
+		max-height: calc(100vh - 5rem);
+		overflow-y: auto;
 		width: 240px;
 		display: flex;
 		flex-direction: column;
@@ -245,6 +270,30 @@
 		color: var(--clr-dark-text);
 		opacity: 0.45;
 		margin: 0;
+	}
+
+	.slider-row {
+		display: grid;
+		grid-template-columns: 5.2rem 1fr 2.6rem;
+		align-items: center;
+		gap: 0.4rem;
+		font-family: var(--font-ui);
+		font-size: 0.62rem;
+		color: var(--clr-dark-text);
+	}
+	.slider-row input { width: 100%; min-width: 0; accent-color: rgb(var(--dark-panel-rgb)); }
+	.slider-val { text-align: right; opacity: 0.7; font-variant-numeric: tabular-nums; }
+	.glass-reset {
+		align-self: flex-end;
+		background: none;
+		border: 1px solid rgba(var(--dark-panel-rgb), 0.2);
+		color: var(--clr-dark-text);
+		font-family: var(--font-ui);
+		font-size: 0.55rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		padding: 0.2rem 0.6rem;
+		cursor: pointer;
 	}
 
 	.field-row {
