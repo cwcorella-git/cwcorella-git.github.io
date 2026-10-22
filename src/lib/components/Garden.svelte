@@ -175,6 +175,7 @@
 		cache:         { canvas: HTMLCanvasElement; baseY: number; w: number; h: number } | null;
 		cacheColorKey: string;
 		grey?:         boolean;  // an overcast deck: baked in the shadow colour
+		life?:         { seed: number; phase: number; period: number; cycle: number };   // cumulus form and fade
 	}
 
 	interface CirrusDef {
@@ -233,7 +234,7 @@
 				size: over ? 620 + crng() * 300 : 260 + crng() * 160, aspectRatio: over ? 0.2 : 0.12,
 				alpha: over ? 0.5 + crng() * 0.15 : 0.12 + crng() * 0.1, haze: over ? 0.5 : 0.4, grey: over,
 				squash: over ? 0.45 : 0.35, prngseed: Math.floor(crng() * 0x7FFFFFFF),
-				speed: 3 + crng() * 5, cache: null, cacheColorKey: '',
+				speed: (10 + crng() * 10) * dpr, cache: null, cacheColorKey: '',
 			});
 		}
 		for (let i = 0; i < weather.cumulus; i++) {
@@ -247,10 +248,11 @@
 			const aspectRatio = 0.20 + perspFrac * 0.32;   // 0.20 modest sliver → 0.52 tall dome
 			const alpha      = (0.52 + crng() * 0.32) * (0.38 + perspFrac * 0.62);
 			const prngseed   = Math.floor(crng() * 0x7FFFFFFF);
-			const speed      = 6 + crng() * 16;
+			const speed      = (25 + crng() * 35) * dpr * (0.6 + 0.4 * perspFrac);   // nearer clouds cross faster
 			clouds.push({
 				xFrac, yFrac, size, aspectRatio, alpha, prngseed, speed,
 				haze: 1 - perspFrac, squash: 1,
+				life: { seed: prngseed, phase: crng(), period: 10 + crng() * 10, cycle: -1 },
 				cache:         null,
 				cacheColorKey: '',
 			});
@@ -266,7 +268,7 @@
 				angle:    (cirrng() - 0.5) * 0.28,
 				alpha:    0.22 + cirrng() * 0.30,
 				prngseed: Math.floor(cirrng() * 0x7FFFFFFF),
-				speed:    2 + cirrng() * 5,
+				speed:    (8 + cirrng() * 8) * dpr,
 				cache:    null,
 				cacheColorKey: '',
 			});
@@ -671,6 +673,24 @@
 	// ── draw: cloud shadows ───────────────────────────────────────────────────
 	// Soft shadows drifting over the ground with their clouds. Overhead clouds
 	// shade the foreground; clouds near the horizon shade the far field.
+	// A cumulus forms, grows and fades over its period; at the end of each
+	// cycle it comes back as a new cloud somewhere else (new seed, new x),
+	// rebaked under drawClouds' one-bake-per-frame budget.
+	function cloudLife(cloud: CloudDef, minutes: number): { a: number; k: number } {
+		const L = cloud.life;
+		if (!L) return { a: 1, k: 1 };
+		const t = minutes / L.period + L.phase, n = Math.floor(t), f = t - n;
+		if (n !== L.cycle) {
+			L.cycle = n;
+			const r = makePRNG(L.seed ^ Math.imul(n, 0x9E3779B1));
+			cloud.prngseed = Math.floor(r() * 0x7FFFFFFF);
+			cloud.xFrac = r();
+			cloud.cache = null;
+		}
+		const a = smoothstep(clamp01(f / 0.15)) * smoothstep(clamp01((1 - f) / 0.2));
+		return { a, k: 0.85 + 0.2 * f };
+	}
+
 	// Cloud cover dims the direct sun; overcast light is flat.
 	function dimSun(c: RGB): RGB { const k = 1 - 0.7 * weather.cover; return [c[0] * k, c[1] * k, c[2] * k]; }
 
@@ -682,16 +702,18 @@
 		ctx.save();
 		ctx.beginPath(); ctx.rect(0, horizonY, W, H - horizonY); ctx.clip();
 		for (const cloud of clouds) {
-			const w    = cloud.cache?.w ?? cloud.size;
+			const { a: life, k } = cloudLife(cloud, minutes);
+			if (life <= 0) continue;
+			const w    = (cloud.cache?.w ?? cloud.size) * k;
 			const cx   = (cloud.xFrac * W + minutes * cloud.speed) % (W + w);
 			const near = clamp01(1 - cloud.yFrac / 0.38);
 			const gx   = cx + (cx - sunX) * 0.15;
 			const gy   = horizonY + (0.12 + 0.8 * near) * (H - horizonY);
-			const rx   = cloud.size * (0.7 + 0.9 * near);
+			const rx   = cloud.size * k * (0.7 + 0.9 * near);
 			const ry   = rx * (0.10 + 0.12 * near);
 			const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
-			g.addColorStop(0,   `rgba(10,16,30,${(0.24 * sun * cloud.alpha).toFixed(3)})`);
-			g.addColorStop(0.6, `rgba(10,16,30,${(0.12 * sun * cloud.alpha).toFixed(3)})`);
+			g.addColorStop(0,   `rgba(10,16,30,${(0.24 * sun * cloud.alpha * life).toFixed(3)})`);
+			g.addColorStop(0.6, `rgba(10,16,30,${(0.12 * sun * cloud.alpha * life).toFixed(3)})`);
 			g.addColorStop(1,   'rgba(10,16,30,0)');
 			ctx.save();
 			ctx.translate(gx, gy);
@@ -1086,17 +1108,20 @@
 		let budget = 1;
 		ctx.save();
 		for (const cloud of clouds) {
+			const { a: life, k } = cloudLife(cloud, minutesSinceEpoch);
 			if ((!cloud.cache || cloud.cacheColorKey !== colorKey) && budget > 0) {
 				budget--;
 				cloud.cache = renderNoiseCloud(cloud.size, cloud.aspectRatio, cloud.prngseed, cloud.grey ? lerpRGB(top, shadow, 0.55) : top, shadow, sunSide, 1, cloud.haze, altDeg);
 				cloud.cacheColorKey = colorKey;
 			}
 			if (!cloud.cache) continue;
-			const { canvas: img, baseY, w, h } = cloud.cache;
+			if (life <= 0) continue;
+			const { canvas: img } = cloud.cache;
+			const baseY = cloud.cache.baseY * k, w = cloud.cache.w * k, h = cloud.cache.h * k;
 			const rawX = (cloud.xFrac * W + minutesSinceEpoch * cloud.speed) % (W + w);
 			let skyY = cloud.yFrac * horizonY * 0.84;     // base sits at this y in main canvas
 			skyY = Math.max(skyY, NAV_CLEAR * dpr + baseY * cloud.squash);   // keep the top out from behind the nav bar
-			ctx.globalAlpha = Math.min(1, 0.3 + cloud.alpha) * cloudAlpha;   // cores read opaque; edges stay soft in the bake
+			ctx.globalAlpha = Math.min(1, 0.3 + cloud.alpha) * cloudAlpha * life;   // cores read opaque; edges stay soft in the bake
 			ctx.drawImage(img, rawX - w / 2, skyY - baseY * cloud.squash, w, h * cloud.squash);
 		}
 		ctx.restore();
