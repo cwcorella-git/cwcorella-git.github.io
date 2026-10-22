@@ -10,12 +10,12 @@
 	import { isUnlockDay } from '$lib/admin/tlock';
 	import { toast } from '$lib/admin/toast.svelte';
 	import { renderTreeArt, drawTreeArt, clumpsFromTips, broadleafShape, pineShape, juniperShape, cottonwoodFoliage, PINE_FOLIAGE, JUNIPER_FOLIAGE, type TreeArt, type Seg } from '$lib/garden/treeArt';
+	import { weatherFor, type Weather } from '$lib/garden/weather';
 	import { renderMeadow, renderNoiseCloud, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
 
 	// ── constants ─────────────────────────────────────────────────────────────
 	const HORIZON_FRAC = 0.68;   // horizon at 68% down canvas
 	const STAR_COUNT   = 700;
-	const CLOUD_COUNT  = 6;
 	const NAV_CLEAR    = 70;   // CSS px kept clear above clouds
 
 	let canvas = $state<HTMLCanvasElement | undefined>();
@@ -174,6 +174,7 @@
 		speed:         number;   // px / minute
 		cache:         { canvas: HTMLCanvasElement; baseY: number; w: number; h: number } | null;
 		cacheColorKey: string;
+		grey?:         boolean;  // an overcast deck: baked in the shadow colour
 	}
 
 	interface CirrusDef {
@@ -212,6 +213,68 @@
 	let meadow: HTMLCanvasElement | null = null;   // multiply layer over the ground band
 	let grain: CanvasPattern | null = null;
 
+	// Today's clouds, from weatherFor: the seeds include the date, so each day
+	// has its own sky. Rebuilt by draw() when the date changes.
+	let weather: Weather = weatherFor(new Date());
+	let weatherDay = '';
+	function buildClouds(): void {
+		const now = new Date();
+		weatherDay = now.toDateString();
+		weather = weatherFor(now);
+		const crng = makePRNG(weather.seed);
+		const over = weather.kind === 'overcast';
+		clouds = [];
+		// A thin, wide, high layer first, so the cumulus pass in front of it.
+		// Overcast: wider, lower and denser, lying across the sky.
+		for (let i = 0; i < weather.sheets; i++) {
+			clouds.push({
+				xFrac: over ? i / weather.sheets + crng() * 0.1 : crng(),
+				yFrac: over ? 0.02 + crng() * 0.12 : 0.03 + crng() * 0.08,
+				size: over ? 620 + crng() * 300 : 260 + crng() * 160, aspectRatio: over ? 0.2 : 0.12,
+				alpha: over ? 0.5 + crng() * 0.15 : 0.12 + crng() * 0.1, haze: over ? 0.5 : 0.4, grey: over,
+				squash: over ? 0.45 : 0.35, prngseed: Math.floor(crng() * 0x7FFFFFFF),
+				speed: 3 + crng() * 5, cache: null, cacheColorKey: '',
+			});
+		}
+		for (let i = 0; i < weather.cumulus; i++) {
+			const xFrac  = crng();
+			const yFrac  = 0.05 + crng() * 0.33;  // 0 = high, 0.38 = near horizon
+
+			// Perspective: clouds high in sky are taller + more opaque.
+			// perspFrac = 1 overhead, 0 near horizon.
+			const perspFrac  = 1 - yFrac / 0.38;
+			const size       = (110 + crng() * 130) * (0.50 + perspFrac * 0.50) * weather.cumulusSize;
+			const aspectRatio = 0.20 + perspFrac * 0.32;   // 0.20 modest sliver → 0.52 tall dome
+			const alpha      = (0.52 + crng() * 0.32) * (0.38 + perspFrac * 0.62);
+			const prngseed   = Math.floor(crng() * 0x7FFFFFFF);
+			const speed      = 6 + crng() * 16;
+			clouds.push({
+				xFrac, yFrac, size, aspectRatio, alpha, prngseed, speed,
+				haze: 1 - perspFrac, squash: 1,
+				cache:         null,
+				cacheColorKey: '',
+			});
+		}
+
+		const cirrng = makePRNG(weather.seed ^ 0xC19C1991);
+		cirrus = [];
+		for (let i = 0; i < weather.cirrus; i++) {
+			cirrus.push({
+				xFrac:    cirrng(),
+				yFrac:    0.03 + cirrng() * 0.15,
+				width:    130 + cirrng() * 220,
+				angle:    (cirrng() - 0.5) * 0.28,
+				alpha:    0.22 + cirrng() * 0.30,
+				prngseed: Math.floor(cirrng() * 0x7FFFFFFF),
+				speed:    2 + cirrng() * 5,
+				cache:    null,
+				cacheColorKey: '',
+			});
+		}
+		terrainLit = { key: '', canvas: terrainLit.canvas };
+		treeCache.key = '';
+	}
+
 	function buildScene(cw: number, ch: number, hy: number): void {
 		const rng = makePRNG(0xCAFEBABE);
 		stars = [];
@@ -246,51 +309,7 @@
 			});
 		}
 
-		const crng = makePRNG(0xC10DE00F);
-		clouds = [];
-		// A thin, wide, high layer first, so the cumulus pass in front of it.
-		for (let i = 0; i < 3; i++) {
-			clouds.push({
-				xFrac: crng(), yFrac: 0.03 + crng() * 0.08, size: 260 + crng() * 160, aspectRatio: 0.12,
-				alpha: 0.12 + crng() * 0.1, haze: 0.4, squash: 0.35, prngseed: Math.floor(crng() * 0x7FFFFFFF),
-				speed: 3 + crng() * 5, cache: null, cacheColorKey: '',
-			});
-		}
-		for (let i = 0; i < CLOUD_COUNT; i++) {
-			const xFrac  = crng();
-			const yFrac  = 0.05 + crng() * 0.33;  // 0 = high, 0.38 = near horizon
-
-			// Perspective: clouds high in sky are taller + more opaque.
-			// perspFrac = 1 overhead, 0 near horizon.
-			const perspFrac  = 1 - yFrac / 0.38;
-			const size       = (110 + crng() * 130) * (0.50 + perspFrac * 0.50);
-			const aspectRatio = 0.20 + perspFrac * 0.32;   // 0.20 modest sliver → 0.52 tall dome
-			const alpha      = (0.52 + crng() * 0.32) * (0.38 + perspFrac * 0.62);
-			const prngseed   = Math.floor(crng() * 0x7FFFFFFF);
-			const speed      = 6 + crng() * 16;
-			clouds.push({
-				xFrac, yFrac, size, aspectRatio, alpha, prngseed, speed,
-				haze: 1 - perspFrac, squash: 1,
-				cache:         null,
-				cacheColorKey: '',
-			});
-		}
-
-		const cirrng = makePRNG(0xC19C1991);
-		cirrus = [];
-		for (let i = 0; i < 6; i++) {
-			cirrus.push({
-				xFrac:    cirrng(),
-				yFrac:    0.03 + cirrng() * 0.15,
-				width:    130 + cirrng() * 220,
-				angle:    (cirrng() - 0.5) * 0.28,
-				alpha:    0.22 + cirrng() * 0.30,
-				prngseed: Math.floor(cirrng() * 0x7FFFFFFF),
-				speed:    2 + cirrng() * 5,
-				cache:    null,
-				cacheColorKey: '',
-			});
-		}
+		buildClouds();
 
 		terrainLit = { key: '', canvas: terrainLit.canvas };
 		shadowCache = { key: '', canvas: null };
@@ -607,12 +626,12 @@
 		const cols = (span / total) * m.ncol;
 		const c0 = (m.ncol - cols) / 2;
 		const doy = dayOfYear(new Date());
-		const key = `${Math.round(altDeg * 2)}|${Math.round(az)}|${doy}|${Math.round(c0)}`;
+		const key = `${Math.round(altDeg * 2)}|${Math.round(az)}|${doy}|${Math.round(c0)}|${weather.kind}`;
 		if (terrainLit.key !== key) {
 			const L: TerrainLight = {
 				az, alt: altDeg,
-				sunCol: lerpRGB([255, 246, 228], [255, 170, 96], golden),
-				sky:    lerpRGB(zenith, horizon, 0.5),
+				sunCol: dimSun(lerpRGB([255, 246, 228], [255, 170, 96], golden)),
+				sky:    lerpRGB(lerpRGB(zenith, horizon, 0.5), [150, 152, 158], weather.cover * 0.4),
 				night:  [14, 18, 35],
 				dl,
 				fog:    horizon,
@@ -652,8 +671,11 @@
 	// ── draw: cloud shadows ───────────────────────────────────────────────────
 	// Soft shadows drifting over the ground with their clouds. Overhead clouds
 	// shade the foreground; clouds near the horizon shade the far field.
+	// Cloud cover dims the direct sun; overcast light is flat.
+	function dimSun(c: RGB): RGB { const k = 1 - 0.7 * weather.cover; return [c[0] * k, c[1] * k, c[2] * k]; }
+
 	function drawCloudShadows(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
-		const sun = clamp01((altDeg - 2) / 12);
+		const sun = clamp01((altDeg - 2) / 12) * (1 - weather.cover / 0.6);
 		if (sun < 0.02) return;
 		const minutes = Date.now() / 60000;
 		const sunX = sxn * W;
@@ -874,7 +896,7 @@
 		const golden = altDeg > -4 ? clamp01(1 - Math.abs(altDeg - 3) / 9) : 0;
 		const L = {
 			sunDx:  0,
-			sunCol: lerpRGB([255, 246, 228], [255, 170, 96], golden),
+			sunCol: dimSun(lerpRGB([255, 246, 228], [255, 170, 96], golden)),
 			dl,
 			night:  [14, 17, 24] as RGB,
 		};
@@ -956,6 +978,8 @@
 		const sinAlt  = Math.max(0, Math.sin(altDeg * Math.PI / 180));
 		const sunY    = horizonY - sinAlt * horizonY * 0.92;
 		const isGolden = altDeg < 12;
+		ctx.save();
+		ctx.globalAlpha = 1 - 0.75 * weather.cover;   // behind overcast, a pale disc
 
 		// Glow
 		const glowR     = isGolden ? Math.min(W * 0.35, 260) : 90;
@@ -992,6 +1016,7 @@
 			ctx.fillRect(0, 0, W, H);
 			ctx.restore();
 		}
+		ctx.restore();
 	}
 
 	// ── draw: Belt of Venus ────────────────────────────────────────────────────
@@ -1063,7 +1088,7 @@
 		for (const cloud of clouds) {
 			if ((!cloud.cache || cloud.cacheColorKey !== colorKey) && budget > 0) {
 				budget--;
-				cloud.cache = renderNoiseCloud(cloud.size, cloud.aspectRatio, cloud.prngseed, top, shadow, sunSide, 1, cloud.haze, altDeg);
+				cloud.cache = renderNoiseCloud(cloud.size, cloud.aspectRatio, cloud.prngseed, cloud.grey ? lerpRGB(top, shadow, 0.55) : top, shadow, sunSide, 1, cloud.haze, altDeg);
 				cloud.cacheColorKey = colorKey;
 			}
 			if (!cloud.cache) continue;
@@ -1176,7 +1201,14 @@
 
 		ctx.clearRect(0, 0, W, H);
 
+		if (now.toDateString() !== weatherDay) buildClouds();
 		drawSky(ctx, altDeg);
+		if (weather.cover > 0.3) {
+			// An overcast sky is greyed toward the cloud shadow colour.
+			const { shadow } = getCloudColors(altDeg);
+			ctx.fillStyle = css(lerpRGB(shadow, [196, 198, 204], clamp01((altDeg + 2) / 14)), 0.9 * weather.cover);
+			ctx.fillRect(0, 0, W, horizonY);
+		}
 		drawStars(ctx, altDeg, time);
 		drawMoon(ctx, altDeg, sxn);
 		drawCircumsolarGlow(ctx, altDeg, sxn);
