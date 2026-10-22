@@ -5,7 +5,21 @@
 	import { importRawKey } from '$lib/admin/crypto';
 	import { sealContentKey } from '$lib/admin/tlock';
 	import { toast } from '$lib/admin/toast.svelte';
-	import { glassTune, setGlass, resetGlass, type GlassTune } from '$lib/admin/glassTune.svelte';
+	import { glassTune, setGlass, resetGlass, glassJson, type GlassTune } from '$lib/admin/glassTune.svelte';
+
+	let glassPublishing = $state(false);
+	async function publishGlass() {
+		if (!adminState.pat) { toast.error('No PAT loaded — cannot commit.'); return; }
+		glassPublishing = true;
+		try {
+			await commitFiles(adminState.pat, [{ path: 'static/glass.json', content: glassJson() }], 'chore(glass): site-wide glass settings');
+			toast.success('Glass saved for everyone — live after the next deploy.');
+		} catch (e) {
+			toast.error(e instanceof Error ? e.message : 'Save failed.');
+		} finally {
+			glassPublishing = false;
+		}
+	}
 
 	const GLASS_SLIDERS: { key: keyof GlassTune; label: string; min: number; max: number; step: number; unit: string }[] = [
 		{ key: 'card',     label: 'card opacity', min: 0,   max: 3,  step: 0.05, unit: '×' },
@@ -218,7 +232,12 @@
 				<span class="slider-val">{glassTune[sl.key]}{sl.unit}</span>
 			</label>
 		{/each}
-		<button class="glass-reset" onclick={resetGlass}>reset</button>
+		<div class="glass-actions">
+			<button class="glass-reset" onclick={resetGlass} title="back to the site's values">reset</button>
+			<button class="glass-reset" onclick={publishGlass} disabled={glassPublishing}>
+				{glassPublishing ? 'saving…' : 'save for everyone'}
+			</button>
+		</div>
 	</section>
 
 	<!-- Logout -->
@@ -283,8 +302,9 @@
 	}
 	.slider-row input { width: 100%; min-width: 0; accent-color: rgb(var(--dark-panel-rgb)); }
 	.slider-val { text-align: right; opacity: 0.7; font-variant-numeric: tabular-nums; }
+	.glass-actions { display: flex; justify-content: flex-end; gap: 0.4rem; }
+	.glass-reset:disabled { opacity: 0.5; cursor: default; }
 	.glass-reset {
-		align-self: flex-end;
 		background: none;
 		border: 1px solid rgba(var(--dark-panel-rgb), 0.2);
 		color: var(--clr-dark-text);

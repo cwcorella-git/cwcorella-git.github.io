@@ -4,7 +4,8 @@
 	import { themeState } from '$lib/admin/theme.svelte';
 	import { lightFrame, rgbCss } from '$lib/admin/contrast';
 	import { skyColorsAt } from '$lib/garden/backdrop';
-	import { glassTune, tuneAlpha } from '$lib/admin/glassTune.svelte';
+	import { glassTune, tuneAlpha, loadSiteGlass } from '$lib/admin/glassTune.svelte';
+	import { base } from '$app/paths';
 
 	// ── constants ─────────────────────────────────────────────────────────────
 	const HORIZON_FRAC = 0.68;
@@ -468,6 +469,8 @@
 	}
 
 	onMount(() => {
+		loadSiteGlass(base);
+
 		// Initialize CSS vars immediately
 		const now = new Date();
 		const altDeg = sunAltitudeDeg(now);
