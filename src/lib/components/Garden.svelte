@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { base } from '$app/paths';
+	import { loadTerrain, relightTerrain, sunAzimuthDeg, NCOL, NROW, ANG0, ANG1, type Terrain } from '$lib/garden/terrain';
 	import { makeGrassTuft, makeFern, tickWind, drawPlants, applyMouseForce, type PlantInstance } from '$lib/garden/plants';
 	import { generateFgTree, loadFgTreeFromCache, saveFgTreeToCache, clearFgTreeCache, generateBgTree, loadBgTreeFromCache, saveBgTreeToCache, drawTree, drawLeaves, type TreeSegment } from '$lib/garden/tree';
 	import { loadGardenState, saveGardenState, creditVisit, accrueElapsedDays, growthFactor, treeGrowthFactor, addAgeUnits } from '$lib/garden/state';
@@ -595,6 +597,9 @@
 		{ seed: 9.4,  freq: 6.0, h: 0.07, crest: 'fbm',    dist: 0.18, snow: false },
 	] as const;
 	let rangeFields: RangeField[] = [];
+	// The real terrain (terrain.ts) replaces the noise ranges once its atlas loads.
+	let terrain: Terrain | null = null;
+	let terrainLit: { key: string; canvas: HTMLCanvasElement | null } = { key: '', canvas: null };
 	let rangeCache: { key: string; layers: { canvas: HTMLCanvasElement; top: number }[] } = { key: '', layers: [] };
 
 	/** The traced skyline (degrees above horizontal), resampled to 0–1 across the screen. */
@@ -628,6 +633,9 @@
 		const golden = altDeg > -4 ? clamp01(1 - Math.abs(altDeg - 3) / 9) : 0;
 		const { horizon, zenith } = getSkyColors(altDeg);
 
+		if (terrain) {
+			drawRealTerrain(ctx, terrain, altDeg, dl, golden, horizon, zenith);
+		} else {
 		const key = `${W}x${H}|${Math.round(altDeg)}|${Math.round(sxn * 40)}`;
 		if (rangeCache.key !== key) {
 			// Sun direction: left–right from its screen position, up from altitude,
@@ -655,11 +663,43 @@
 			};
 		}
 		for (const l of rangeCache.layers) ctx.drawImage(l.canvas, 0, l.top);
+		}
 
 		// Rolling hills, filled to the bottom: this is the ground the meadow multiplies over.
 		const hill: RGB = dl < 0.5 ? lerpRGB([6, 8, 16], [52, 54, 40], dl * 2) : lerpRGB([52, 54, 40], [150, 148, 98], (dl - 0.5) * 2);
 		const warm = lerpRGB(hill, [190, 140, 80], golden * 0.25);
 		fillHillRange(ctx, 8.1, horizonY * 0.14, css(warm), horizon, (1 - Math.exp(-(0.3 + 0.75 * dl) * 0.08)));
+	}
+
+	/** The baked panorama, re-lit about every half degree of sun and drawn with
+	 *  angle 0 on the horizon. Narrow screens show a slice around Mt Rose
+	 *  instead of squeezing all 160° in, so the slopes keep their shape. */
+	function drawRealTerrain(ctx: CanvasRenderingContext2D, t: Terrain, altDeg: number, dl: number, golden: number, horizon: RGB, zenith: RGB): void {
+		const now = new Date();
+		const az = sunAzimuthDeg(now);
+		const month = now.getMonth();
+		const key = `${Math.round(altDeg * 2)}|${Math.round(az)}|${month}`;
+		if (terrainLit.key !== key) {
+			terrainLit = {
+				key,
+				canvas: relightTerrain(t, {
+					az, alt: altDeg,
+					sunCol: lerpRGB([255, 246, 228], [255, 170, 96], golden),
+					sky:    lerpRGB(zenith, horizon, 0.5),
+					night:  [14, 18, 35],
+					dl,
+					fog:    horizon,
+					beta:   0.18 + 0.35 * dl,
+					snowLine: month >= 10 || month <= 4 ? (month === 11 || month <= 2 ? 2100 : 2500) : null,
+				}, terrainLit.canvas ?? undefined),
+			};
+		}
+		const ph = horizonY * 0.34;                                // panorama height on screen
+		const span = Math.min(160, (4 * W * (ANG1 - ANG0)) / ph);  // ≤ 4× vertical exaggeration
+		const cols = (span / 160) * NCOL;
+		const c0 = Math.max(0, Math.min(NCOL - cols, ((255 - 180) / 160) * NCOL - cols / 2));
+		const y0 = horizonY - ph * (ANG1 / (ANG1 - ANG0));
+		ctx.drawImage(terrainLit.canvas!, c0, 0, cols, NROW, 0, y0, W, ph);
 	}
 
 	// ── draw: meadow ──────────────────────────────────────────────────────────
@@ -1270,6 +1310,7 @@
 		treeLeanAngle = (makePRNG(gs.seed)() - 0.5) * 0.14; // ±4° windward lean
 
 		buildScene(W, H, horizonY);
+		loadTerrain(`${base}/garden/terrain.png`).then((t) => { terrain = t; }).catch(() => {});   // noise ranges stay if it fails
 
 		animFrame = requestAnimationFrame(draw);
 		window.addEventListener('resize', resize);
