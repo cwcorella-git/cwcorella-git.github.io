@@ -8,6 +8,7 @@
 	import { toast } from '$lib/admin/toast.svelte';
 	import renoRidge from '$lib/garden/reno-ridge.json';
 	import type { RangeField } from '$lib/garden/detail';
+	import { renderTreeArt, drawTreeArt, clumpsFromTips, broadleafShape, pineShape, juniperShape, cottonwoodFoliage, PINE_FOLIAGE, JUNIPER_FOLIAGE, type TreeArt, type Seg } from '$lib/garden/treeArt';
 	import { renderMeadow, buildRangeField, renderRangeField, renderNoiseCloud, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
 
 	// ── constants ─────────────────────────────────────────────────────────────
@@ -864,143 +865,78 @@
 		ctx.fillRect(0, 0, W, H);
 	}
 
-	// ── draw: midground tree silhouettes ──────────────────────────────────────
-	// Two species, four trees. Oak: wide decurrent crown, ±8° trunk lean,
-	// scaffold branches at 42–64% trunk height. Maple: tighter dome, ±5° lean.
-	// Both species draw a curved trunk (quadratic bezier) following the lean.
-	function drawMidgroundTrees(ctx: CanvasRenderingContext2D, altDeg: number): void {
-		const isNight    = altDeg < -6;
-		const isTwilight = !isNight && altDeg < 6;
-		const clr = isNight    ? 'rgb(8,10,20)'
-		          : isTwilight ? 'rgb(42,46,55)'
-		          :              'rgb(55,68,38)';
-		// Leaf cluster alpha — zero at night, fades in through civil twilight
-		const leafAlpha = isNight ? 0 : Math.max(0, Math.min(1, (altDeg + 2) / 12));
+	// ── trees ─────────────────────────────────────────────────────────────────
+	// Local species (2026-10-22): the foreground and far-right trees are
+	// cottonwoods, which follow the seasons; the midground has a cottonwood,
+	// two Jeffrey pines and a juniper. Each tree is baked by treeArt.ts into a
+	// trunk plus leaf-clump sprites and re-baked when the sun moves a degree.
+	const MIDGROUND: { xf: number; bornAgo: number; kind: 'cottonwood' | 'pine' | 'juniper'; h: number }[] = [
+		{ xf: 0.49, bornAgo: 54750, kind: 'cottonwood', h: 130 },  // +150yr
+		{ xf: 0.61, bornAgo: 10950, kind: 'pine',       h: 150 },  // +30yr
+		{ xf: 0.74, bornAgo: 0,     kind: 'pine',       h: 120 },  // same age as the site
+		{ xf: 0.85, bornAgo: -5475, kind: 'juniper',    h: 70  },  // −15yr
+	];
+	let treeCache: { key: string; fg: TreeArt | null; bg: TreeArt | null; mid: TreeArt[] } = { key: '', fg: null, bg: null, mid: [] };
 
-		// Recursive deciduous crown. angle: math radians, π/2 = straight up.
-		// spread0/spreadR: base + RNG range for split angle; ratio0/ratioR: length ratio.
-		function branch(
-			x: number, y: number,
-			angle: number, length: number, thick: number,
-			depth: number, rng: () => number,
-			spread0 = 0.50, spreadR = 0.24, ratio0 = 0.67, ratioR = 0.08
-		): void {
-			if (depth <= 0 || length < 1.2) return;
-			const x2 = x + Math.cos(angle) * length;
-			const y2 = y - Math.sin(angle) * length;
-			ctx.lineWidth = Math.max(0.3, thick);
-			ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x2, y2); ctx.stroke();
-			// Leaf cluster at terminal nodes
-			if (depth <= 1 && leafAlpha > 0.01) {
-				ctx.globalAlpha = 0.82 * leafAlpha * (0.25 + rng() * 0.25);
-				ctx.beginPath(); ctx.arc(x2, y2, 4 + rng() * 4, 0, Math.PI * 2); ctx.fill();
-				ctx.globalAlpha = 0.82;
-			}
-			const ratio  = ratio0 + rng() * ratioR;
-			const spread = spread0 + rng() * spreadR;
-			const bias   = (rng() - 0.5) * 0.22;
-			branch(x2, y2, angle + spread + bias, length * ratio,        thick * 0.62, depth - 1, rng, spread0, spreadR, ratio0, ratioR);
-			branch(x2, y2, angle - spread + bias, length * ratio * 0.94, thick * 0.60, depth - 1, rng, spread0, spreadR, ratio0, ratioR);
-			// Occasional third shoot — mid-crown density
-			if (depth >= 4 && rng() < 0.28)
-				branch(x2, y2, angle + bias * 0.3, length * ratio * 0.72, thick * 0.50, depth - 2, rng, spread0, spreadR, ratio0, ratioR);
-		}
-
-		type Kind = 'oak' | 'maple';
-		const specs: { xf: number; bornAgo: number; kind: Kind }[] = [
-			{ xf: 0.49, bornAgo: 54750, kind: 'oak'   },  // +150yr — ancient spreading oak
-			{ xf: 0.61, bornAgo: 10950, kind: 'maple' },  // +30yr  — mid-growth maple
-			{ xf: 0.74, bornAgo: 0,     kind: 'oak'   },  // same age as site — oak
-			{ xf: 0.85, bornAgo: -5475, kind: 'maple' },  // −15yr  — young maple
-		];
-
-		for (const spec of specs) {
-			const gf  = treeGrowthFactor(Math.max(0, gardenAgeUnits + spec.bornAgo));
-			const bx  = spec.xf * W;
-			const by  = horizonY;
-			const tw  = Math.max(0.8, 3.5 * gf);
-			const rng = makePRNG(Math.floor(spec.xf * 0x7FFFFFFF));
-
-			ctx.save();
-			ctx.strokeStyle = clr;
-			ctx.fillStyle   = clr;
-			ctx.globalAlpha = 0.82;
-			ctx.lineCap     = 'round';
-
-			if (spec.kind === 'oak') {
-				const trunkH    = 72 * gf;
-				const leanAngle = (rng() - 0.5) * 0.14;  // ±8° — wind/phototropism lean
-				const topX      = bx + Math.sin(leanAngle) * trunkH;
-				const topY      = by - trunkH;
-				// Bezier control point — trunk curves into the lean direction
-				const cpX = bx + Math.sin(leanAngle) * trunkH * 0.45;
-				const cpY = by - trunkH * 0.55;
-				ctx.lineWidth = tw;
-				ctx.beginPath(); ctx.moveTo(bx, by); ctx.quadraticCurveTo(cpX, cpY, topX, topY); ctx.stroke();
-
-				// Scaffold branches at ~45–65% trunk height — dominant side first
-				const scaffT    = 0.42 + rng() * 0.22;
-				const scaffX    = bx + Math.sin(leanAngle) * scaffT * trunkH;
-				const scaffY    = by - scaffT * trunkH;
-				const leanSign  = leanAngle >= 0 ? 1 : -1;
-				const scaffLen  = trunkH * (0.38 + rng() * 0.12);
-				branch(scaffX, scaffY, Math.PI / 2 + leanSign * (0.42 + rng() * 0.25), scaffLen, tw * 0.50, 5, rng);
-				// Secondary scaffold on opposite side (smaller)
-				if (rng() < 0.70)
-					branch(scaffX, scaffY, Math.PI / 2 - leanSign * (0.36 + rng() * 0.20), scaffLen * 0.68, tw * 0.38, 4, rng);
-
-				// Crown from trunk top — angle biased toward lean
-				branch(topX, topY, Math.PI / 2 + leanAngle * 0.5, trunkH * 0.55, tw * 0.78, 8, rng);
-
-			} else {
-				// Maple: tighter dome, ±5° lean, compact spreading crown
-				const trunkH    = 60 * gf;
-				const leanAngle = (rng() - 0.5) * 0.09;  // ±5°
-				const topX      = bx + Math.sin(leanAngle) * trunkH;
-				const topY      = by - trunkH;
-				const cpX = bx + Math.sin(leanAngle) * trunkH * 0.45;
-				const cpY = by - trunkH * 0.55;
-				ctx.lineWidth = tw;
-				ctx.beginPath(); ctx.moveTo(bx, by); ctx.quadraticCurveTo(cpX, cpY, topX, topY); ctx.stroke();
-
-				// One scaffold branch at ~55% height (only on mature trees)
-				if (gf > 0.25 && rng() < 0.80) {
-					const scaffT   = 0.48 + rng() * 0.18;
-					const scaffX   = bx + Math.sin(leanAngle) * scaffT * trunkH;
-					const scaffY   = by - scaffT * trunkH;
-					const leanSign = leanAngle >= 0 ? 1 : -1;
-					const scaffLen = trunkH * (0.30 + rng() * 0.10);
-					branch(scaffX, scaffY, Math.PI / 2 + leanSign * (0.35 + rng() * 0.20), scaffLen, tw * 0.42, 4, rng, 0.28, 0.17, 0.73, 0.07);
-				}
-
-				// Crown — tighter spread (±16–26°), higher length ratio → dome shape
-				branch(topX, topY, Math.PI / 2 + leanAngle * 0.5, trunkH * 0.58, tw * 0.75, 9, rng, 0.28, 0.17, 0.73, 0.07);
-			}
-
-			ctx.restore();
-		}
+	function segsFromTree(t: TreeSegment[]): Seg[] {
+		return t.map((s) => ({ x1: s.x1f * W, y1: s.y1f * H, x2: s.x2f * W, y2: s.y2f * H, thick: s.thick }));
 	}
 
-	// ── draw: background tree (space colonization silhouette) ─────────────────
-	// Rendered far right at 60% scale, before midground trees so it sits behind
-	// them. Uses hardcoded bark colors but globalAlpha drives night darkening.
-	function drawBgTree(ctx: CanvasRenderingContext2D, altDeg: number): void {
-		if (bgTreeSegs.length === 0) return;
-		const dayness  = Math.max(0, Math.min(1, (altDeg + 2) / 14));
-		const bgBaseX  = W * 0.86;
-		const bgScale  = 0.58;
-		const treeAlpha = Math.max(0.12, dayness * 0.42);
-		const leafAlpha = dayness * 0.28;
+	function treeArts(altDeg: number, sxn: number): typeof treeCache {
+		const doy = dayOfYear(new Date());
+		const key = `${W}x${H}|${Math.round(altDeg)}|${Math.round(sxn * 40)}|${doy}|${gardenAgeUnits}|${fgTreeSegs.length}|${bgTreeSegs.length}`;
+		if (treeCache.key === key) return treeCache;
+		const dl     = clamp01((altDeg + 6) / 12);
+		const golden = altDeg > -4 ? clamp01(1 - Math.abs(altDeg - 3) / 9) : 0;
+		const L = {
+			sunDx:  0,
+			sunCol: lerpRGB([255, 246, 228], [255, 170, 96], golden),
+			dl,
+			night:  [14, 17, 24] as RGB,
+		};
+		const sunX = sxn * W;
+		const leaf = cottonwoodFoliage(doy);
+		const bake = (segs: Seg[], cell: number, seed: number) => {
+			const xs = segs.length ? segs[0].x1 : 0;
+			const clumps = clumpsFromTips(segs, cell);
+			return renderTreeArt(segs, clumps, leaf, { ...L, sunDx: sunX < xs ? -1 : 1 }, seed);
+		};
+		const fg = fgTreeSegs.length ? bake(segsFromTree(fgTreeSegs), 20 * dpr, 101) : null;
+		const bg = bgTreeSegs.length ? bake(segsFromTree(bgTreeSegs), 26 * dpr, 211) : null;
+		const mid = MIDGROUND.map((m, i) => {
+			const gf = treeGrowthFactor(Math.max(0, gardenAgeUnits + m.bornAgo));
+			const x = m.xf * W, h = Math.max(12, m.h * gf * dpr);
+			const seed = Math.floor(m.xf * 0x7FFFFFFF);
+			const shape = m.kind === 'pine' ? pineShape(x, horizonY, h, seed)
+			            : m.kind === 'juniper' ? juniperShape(x, horizonY, h, seed)
+			            : broadleafShape(x, horizonY, h, seed);
+			const f = m.kind === 'pine' ? PINE_FOLIAGE : m.kind === 'juniper' ? JUNIPER_FOLIAGE : leaf;
+			return renderTreeArt(shape.segs, shape.clumps, f, { ...L, sunDx: sunX < x ? -1 : 1 }, seed + i);
+		});
+		treeCache = { key, fg, bg, mid };
+		return treeCache;
+	}
 
-		// Canvas transform: translate base from W*0.28 to bgBaseX, scale around base
+	function drawMidgroundTrees(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number, windPx: number): void {
+		const arts = treeArts(altDeg, sxn).mid;
 		ctx.save();
-		ctx.translate(bgBaseX - W * 0.28, 0);
-		ctx.translate(W * 0.28, horizonY);
+		ctx.globalAlpha = 0.92;
+		for (const a of arts) drawTreeArt(ctx, a, windPx * 0.4);
+		ctx.restore();
+	}
+
+	// ── draw: background tree (space colonization) ────────────────────────────
+	// Far right at 58% scale, behind the midground trees.
+	function drawBgTree(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number, windPx: number): void {
+		const art = treeArts(altDeg, sxn).bg;
+		if (!art) return;
+		const bgBaseX = W * 0.86, bgScale = 0.58;
+		ctx.save();
+		ctx.translate(bgBaseX, horizonY);
 		ctx.scale(bgScale, bgScale);
 		ctx.translate(-W * 0.28, -horizonY);
-		ctx.globalAlpha = treeAlpha;
-		drawTree(ctx, bgTreeSegs, W, H);
-		if (leafAlpha > 0.01) drawLeaves(ctx, bgTreeSegs, W, H, 'rgb(52,68,34)', leafAlpha / bgScale);
+		ctx.globalAlpha = 0.75;
+		drawTreeArt(ctx, art, windPx * 0.5);
 		ctx.restore();
 	}
 
@@ -1263,32 +1199,24 @@
 		drawTerrain(ctx, altDeg, sxn);
 		drawMeadow(ctx);
 		drawCloudShadows(ctx, altDeg, sxn);
-		drawBgTree(ctx, altDeg);            // space-colonization silhouette — far right background
-		drawMidgroundTrees(ctx, altDeg);
+		const windPx = (noise1D(time / 6) - 0.5) * 6 * dpr;
+		drawBgTree(ctx, altDeg, sxn, windPx);            // space-colonization cottonwood — far right background
+		drawMidgroundTrees(ctx, altDeg, sxn, windPx);
 		drawHorizonBlend(ctx, altDeg);
 		drawPlants(ctx, bgPlants, horizonY, H, 1 - clamp01((altDeg + 6) / 12));   // far grass — behind tree
 		drawCirrus(ctx, altDeg);
 		drawClouds(ctx, altDeg, sxn);
 		drawTreeCastShadow(ctx, altDeg, sxn);
 		drawTreeShadow(ctx, altDeg);
-		if (fgTreeSegs.length > 0) {
-			// Apply seeded trunk lean — rotate the whole tree around its base
-			const bx       = W * 0.28;
-			const tgf      = treeGrowthFactor(gardenAgeUnits);
-			const dayness  = Math.max(0, Math.min(1, (altDeg + 2) / 14));
-			const leafAlpha = tgf * dayness * 0.55;
+		const fgArt = treeArts(altDeg, sxn).fg;
+		if (fgArt) {
+			// Seeded trunk lean — rotate the whole tree around its base
+			const bx = W * 0.28;
 			ctx.save();
 			ctx.translate(bx, horizonY);
 			ctx.rotate(treeLeanAngle);
 			ctx.translate(-bx, -horizonY);
-			// After sunset the tree goes to silhouette instead of keeping its daylight bark.
-			drawTree(ctx, fgTreeSegs, W, H, altDeg < -2 ? css(lerpRGB([16, 18, 26], [60, 52, 46], clamp01((altDeg + 8) / 6))) : undefined);
-			const golden = altDeg > -4 ? clamp01(1 - Math.abs(altDeg - 3) / 9) : 0;
-			drawLeaves(ctx, fgTreeSegs, W, H, 'rgb(62,84,40)', leafAlpha, {
-				dark:  'rgb(30,42,24)',
-				light: css(lerpRGB([112, 134, 62], [196, 160, 78], golden)),
-				sunDx: sxn * W < bx ? -1 : 1,
-			});
+			drawTreeArt(ctx, fgArt, windPx);
 			ctx.restore();
 		}
 		drawPlants(ctx, fgPlants, horizonY, H, 1 - clamp01((altDeg + 6) / 12));   // near grass — in front of everything
