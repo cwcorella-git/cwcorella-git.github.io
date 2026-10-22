@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 	import { base } from '$app/paths';
 	import { loadTerrain, relightTerrain, snowLineFor, meadowLight, meadowSeason, type Terrain, type TerrainLight } from '$lib/garden/terrain';
-	import { makeGrassTuft, makeFern, tickWind, drawPlants, applyMouseForce, type PlantInstance } from '$lib/garden/plants';
+	import { makeGrassTuft, makeSeedHead, tickWind, drawPlants, applyMouseForce, type PlantInstance } from '$lib/garden/plants';
 	import { generateFgTree, loadFgTreeFromCache, saveFgTreeToCache, clearFgTreeCache, generateBgTree, loadBgTreeFromCache, saveBgTreeToCache, drawTree, drawLeaves, type TreeSegment } from '$lib/garden/tree';
 	import { loadGardenState, saveGardenState, creditVisit, accrueElapsedDays, growthFactor, treeGrowthFactor, addAgeUnits } from '$lib/garden/state';
 	import { adminState } from '$lib/admin/state.svelte';
@@ -345,9 +345,9 @@
 			(yFrac < bgCut ? bgPlants : fgPlants).push(plant);
 		}
 
-		// Ferns — 14 total, kept off the very horizon
-		for (let i = 0; i < 14; i++) {
-			const yFrac  = Math.pow(prng(), 1.2) * 0.78 + 0.06;
+		// Seed heads — 24, mostly in the near field, kept off the very horizon
+		for (let i = 0; i < 24; i++) {
+			const yFrac  = Math.pow(prng(), 0.7) * 0.78 + 0.06;
 			const x      = prng() * cw;
 			const y      = hy + yFrac * groundBand;
 			const bornAt = prng() * 6000;
@@ -355,7 +355,7 @@
 			const depth  = 0.431 / (1.233 - yFrac);
 			const h      = (50 + prng() * 50) * scale * depth;
 			const seed   = Math.floor(prng() * 0x7FFFFFFF);
-			const plant  = makeFern(x, y, h, seed);
+			const plant  = makeSeedHead(x, y, h, seed);
 			(yFrac < bgCut ? bgPlants : fgPlants).push(plant);
 		}
 	}

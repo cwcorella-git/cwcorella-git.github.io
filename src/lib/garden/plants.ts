@@ -17,7 +17,7 @@ export interface PlantSegment {
 export interface PlantInstance {
 	x:    number;
 	y:    number;
-	kind: 'grass' | 'fern';
+	kind: 'grass' | 'seedhead';
 	root: PlantSegment;
 }
 
@@ -34,7 +34,7 @@ function makePRNG(seed: number): () => number {
 
 // ── palettes ──────────────────────────────────────────────────────────────
 const GRASS_PALETTE = ['#6b7c3a', '#7a8c45', '#5a6e2e', '#8a9c50', '#4e6228'];
-const FERN_PALETTE  = ['#3d5c2a', '#4a6e30', '#526838', '#3a5225'];
+const SEED_PALETTE  = ['#a8a666', '#c8b47a', '#d6c28c'];   // stem, panicle, spikelet tips (the season greens them)
 
 // ── grass tufts ───────────────────────────────────────────────────────────
 export function makeGrassTuft(
@@ -85,52 +85,37 @@ export function makeGrassTuft(
 }
 
 // ── ferns ─────────────────────────────────────────────────────────────────
-export function makeFern(
+/** A dry grass stem (wild rye / needlegrass) with a drooping seed panicle:
+ *  a gently curved stem in four pieces, then short spikelets that splay out
+ *  and hang from the top two pieces. Same segment tree, so wind and the
+ *  mouse act on it like any tuft. */
+export function makeSeedHead(
 	x: number, y: number, maxHeight: number, seed: number
 ): PlantInstance {
 	const rng = makePRNG(seed);
-
-	function makeNode(depth: number, len: number, thick: number, restAngle: number): PlantSegment {
-		const color = FERN_PALETTE[Math.min(3 - Math.min(depth, 3), FERN_PALETTE.length - 1)];
-		const seg: PlantSegment = {
-			restAngle,
-			angle:  restAngle,
-			angVel: 0,
-			len,
-			thick,
-			color,
-			children: [],
-			wx0: 0, wy0: 0, wx: 0, wy: 0,
-		};
-
-		if (depth > 0) {
-			// Continuation — slight random upward curve
-			seg.children.push(makeNode(
-				depth - 1,
-				len * 0.72,
-				thick * 0.65,
-				(rng() - 0.5) * 12,
-			));
-
-			// Alternating side fronds (only when there's enough depth)
-			if (depth >= 2) {
-				const frondLen   = len * 0.44;
-				const frondThick = thick * 0.44;
-				seg.children.push(makeNode(depth - 2, frondLen, frondThick, -55 + (rng() - 0.5) * 18));
-				seg.children.push(makeNode(depth - 2, frondLen, frondThick,  55 + (rng() - 0.5) * 18));
-			}
-		}
-
-		return seg;
-	}
-
-	const root: PlantSegment = {
-		restAngle: 0, angle: 0, angVel: 0,
-		len: 0, thick: 0, color: '',
-		children: [makeNode(4, maxHeight * 0.55, 2.4, 0)],
+	const seg = (len: number, thick: number, restAngle: number, color: string): PlantSegment => ({
+		restAngle, angle: restAngle, angVel: 0, len, thick, color, children: [],
 		wx0: 0, wy0: 0, wx: 0, wy: 0,
-	};
-	return { x, y, kind: 'fern', root };
+	});
+	const bend = (rng() < 0.5 ? -1 : 1) * (3 + rng() * 4);     // the whole stem leans one way
+	const stemLen = maxHeight * 0.3;
+	const pieces: PlantSegment[] = [];
+	for (let i = 0; i < 4; i++) {
+		pieces.push(seg(stemLen * (1 - i * 0.08), 2.4 - i * 0.35, i === 0 ? (rng() - 0.5) * 10 : bend, SEED_PALETTE[0]));
+		if (i > 0) pieces[i - 1].children.push(pieces[i]);
+	}
+	for (const p of pieces.slice(2)) {
+		const n = 5 + Math.floor(rng() * 3);
+		for (let k = 0; k < n; k++) {
+			const side = k % 2 ? 1 : -1;
+			const spike = seg(stemLen * (0.4 + rng() * 0.25), 1.7, side * (12 + rng() * 18), SEED_PALETTE[1]);
+			spike.children.push(seg(stemLen * (0.25 + rng() * 0.15), 1.3, side * (18 + rng() * 18), SEED_PALETTE[2]));   // the tip droops
+			p.children.push(spike);
+		}
+	}
+	const root = seg(0, 0, 0, '');
+	root.children.push(pieces[0]);
+	return { x, y, kind: 'seedhead', root };
 }
 
 // ── wind physics (spring-damper) ───────────────────────────────────────────
