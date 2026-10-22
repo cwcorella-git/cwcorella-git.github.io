@@ -521,7 +521,7 @@ Row 29 recorded the cloud bake as "about 70 ms". The first real measurement (`$S
 |---|---|---|
 | 36 | crowns and bark take golden-hour light (`ArtLight.warm`) | **done**: `b902e62`; strip in Media `cwc-crowns` |
 | 37 | read `cwc-trees` once | **done**: no verdict, read once while planning and once after row 36, not polled further |
-| 38 | bake cost: reduced-size cloud bakes, shared clump sprites | **done**: see sha below |
+| 38 | bake cost: reduced-size cloud bakes, shared clump sprites | **done**: `c810943` |
 | 39 | trees still bake all at once (~100 ms, six trees in one frame) | **proposed**: spread the bake over frames as the clouds do, if it shows up as a hitch |
 
 ## Open
