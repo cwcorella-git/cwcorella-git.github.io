@@ -321,7 +321,7 @@ Row 17/18. Steps 1–3 below are DONE (renders and Media sent, 2026-10-22 08:45)
 - Nothing has been checked on a real phone.
 - The earlier Media sets (`cwc-range-2` and the clouds and meadow sets) were all taken at the wrong time of day. The operator's Niederhorn pick was made from 08:30 light.
 
-## Resume here
+## Resume here (superseded by the one at the end)
 
 - **Row 23.** A rebake is running in the background: task `b349kp5h1`.
   - Output: `$S/bakes4/niederhorn/terrain.{png,json}`.
@@ -335,3 +335,25 @@ Row 17/18. Steps 1–3 below are DONE (renders and Media sent, 2026-10-22 08:45)
   5. Commit by explicit path: `scripts/bake-terrain.py`, `src/lib/garden/detail.ts`, `src/lib/garden/terrain.ts`, `static/garden/terrain.png`, `static/garden/terrain.json`.
   6. Push with `git -c credential.helper='!gh auth git-credential' push -q https://github.com/cwcorella-git/cwcorella-git.github.io.git main`. If it fails with HTTP 408, retry with `-c http.postBuffer=524288000`.
 - `$S` = `/tmp/claude-1000/-home-user-Projects-cwcorella-git-github-io/a292417d-d3e3-4aba-ad17-fa902c0e6aba/scratchpad`. The dev server is on :5191.
+
+## 11. The near shadows barely registered; winter left the meadow green
+
+Row 23 is landed as `eeaf700`. I compared before and after at 15:30 with the same code; only the atlas differed. The near horizon samples (6–40 m) change about 4.7k pixels, so the close swells were already almost flat as baked. Most of the foreground change comes from the blade size and density and from the darkening at the bottom edge, which are not in the atlas. At 17:55 the meadow is still dark brown (average RGB 46,39,28), even with the +0.22 ambient lift.
+
+I re-checked the renders with the corrected clock (Media `cwc-recheck`):
+- 10:00 Oct: the sun is in the east and the light is right.
+- Jan 15 12:00: there is snow on the peaks and the trees are bare, **but the meadow is summer green**.
+- Jan 15 16:40: the alpenglow is right, **but the near blades stay bright green over a dark ground**. Their colour doesn't follow daylight.
+
+| # | item | state |
+|---|---|---|
+| 23 | foreground depth | **done**: `eeaf700` |
+| 24 | meadow follows the season (winter straw or snow, by `snowLineFor`) | **proposed** |
+| 25 | painted grass blades dim and warm with daylight / sun colour | **proposed** |
+
+## Open
+- Media `cwc-foreground` and `cwc-recheck` are both waiting on the operator.
+- Not yet tried on a real phone.
+
+## Resume here
+Rows 24 and 25 are proposed and not started; the operator chooses. Nothing is running in the background.
