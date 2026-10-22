@@ -487,3 +487,28 @@ After that, rows 28 and 29 per `~/.claude/plans/crystalline-whistling-music.md`.
 - Read `ops_pick cwc-clouds3` once, and act on any notes.
 - Nothing is unlanded. Main is pushed through `eefea8f` and the commit after it. The dev server on :5191 runs as a background task of the previous context; if it is gone, restart it with `npx vite dev --port 5191 --strictPort`.
 - Next item: none is queued. Wait for the operator's `cwc-clouds3` notes or his glass save.
+
+## 16. The clouds weren't fast; the wrap was moving
+
+The operator wrote: "the clouds are flying by a million miles an hour on the live site." Row 29's speeds are 25–60 px/min. The cause was the wrap: x was taken modulo `W + cache.w·k`, and `k` (form-and-fade growth) changes every frame. The distance travelled since 1970 is about 1e9 px, so a 0.03 px change in the modulus moves the result by hundreds of px. A worked example in node: before the fix, x moved 50 px every 0.25 s, about 200 px/s; after it, about 40 px/min. `driftX()` now wraps over a fixed `W + 2.6·size` span (`d7a9a1f`). A screenshot-diff probe could not show this, because the garden redraws at about 4 fps and the probe read 0 both before and after. It was confirmed only by the arithmetic.
+
+The operator then said the trees "need work". From the render: the pines were a pole with a few lumps ("the small green tree doesn't really seem to fit"), the cottonwoods were rings of yellow balls, and the meadow had bare green fern stalks. The plan was approved as rows 33–35.
+
+| # | item | state |
+|---|---|---|
+| 32b | clouds wrap over a fixed span | **done**: `d7a9a1f` |
+| 33 | Jeffrey pines: clear trunk, spiral limbs, needle tufts (`Foliage.needle`) | **done**: `0798dab` |
+| 34 | cottonwood crowns fill in: clumps along the inner limbs, cell 0.09h / fg 12 / bg 15 dpr | **done**: `4f69dc3` |
+| 35 | `makeSeedHead` replaces `makeFern`; 24 seed heads, weighted toward the near field | **done**: `ca2bb9e` |
+| 36 | tree crowns don't warm at sunset (acid yellow-green at 17:30) | **proposed**: this was true before rows 33–34 too |
+
+The first try at the seed heads was invisible: 1.3 px olive stems on olive grass. They needed width 2.4 and tan panicles.
+
+## Open
+- Media `cwc-trees` (before / after at noon / after at 17:30 / phone) has been sent but not read.
+- Never measured: tree bake time after rows 33 and 34. The cottonwoods now have many more clump sprites. Throttled-phone timing is still owed from row 29 as well.
+- Rows 33–35 are blockout quality. The pine tufts still read a little like cauliflower up close.
+- The cloud fix has not been watched as motion on the live site.
+
+## Resume here (supersedes the one above)
+Read `ops_pick cwc-trees` once and act on the notes. Otherwise take row 36 (crown colour at sunset: `renderClump` mixes `own` toward `sunCol` at only 0.08/0.45; warm it with `golden`). Pull before pushing (`static/glass.json` is committed from the browser).
