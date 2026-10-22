@@ -2,7 +2,7 @@
 	import { dayOfYear, sunAltitudeDeg, sunXNorm } from '$lib/garden/sun';
 	import { onMount } from 'svelte';
 	import { base } from '$app/paths';
-	import { loadTerrain, relightTerrain, snowLineFor, type Terrain } from '$lib/garden/terrain';
+	import { loadTerrain, relightTerrain, snowLineFor, meadowLight, meadowSeason, type Terrain, type TerrainLight } from '$lib/garden/terrain';
 	import { makeGrassTuft, makeFern, tickWind, drawPlants, applyMouseForce, type PlantInstance } from '$lib/garden/plants';
 	import { generateFgTree, loadFgTreeFromCache, saveFgTreeToCache, clearFgTreeCache, generateBgTree, loadBgTreeFromCache, saveBgTreeToCache, drawTree, drawLeaves, type TreeSegment } from '$lib/garden/tree';
 	import { loadGardenState, saveGardenState, creditVisit, accrueElapsedDays, growthFactor, treeGrowthFactor, addAgeUnits } from '$lib/garden/state';
@@ -571,6 +571,9 @@
 	// on 2026-10-22: they read as flat cut-outs however they were lit.
 	let terrain: Terrain | null = null;
 	let terrainLit: { key: string; canvas: HTMLCanvasElement | null } = { key: '', canvas: null };
+	// What the grass tufts take from the ground: its light and its season.
+	let plantLight: RGB | null = null;
+	let plantGreen = 1;
 
 	const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
@@ -603,20 +606,25 @@
 		const span = Math.min(total, (4 * W * frame) / ph);              // ≤ 4× vertical exaggeration
 		const cols = (span / total) * m.ncol;
 		const c0 = (m.ncol - cols) / 2;
-		const key = `${Math.round(altDeg * 2)}|${Math.round(az)}|${month}|${Math.round(c0)}`;
+		const doy = dayOfYear(new Date());
+		const key = `${Math.round(altDeg * 2)}|${Math.round(az)}|${doy}|${Math.round(c0)}`;
 		if (terrainLit.key !== key) {
+			const L: TerrainLight = {
+				az, alt: altDeg,
+				sunCol: lerpRGB([255, 246, 228], [255, 170, 96], golden),
+				sky:    lerpRGB(zenith, horizon, 0.5),
+				night:  [14, 18, 35],
+				dl,
+				fog:    horizon,
+				beta:   0.18 + 0.35 * dl,
+				snowLine: snowLineFor(m, month),
+				doy,
+			};
+			plantLight = meadowLight(L);
+			plantGreen = meadowSeason(doy);
 			terrainLit = {
 				key,
-				canvas: relightTerrain(t, {
-					az, alt: altDeg,
-					sunCol: lerpRGB([255, 246, 228], [255, 170, 96], golden),
-					sky:    lerpRGB(zenith, horizon, 0.5),
-					night:  [14, 18, 35],
-					dl,
-					fog:    horizon,
-					beta:   0.18 + 0.35 * dl,
-					snowLine: snowLineFor(m, month),
-				}, terrainLit.canvas ?? undefined, [Math.floor(c0), Math.ceil(c0 + cols)], W / dpr < 800 ? 2 : 1),   // phones: half-res light
+				canvas: relightTerrain(t, L, terrainLit.canvas ?? undefined, [Math.floor(c0), Math.ceil(c0 + cols)], W / dpr < 800 ? 2 : 1),   // phones: half-res light
 			};
 		}
 		const top = m.nrowTop ?? m.nrow;
@@ -624,6 +632,12 @@
 		// perspective, down to the bottom of the screen.
 		ctx.drawImage(terrainLit.canvas!, c0, 0, cols, top, 0, horizonY - ph, W, ph);
 		if (top < m.nrow) ctx.drawImage(terrainLit.canvas!, c0, top, cols, m.nrow - top, 0, horizonY, W, H - horizonY);
+	}
+
+	function tuftLight(altDeg: number): RGB {
+		if (terrain && plantLight) return plantLight;
+		const v = clamp01((altDeg + 6) / 12) * 0.9 + 0.1;   // no terrain: the old dimming
+		return [v, v, v];
 	}
 
 	// ── draw: meadow ──────────────────────────────────────────────────────────
@@ -1179,7 +1193,7 @@
 		drawBgTree(ctx, altDeg, sxn, windPx);            // space-colonization cottonwood — far right background
 		drawMidgroundTrees(ctx, altDeg, sxn, windPx);
 		drawHorizonBlend(ctx, altDeg);
-		drawPlants(ctx, bgPlants, horizonY, H, 1 - clamp01((altDeg + 6) / 12));   // far grass — behind tree
+		drawPlants(ctx, bgPlants, horizonY, H, tuftLight(altDeg), plantGreen);   // far grass — behind tree
 		drawCirrus(ctx, altDeg);
 		drawClouds(ctx, altDeg, sxn);
 		drawTreeCastShadow(ctx, altDeg, sxn);
@@ -1195,7 +1209,7 @@
 			drawTreeArt(ctx, fgArt, windPx);
 			ctx.restore();
 		}
-		drawPlants(ctx, fgPlants, horizonY, H, 1 - clamp01((altDeg + 6) / 12));   // near grass — in front of everything
+		drawPlants(ctx, fgPlants, horizonY, H, tuftLight(altDeg), plantGreen);   // near grass — in front of everything
 		drawGrain(ctx);
 		drawVignette(ctx);
 

@@ -171,19 +171,23 @@ export function tickWind(
 
 // ── drawing ───────────────────────────────────────────────────────────────
 // parentDir: degrees, -90 = pointing straight up
-// Plant colours dimmed toward a night silhouette, memoised per (colour, step).
-const DIM_TO = [14, 18, 24];
-const dimmed = new Map<string, string>();
-function dimColor(hex: string, dim: number): string {
-	const step = Math.round(dim * 20);
-	if (step === 0) return hex;
-	const key = hex + step;
-	let out = dimmed.get(key);
+// Plant colours lit like the ground they stand on and browned by the
+// season, memoised per (colour, light, season) step.
+type RGB = [number, number, number];
+const STRAW = [168, 150, 104];
+const lit = new Map<string, string>();
+function litColor(hex: string, light: RGB, green: number): string {
+	const q = light.map((v) => Math.round(v * 32));
+	const gs = Math.round(green * 16);
+	const key = hex + q.join(',') + '|' + gs;
+	let out = lit.get(key);
 	if (!out) {
-		const t = step / 20;
-		const c = [1, 3, 5].map((i, k) => Math.round(parseInt(hex.slice(i, i + 2), 16) * (1 - t) + DIM_TO[k] * t));
+		const c = [1, 3, 5].map((i, k) => {
+			const base = parseInt(hex.slice(i, i + 2), 16) * (gs / 16) + STRAW[k] * (1 - gs / 16);
+			return Math.round(Math.min(255, base * (q[k] / 32)));
+		});
 		out = `rgb(${c[0]},${c[1]},${c[2]})`;
-		dimmed.set(key, out);
+		lit.set(key, out);
 	}
 	return out;
 }
@@ -193,10 +197,10 @@ function drawSeg(
 	x: number, y: number,
 	parentDir: number,
 	seg: PlantSegment,
-	dim = 0,
+	light: RGB, green: number,
 ): void {
 	if (seg.len === 0) {
-		for (const child of seg.children) drawSeg(ctx, x, y, parentDir, child, dim);
+		for (const child of seg.children) drawSeg(ctx, x, y, parentDir, child, light, green);
 		return;
 	}
 	const dir    = parentDir + seg.angle;
@@ -209,12 +213,12 @@ function drawSeg(
 	ctx.beginPath();
 	ctx.moveTo(x, y);
 	ctx.lineTo(ex, ey);
-	ctx.strokeStyle = dimColor(seg.color, dim);
+	ctx.strokeStyle = litColor(seg.color, light, green);
 	ctx.lineWidth   = seg.thick;
 	ctx.lineCap     = 'round';
 	ctx.stroke();
 
-	for (const child of seg.children) drawSeg(ctx, ex, ey, dir, child, dim);
+	for (const child of seg.children) drawSeg(ctx, ex, ey, dir, child, light, green);
 }
 
 export function drawPlants(
@@ -222,7 +226,8 @@ export function drawPlants(
 	plants: PlantInstance[],
 	horizonY: number,
 	H: number,
-	dim = 0,   // 0 day colours → 1 night silhouette
+	light: RGB = [1, 1, 1],   // multiplier from the ground's light (terrain.ts meadowLight)
+	green = 1,                // 1 summer grass … 0 winter straw
 ): void {
 	ctx.save();
 	const depthBand = (H - horizonY) * 0.80;
@@ -232,7 +237,7 @@ export function drawPlants(
 		// Far plants (near horizon) fade to 0.55 alpha; foreground is fully opaque.
 		const t = depthBand > 0 ? Math.max(0, Math.min(1, (plant.y - horizonY) / depthBand)) : 1;
 		ctx.globalAlpha = 0.55 + t * 0.45;
-		for (const child of plant.root.children) drawSeg(ctx, plant.x, plant.y, -90, child, dim);
+		for (const child of plant.root.children) drawSeg(ctx, plant.x, plant.y, -90, child, light, green);
 	}
 	ctx.globalAlpha = 1;
 	ctx.restore();

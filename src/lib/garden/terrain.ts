@@ -103,17 +103,46 @@ export interface TerrainLight {
 	dl: number;                // daylight 0–1
 	fog: RGB; beta: number;    // haze colour and density per 10 km
 	snowLine: number | null;   // metres; null when there is no snow
+	doy?: number;              // day of year, for the meadow's season
 }
 
 const MEADOW: RGB = [150, 146, 104];
 const FOREST: RGB = [48, 64, 46];
 const GRASS: RGB = [118, 134, 72];
 const DRY: RGB = [190, 164, 100];
+const STRAW: RGB = [192, 160, 102];
 const ROCK: RGB = [136, 128, 118];
 const SNOW: RGB = [238, 240, 246];
 
 const sm = (a: number, b: number, x: number) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const mix = (a: RGB, b: RGB, t: number): RGB => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+
+/** How green the meadow is: 1 May–Sep, 0 (straw) Dec–Feb, ramps between. */
+export function meadowSeason(doy: number): number {
+	const ramp = (a: number, b: number) => Math.max(0, Math.min(1, (doy - a) / (b - a)));
+	return doy < 182 ? ramp(60, 121) : 1 - ramp(274, 335);
+}
+
+const MEADOW_AMB = 0.22;   // the meadow is open to the whole sky; at dusk it still reads as grass
+// Sun plus sky light on a surface, per channel, before the albedo.
+const lightOn = (L: TerrainLight, diff: number, amb: number): RGB => [
+	L.sunCol[0] * diff * 1.05 + L.sky[0] * amb,
+	L.sunCol[1] * diff * 1.05 + L.sky[1] * amb,
+	L.sunCol[2] * diff * 1.05 + L.sky[2] * amb,
+];
+
+/** The light on open, flat meadow as a multiplier for plant colours (≈1 at
+ *  midday), so the painted grass agrees with the ground it stands on. */
+export function meadowLight(L: TerrainLight): RGB {
+	const rad = Math.PI / 180;
+	const diff = Math.max(0, Math.sin(Math.max(0.5, L.alt) * rad)) * sm(-1, 3, L.alt);
+	const li = lightOn(L, diff, 0.18 + 0.32 + MEADOW_AMB);
+	return [0, 1, 2].map((k) => {
+		const lit = (GRASS[k] / 255) * li[k];
+		const col = L.night[k] + (lit - L.night[k]) * L.dl;
+		return Math.min(1.1, col / GRASS[k] / 1.1);
+	}) as RGB;
+}
 
 /** `cols` limits the work to the columns on screen; `step` 2 lights at half resolution. */
 export function relightTerrain(t: Terrain, L: TerrainLight, out?: HTMLCanvasElement, cols?: [number, number], step = 1): HTMLCanvasElement {
@@ -131,6 +160,7 @@ export function relightTerrain(t: Terrain, L: TerrainLight, out?: HTMLCanvasElem
 	const kf = (((L.az / 45) % 8) + 8) % 8, k0 = Math.floor(kf), k1 = (k0 + 1) % 8, kt = kf - k0;
 	const sunUp = sm(-1, 3, L.alt);
 	const [f0, f1] = forest;
+	const green = meadowSeason(L.doy ?? 172);
 
 	const x0 = Math.max(0, cols?.[0] ?? 0), x1 = Math.min(ncol, cols?.[1] ?? ncol);
 	const shade = (i: number) => {
@@ -143,7 +173,7 @@ export function relightTerrain(t: Terrain, L: TerrainLight, out?: HTMLCanvasElem
 		const e = t.elev[i], g = t.grain[i];
 		const slope = 1 - nz;                           // 0 flat … ~1 cliff
 		let alb = MEADOW;
-		if (t.meadow[i]) alb = mix(mix(GRASS, MEADOW, g * 0.35), DRY, Math.min(1, t.dry[i] * 1.3));
+		if (t.meadow[i]) alb = mix(STRAW, mix(mix(GRASS, MEADOW, g * 0.35), DRY, Math.min(1, t.dry[i] * 1.3)), green);
 		else {
 			const woods = sm(f0, f0 + 150, e) * (1 - sm(f1 - 100, f1 + 100, e + g * 80)) * (0.6 + 0.4 * g) * (1 - sm(0.35, 0.6, slope));
 			alb = mix(alb, FOREST, woods);
@@ -151,13 +181,8 @@ export function relightTerrain(t: Terrain, L: TerrainLight, out?: HTMLCanvasElem
 			if (L.snowLine !== null) alb = mix(alb, SNOW, sm(L.snowLine, L.snowLine + 250, e + g * 150) * (1 - sm(0.4, 0.65, slope)));
 		}
 
-		// The meadow is open to the whole sky; at dusk it still reads as grass.
-		const amb = 0.18 + 0.32 * nz * nz + (t.meadow[i] ? 0.22 : 0);
-		let col: RGB = [
-			(alb[0] / 255) * (L.sunCol[0] * diff * 1.05 + L.sky[0] * amb),
-			(alb[1] / 255) * (L.sunCol[1] * diff * 1.05 + L.sky[1] * amb),
-			(alb[2] / 255) * (L.sunCol[2] * diff * 1.05 + L.sky[2] * amb),
-		];
+		const li = lightOn(L, diff, 0.18 + 0.32 * nz * nz + (t.meadow[i] ? MEADOW_AMB : 0));
+		let col: RGB = [(alb[0] / 255) * li[0], (alb[1] / 255) * li[1], (alb[2] / 255) * li[2]];
 		col = mix(L.night, col, L.dl);
 		const haze = 1 - Math.exp(-L.beta * t.km[i] / 10);
 		col = mix(col, L.fog, Math.min(1, haze + (1 - haze) * t.pool[i] * 0.45 * Math.min(1, t.km[i] / 8)));
