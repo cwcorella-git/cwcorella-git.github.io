@@ -24,8 +24,8 @@ trees and picked every option: four for the mountains and four for the trees.
 | 14 | Operator on `c94a1ac`: "we lost the full range (horizontal fill) and it's just one mountain. nothing in the background. no layers." Then: "i dont even want it to be reno. can we pick another range? it could be fiction. idc." Approved plan: `~/.claude/plans/crystalline-whistling-music.md` | **in progress**: steps 1, 3 and 4 written and uncommitted; step 2 baking; step 5 not started |
 | 15 | Step 2: bake the top 3 sites, render them through the page, send to Media as group `cwc-range`, operator picks one, commit only that atlas | **superseded** by 17: sent to Media; operator liked Rigi and Niederhorn both, but "they both have detail issues. mountains are smooth in some areas." |
 | 16 | Step 5: time the re-light and atlas decode on a throttled phone; try lossless WebP | **proposed** |
-| 17 | Re-bake Rigi and Niederhorn with sub-tile detail (z12 near, ridged noise on steep ground, 1600×440 atlas) | **in progress**: script written, bake `bjh07kiwl` running, uncommitted |
-| 18 | Operator: "how can we convert the plains? now the foreground is clearly 2d"; picked "Bake into the terrain". The camera stands on a baked meadow sloping away at 6°, drawn into the ground band | **in progress**: bake + `terrain.ts` + `Garden.svelte` written, check clean, never rendered |
+| 17 | Re-bake Rigi and Niederhorn with sub-tile detail (z12 near, ridged noise on steep ground, 1600×440 atlas) | **rendered, awaiting pick**: both baked (Rigi 221 s, Niederhorn 146 s, ~1.25 GB, atlas 1.8/1.6 MB); sent to Media `cwc-range-2`; uncommitted |
+| 18 | Operator: "how can we convert the plains? now the foreground is clearly 2d"; picked "Bake into the terrain". The camera stands on a baked meadow sloping away at 6°, drawn into the ground band | **rendered, weak**: in the renders the meadow still reads as a near-flat green plane under the painted blades. Rendered, but it does NOT yet answer "clearly 2d" |
 
 Renders went to the ops Media tab without a group. There was nothing to pick, only to look at.
 
@@ -223,9 +223,20 @@ Changes in the working tree (all uncommitted, none rendered):
 - `reno-ridge.json` must be deleted in the same commit as the code.
 - `npm run check` is clean; vitest last passed (325) before these edits.
 
+
+## 8. The detail landed on the rock; the meadow barely shows (rows 17–18 rendered)
+
+The renders are `$S/renders/live-{rigi,niederhorn}-v2{,-am,-phone}.png`, at 15:30, 10:00 and 390 px.
+- **Ridges:** faces now carry gullies and rib detail, and the layers separate in haze. The smooth patches from round one are mostly gone. No seams or streaks seen.
+- **Meadow:** the baked meadow is there, but its lit colour is a uniform green, and the perspective plane shows almost no structure under the painted blades and patches. The 6° slope does let ridge layers show above it.
+- **Verdict:** a likely next pass for "clearly 2d" is stronger meadow-wave amplitude, or albedo variation by distance (dry or gold patches baked in). This is **not done**; it is listed as row 19.
+- **Never verified:** the sunset and January lighting, phone timing (row 16), and anything after the pick.
+
+| 19 | Meadow still reads flat after the bake: raise MEADOW_WAVES amplitude and/or add baked albedo patches, then re-render | **proposed** |
+
 ## Resume here
 
-Row 17/18.
+Row 17/18. Steps 1–3 below are DONE (renders and Media sent, 2026-10-22 08:45). **Resume at step 4**: read the pick with `ops_pick` group `cwc-range-2`, then commit. Then row 19.
 
 1. The background bake `bjh07kiwl` writes to
    `$S/bakes2/<site>/`. Its output log is
