@@ -91,18 +91,6 @@ export async function loadTerrain(baseUrl: string): Promise<Terrain> {
 	return t;
 }
 
-/** Solar azimuth, degrees clockwise from north, at the garden's latitude. */
-export function sunAzimuthDeg(date: Date, latDeg = 39.53): number {
-	const rad = Math.PI / 180;
-	const doy = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86400000);
-	const decl = 23.45 * Math.sin(rad * (360 / 365) * (doy - 81)) * rad;
-	const hour = date.getHours() + date.getMinutes() / 60;
-	const ha = 15 * (hour - 12) * rad;
-	const lat = latDeg * rad;
-	const az = Math.atan2(Math.sin(ha), Math.cos(ha) * Math.sin(lat) - Math.tan(decl) * Math.cos(lat));
-	return (az / rad + 180 + 360) % 360;
-}
-
 /** Snow line for a month (0–11) from the region's two lines, or null in summer. */
 export function snowLineFor(meta: TerrainMeta, month: number): number | null {
 	if (month >= 5 && month <= 8) return null;                   // Jun–Sep

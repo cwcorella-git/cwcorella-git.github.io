@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { dayOfYear, sunAltitudeDeg, sunXNorm } from '$lib/garden/sun';
 	import { onMount } from 'svelte';
 	import { themeState } from '$lib/admin/theme.svelte';
 	import { lightFrame, rgbCss } from '$lib/admin/contrast';
@@ -22,35 +23,7 @@
 	}
 
 	// ── sun position ──────────────────────────────────────────────────────────
-	function dayOfYear(d: Date): number {
-		return Math.floor((d.getTime() - new Date(d.getFullYear(), 0, 0).getTime()) / 86400000);
-	}
-
-	function sunAltitudeDeg(date: Date): number {
-		const rad  = Math.PI / 180;
-		const doy  = dayOfYear(date);
-		const decl = 23.45 * Math.sin(rad * (360 / 365) * (doy - 81));
-		const hour = date.getHours() + date.getMinutes() / 60 + date.getSeconds() / 3600;
-		const ha   = 15 * (hour - 12);
-		const lat  = 39.53 * rad;  // Reno, NV
-		const sinAlt =
-			Math.sin(lat) * Math.sin(decl * rad) +
-			Math.cos(lat) * Math.cos(decl * rad) * Math.cos(ha * rad);
-		return Math.asin(Math.max(-1, Math.min(1, sinAlt))) / rad;
-	}
-
-	// sunrise → right (1.0), noon → center (~0.5), sunset → left (0.0)
-	function sunXNorm(date: Date, lat: number): number {
-		const rad   = Math.PI / 180;
-		const doy   = dayOfYear(date);
-		const decl  = 23.45 * Math.sin(rad * (360 / 365) * (doy - 81));
-		const cosH0 = Math.max(-1, Math.min(1, -Math.tan(lat * rad) * Math.tan(decl * rad)));
-		const H0_hours = Math.acos(cosH0) * 12 / Math.PI;
-		const sunrise  = 12 - H0_hours;
-		const sunset   = 12 + H0_hours;
-		const hour = date.getHours() + date.getMinutes() / 60;
-		return Math.max(0, Math.min(1, 1 - (hour - sunrise) / (sunset - sunrise)));
-	}
+	// In $lib/garden/sun.ts, shared with the terrain.
 
 	// ── moon phase (Julian date) ───────────────────────────────────────────────
 	function moonPhase(): number {
