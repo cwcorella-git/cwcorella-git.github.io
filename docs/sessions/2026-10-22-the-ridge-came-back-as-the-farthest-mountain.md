@@ -22,8 +22,10 @@ trees and picked every option: four for the mountains and four for the trees.
 | 12 | Operator: "we need an alternative rendering method for the mountains altogether". Real terrain chosen: `scripts/bake-terrain.py` ray-marches AWS Terrarium elevation (z11) from downtown Reno over azimuths 180–340 and bakes normals, distance, elevation and 8-direction horizon angles into `static/garden/terrain.png` (526 KB). `src/lib/garden/terrain.ts` re-lights it from the real sun, with terrain shadows, distance haze and a monthly snow line. The noise ranges remain only as the load fallback | **done**: `c94a1ac`. Seen at 10:00, 15:30, sunset, Jan 15 and on a phone (dev). Not seen live. Re-light cost on a phone not measured (216k px per half-degree of sun) |
 | 13 | Remove the noise-range code (`buildRangeField`/`renderRangeField`, `RANGES`, `reno-ridge.json`) if the fallback is not wanted | **in progress**: removed in the working tree, uncommitted (see 14) |
 | 14 | Operator on `c94a1ac`: "we lost the full range (horizontal fill) and it's just one mountain. nothing in the background. no layers." Then: "i dont even want it to be reno. can we pick another range? it could be fiction. idc." Approved plan: `~/.claude/plans/crystalline-whistling-music.md` | **in progress**: steps 1, 3 and 4 written and uncommitted; step 2 baking; step 5 not started |
-| 15 | Step 2: bake the top 3 sites, render them through the page, send to Media as group `cwc-range`, operator picks one, commit only that atlas | **in progress**: background bake running |
+| 15 | Step 2: bake the top 3 sites, render them through the page, send to Media as group `cwc-range`, operator picks one, commit only that atlas | **superseded** by 17: sent to Media; operator liked Rigi and Niederhorn both, but "they both have detail issues. mountains are smooth in some areas." |
 | 16 | Step 5: time the re-light and atlas decode on a throttled phone; try lossless WebP | **proposed** |
+| 17 | Re-bake Rigi and Niederhorn with sub-tile detail (z12 near, ridged noise on steep ground, 1600×440 atlas) | **in progress**: script written, bake `bjh07kiwl` running, uncommitted |
+| 18 | Operator: "how can we convert the plains? now the foreground is clearly 2d"; picked "Bake into the terrain". The camera stands on a baked meadow sloping away at 6°, drawn into the ground band | **in progress**: bake + `terrain.ts` + `Garden.svelte` written, check clean, never rendered |
 
 Renders went to the ops Media tab without a group. There was nothing to pick, only to look at.
 
@@ -179,3 +181,63 @@ the first `buildScene` call. The terrain then never loaded, and nothing in the c
   atlas, JSON and the `reno-ridge.json` removal together. Push with
   `git -c credential.helper='!gh auth git-credential' push -q https://github.com/cwcorella-git/cwcorella-git.github.io.git main`.
 - Then row 16 (phone timing, WebP), per the plan file.
+
+## 7. Both Alpine views had layers; both were smooth (round two)
+
+The three bakes (Rigi, Niederhorn, Sierra from the White Mountains) were
+rendered through the page at 15:30 and sent to Media as `cwc-range`. Rigi and
+Niederhorn finally showed stacked ridges across the width; Sierra was a hazy
+wall. Niederhorn also had dark vertical streaks on its left ridge. The
+operator: "i like how both feel on their own but maybe im trying to say they
+both have detail issues. mountains are smooth in some areas." And: "now the
+foreground is clearly 2d and it needs an upgrade."
+
+Diagnosis, not measured: z11 tiles are ~50 m/px there, normals from 40 m
+differences, and a 1200-column atlas upscaled on desktop. So mid-distance
+faces come out as smooth plastic.
+
+Changes in the working tree (all uncommitted, none rendered):
+
+- `scripts/bake-terrain.py`:
+  - **Tiles:** a `Land` class with z12 tiles within 28 km and z11 beyond.
+  - **Meadow:** the camera stands on a meadow cone sloping down at 6° (`site['slope']`), out to 1.4–2.4 km and blended into the real terrain. The ridges below the summit still show above its vanishing line.
+  - **Detail:** ridged-noise detail on the normals, scaled by steepness and faded per octave by the pixel footprint.
+  - **Atlas layout:** 280 rows above the meadow's vanishing line (linear in angle) and 160 meadow rows (linear in tangent, a true perspective plane down to 6 m). Atlas 1600×(440×5).
+  - **Format markers:** B channel 192 marks the meadow; the JSON gains `nrowTop`, `tan0` and `tan1`.
+  - The ray march now starts at 3 m.
+- `terrain.ts`: a `meadow` flag; meadow albedo is grass, with no forest, rock or snow.
+- `Garden.svelte`:
+  - The top rows are drawn above `horizonY` and the meadow rows fill `horizonY..H`.
+  - `fillHillRange` is skipped when the bake carries `nrowTop`.
+  - The painted meadow, blades and trees still draw on top.
+
+## Open (rows 17–18)
+
+- **Never rendered:**
+  - the meadow cone could read as a bald dome;
+  - 6° may hide or show too much of the valley;
+  - the vertical exaggeration is unchanged at ≤ 4×.
+- **Not measured:** the bake's run time and memory, and the atlas size (likely several MB, which feeds row 16).
+- The `--score` path was changed to the new `march` signature and has not been run.
+- `static/garden/terrain.png` and `terrain.json` currently hold the round-one White Mountains bake, copied in for rendering. **Do not commit them.**
+- `reno-ridge.json` must be deleted in the same commit as the code.
+- `npm run check` is clean; vitest last passed (325) before these edits.
+
+## Resume here
+
+Row 17/18.
+
+1. The background bake `bjh07kiwl` writes to
+   `$S/bakes2/<site>/`. Its output log is
+   `/tmp/claude-1000/-home-user-Projects-cwcorella-git-github-io/6a42ab56-838f-4546-83a4-f05667814a49/tasks/bjh07kiwl.output`.
+   If it failed or never finished, rerun:
+   `python3 scripts/bake-terrain.py --site rigi --cache $S/tiles --out $S/bakes2/rigi`, then the same for niederhorn.
+2. For each site:
+   - copy `$S/bakes2/<site>/terrain.{png,json}` into `static/garden/`;
+   - render with `node $S/renders/live.cjs <site>-v2 / 1440 2026-10-22T15:30:00-07:00 sky`, plus a 10:00 render and a 390 px render (dev server on :5191);
+   - look at it, and fix the meadow slope or detail amplitude if it is obviously wrong.
+3. Send both to Media group `cwc-range-2`, labelled by place.
+4. After the pick: copy that bake in, `git rm src/lib/garden/reno-ridge.json`, run check and vitest, commit by explicit paths, and push with the gh credential helper.
+
+`$S` = `/tmp/claude-1000/-home-user-Projects-cwcorella-git-github-io/a292417d-d3e3-4aba-ad17-fa902c0e6aba/scratchpad`.
+
