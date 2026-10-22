@@ -15,6 +15,8 @@ trees and picked every option: four for the mountains and four for the trees.
 | 5 | Re-cast the tree shadow from the new clumped crown | **proposed**: it still uses the old `drawTree`/`drawLeaves` outline |
 | 6 | Time the range re-render on a phone (heightfield re-lit on each 1° sun step) | **proposed** |
 | 7 | Rows 10 and 11 of the 2026-10-21 doc (ALL-CAPS labels, re-push `garden-archive`) | **proposed**: still the operator's call |
+| 8 | Mountains still read 2D (operator): spur ridges scaled per range, relief-exaggerated side light, cast shadows, haze thicker at the base | **done**: `65c6aa2`. Seen at 10:00, 15:30, sunset, Jan 15, and on a phone. Not checked on the live site |
+| 9 | Winter snowfields read as pale vertical walls; they should follow the gullies | **proposed** |
 
 Renders went to the ops Media tab without a group. There was nothing to pick, only to look at.
 
