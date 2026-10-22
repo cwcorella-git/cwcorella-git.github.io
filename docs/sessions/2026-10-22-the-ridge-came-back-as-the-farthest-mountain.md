@@ -481,7 +481,7 @@ After that, rows 28 and 29 per `~/.claude/plans/crystalline-whistling-music.md`.
 - Never checked: the drift as actual motion. The only evidence is two still frames.
 - **'save for everyone' has never been clicked.** The commit through `commitFiles` is untested. Verified on dev only: a hand-placed `static/glass.json` reached a fresh visitor (blur 9px, card 1.8×), and a browser's own setting overrode it. Not seen on the live site.
 
-## Resume here
+## Resume here (superseded by the one at the end)
 
 - **Before any local push, `git pull` first.** 'save for everyone' commits `static/glass.json` to main from the browser, so origin can move ahead of this tree.
 - Read `ops_pick cwc-clouds3` once, and act on any notes.
@@ -529,5 +529,23 @@ Row 29 recorded the cloud bake as "about 70 ms". The first real measurement (`$S
 - The fg/bg trees were timed by proxy (a 380 px `broadleafShape`), not the real `tree.ts` segments.
 - `cwc-trees` and `cwc-crowns` have no verdict.
 
-## Resume here
+## Resume here (superseded by the one at the end)
 Nothing is queued. If the operator leaves notes, read `ops_pick cwc-crowns` / `cwc-trees` once. Pull before pushing.
+
+## 18. Incremental tree bake, the juniper, one crown on the foreground tree
+
+| # | item | state |
+|---|---|---|
+| 39 | a light-only change re-bakes one tree per frame, then swaps in all at once; geometry changes bake all at once | **done**: `1dda136` |
+| 40 | juniper: short trunk, 2–4 twisted stems, scale-leaf stipple (`Foliage.scale`), moved to x 0.93, clear of the far cottonwood | **done**: `bc5925f` |
+| 41 | foreground cottonwood forks at 45–55% into 2–3 leaders (a vase shape); the stacked scaffolds are gone; cache key `cwc:fg-tree-v2` | **done**: `0dfced8` |
+| 42 | on a phone, midground trees scale by dpr (`m.h * dpr`) but `generateFgTree` doesn't, so the near tree is smaller than the far ones | **proposed**: this was already the case before today; it shows in Media `cwc-trees2` |
+
+**Row 39 is unmeasured end to end.** A long-task probe across a 5-minute clock jump (`$S/renders/hitch.cjs`, 4× throttle, phone) swung between 130 and 620 ms with or without the change. The large tasks look like an artefact of `clock.fastForward` firing many timers at once. The claim rests only on the per-job cost: the largest single tree is 43 ms, against about 100 ms for all of them in one frame.
+
+## Open
+- Media `cwc-trees`, `cwc-crowns` and `cwc-trees2` have no verdict (`cwc-trees` and `cwc-crowns` each read twice).
+- The end-to-end hitch measurement needs a better rig: a real phone, or a trace without `fastForward`.
+
+## Resume here
+Row 42, unless the operator's notes say otherwise. Pull before pushing.
