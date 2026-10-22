@@ -443,7 +443,7 @@ What I recommended to the operator: line + halo, with glass as the safety net.
 - Everything in §14 is a **mock**. Nothing is in the repo. A real build has to re-sample when the light changes and when the page scrolls (the list moves over the scene), and it has to read the garden canvases directly, not a screenshot. Its cost is unmeasured, and so is its effect on `contrast.test.ts`, which today checks sky bands only.
 - Row 27 is still mid-edit (below). The open items from §13 still stand.
 
-## Resume here
+## Resume here (superseded by the one at the end)
 **Row 30 waits on `ops_pick cwc-ui-contrast`.** Read it once; do not poll. When the pick arrives, plan the real version: a sampler over the garden canvases in `Garden.svelte`, per-element colour via CSS vars, re-run on relight and scroll; then ask before building.
 
 **Row 27 is unchanged and still stopped mid-edit.** In `src/lib/garden/detail.ts`, `renderNoiseCloud` has gained the parameter `sunAlt = 30`. That is uncommitted.
@@ -457,3 +457,31 @@ Next steps for row 27:
 After that, rows 28 and 29 per `~/.claude/plans/crystalline-whistling-music.md`.
 
 `$S` = `/tmp/claude-1000/-home-user-Projects-cwcorella-git-github-io/a292417d-d3e3-4aba-ad17-fa902c0e6aba/scratchpad`. The mock CSS is in `$S/renders/ui-{sky,paper,ground,clear}.css`. Nothing is running in the background. Main is pushed through `9de37d7`.
+
+## 15. Glass stayed; the light flash was a retired theme's boot script; clouds rows 27–29 landed
+
+| # | item | state |
+|---|---|---|
+| 27 | sunset light from below | **done**: `e5fd241` |
+| 28 | weather per day | **done**: `a65ce91` |
+| 29 | movement: drift and form/fade | **done**: `9856965` |
+| 30 | UI without glass, text coloured per line | **dropped**: the operator, on the mocks: "i dont like the rounded rows for items. i feel like i'd prefer to go back to the glass background" |
+| 31 | glass sliders in admin settings; first paint from the garden's average colour | **done**: `8aaafe5` |
+| 32 | ship the operator's slider values as `GLASS_DEFAULTS` | **proposed**: waiting on his five values |
+
+- **The flash on load did not come from the garden.** `src/app.html` still held the boot script for the six retired palettes, and it fell back to `neutral`, whose `--body-bg` is #d8d8d8. Now `Garden.svelte` saves its average colour (a 16×16 downsample, every 20 s, to `cwc-paint-bg`) and `Sky.svelte` saves its text and glass vars (every 30 s, to `cwc-paint-vars`). `app.html` paints these before anything mounts. When they are more than 2 h old, or missing, it guesses from the hour. Checked on dev with page scripts blocked: the first paint was the saved rgb(109,149,152).
+- **The sliders (`src/lib/admin/glassTune.svelte.ts`) multiply Sky.svelte's per-frame alphas**, so the lightFrame contrast floor is still the starting point. Pushing card opacity below 1× can drop the text under 4.5:1, and `contrast.test.ts` does not cover that.
+- **Row 28:** the first overcast render looked like bright cumulus banks low in the sky. The deck had to be higher, flatter (squash 0.45), baked in a colour mixed toward `shadow`, and drawn over a grey wash on the sky at 0.9 × `cover`.
+- **Row 29:** the cumulus lifecycle (`cloudLife`) reseeds a cloud when its cycle number changes. The drawn x and the shadow jump at that moment, but alpha is 0 then, so nothing visible moves.
+
+## Open
+
+- Media `cwc-clouds3` holds rows 27–29: two sunsets, three weather kinds and the 5-min drift pair. No pick has been read.
+- Never measured: `timing.cjs` cloud-bake cost on a throttled phone, now that busy days have up to 11 cumulus and each reseeds every 10–20 min. Only a desktop dev render has been looked at. The phone width has not been looked at.
+- Never checked: the drift as actual motion. The only evidence is two still frames.
+
+## Resume here
+
+- Row 32: when the operator's slider values arrive, put them in `GLASS_DEFAULTS` in `src/lib/admin/glassTune.svelte.ts`, then commit and push.
+- Read `ops_pick cwc-clouds3` once, and act on any notes.
+- Nothing is unlanded. Main is pushed through `9856965`. The dev server was restarted on :5191 in the background.
