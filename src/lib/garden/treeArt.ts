@@ -7,7 +7,7 @@ export type RGB = [number, number, number];
 
 export interface Seg { x1: number; y1: number; x2: number; y2: number; thick: number }
 export interface Clump { x: number; y: number; r: number }
-export interface Foliage { mid: RGB; amount: number; needle?: boolean }   // amount: 0 bare → 1 full leaf; needle: tufts, not leaf masses
+export interface Foliage { mid: RGB; amount: number; needle?: boolean; scale?: boolean }   // amount: 0 bare → 1 full leaf; needle: tufts; scale: juniper stipple
 
 export interface ArtLight {
 	sunDx: number;   // -1 sun to the left, +1 to the right
@@ -50,7 +50,7 @@ export function cottonwoodFoliage(doy: number): Foliage {
 	return { mid: mix(SUMMER, GOLD, ramp(272, 292)), amount: 1 - ramp(305, 332) };
 }
 export const PINE_FOLIAGE: Foliage    = { mid: [52, 74, 50], amount: 1, needle: true };
-export const JUNIPER_FOLIAGE: Foliage = { mid: [84, 104, 86], amount: 1 };
+export const JUNIPER_FOLIAGE: Foliage = { mid: [46, 78, 54], amount: 1, scale: true };
 
 // ── shapes ────────────────────────────────────────────────────────────────
 /** Group branch tips into clumps on a grid of `cell` px. */
@@ -144,20 +144,35 @@ export function pineShape(x: number, y: number, h: number, seed: number): { segs
 	return { segs, clumps };
 }
 
-/** Western juniper: short, multi-stemmed, a lumpy rounded crown. */
+/** Western juniper: a short trunk splitting low into 2–4 twisting stems, an
+ *  asymmetric crown wider than tall in flattish lumpy tiers. */
 export function juniperShape(x: number, y: number, h: number, seed: number): { segs: Seg[]; clumps: Clump[] } {
 	const rng = makePRNG(seed);
 	const segs: Seg[] = [];
-	const clumps: Clump[] = [];
-	for (let i = 0; i < 3; i++) {
-		const a = Math.PI / 2 + (i - 1) * 0.35 + (rng() - 0.5) * 0.2;
-		const len = h * (0.45 + rng() * 0.15);
-		segs.push({ x1: x + (i - 1) * h * 0.04, y1: y, x2: x + Math.cos(a) * len, y2: y - Math.sin(a) * len, thick: h * 0.04 });
+	const trunkH = h * (0.12 + rng() * 0.08);
+	segs.push({ x1: x, y1: y, x2: x + (rng() - 0.5) * h * 0.05, y2: y - trunkH, thick: h * 0.1 });
+	const bx = segs[0].x2, by = segs[0].y2;
+	const lopsided = (rng() - 0.5) * 0.5;                        // the whole crown leans one way
+	const stems = 2 + Math.floor(rng() * 3);
+	for (let i = 0; i < stems; i++) {
+		let a = Math.PI / 2 + lopsided + ((i + 0.5) / stems - 0.5) * 1.3 + (rng() - 0.5) * 0.25;
+		let px = bx, py = by, thick = h * 0.07;
+		const n = 4, len = (h - trunkH) * (0.75 + rng() * 0.3) / n;
+		for (let k = 0; k < n; k++) {
+			a += (rng() - 0.5) * 0.5;                              // twist
+			const qx = px + Math.cos(a) * len, qy = py - Math.sin(a) * len;
+			segs.push({ x1: px, y1: py, x2: qx, y2: qy, thick });
+			// Side shoots: short, near horizontal, the tiers.
+			if (k > 0) for (const side of [-1, 1]) {
+				if (rng() < 0.35) continue;
+				const sl = h * (0.12 + rng() * 0.16), sa = (side < 0 ? Math.PI : 0) + (rng() - 0.5) * 0.4;
+				segs.push({ x1: qx, y1: qy, x2: qx + Math.cos(sa) * sl, y2: qy - Math.sin(sa) * sl * 0.4, thick: thick * 0.35 });
+			}
+			px = qx; py = qy; thick *= 0.75;
+		}
 	}
-	for (let i = 0; i < 11; i++) {
-		const a = rng() * Math.PI * 2, d = Math.sqrt(rng());
-		clumps.push({ x: x + Math.cos(a) * d * h * 0.42, y: y - h * 0.58 + Math.sin(a) * d * h * 0.3, r: h * (0.14 + rng() * 0.08) });
-	}
+	// Foliage along everything above the trunk, on a fine grid: a dense, lumpy mass.
+	const clumps = clumpsFromTips(segs.slice(1).flatMap((s) => [s, { ...s, x2: (s.x1 + s.x2) / 2, y2: (s.y1 + s.y2) / 2 }]), h * 0.1, Infinity, 1);
 	return { segs, clumps };
 }
 
@@ -189,6 +204,24 @@ function renderClump(r: number, f: Foliage, L: ArtLight, seed: number): HTMLCanv
 			ctx.fill();
 		}
 	};
+	if (f.scale) {
+		// Scale-leaf foliage: dense short stipple, dark blue-green, a few dusty berries.
+		const dots = (n: number, ox: number, oy: number, spread: number, col: RGB, sz: number) => {
+			ctx.fillStyle = rgb(col);
+			for (let i = 0; i < n; i++) {
+				const a = rng() * Math.PI * 2, d = Math.sqrt(rng()) * spread;
+				ctx.fillRect(cx + ox + Math.cos(a) * d * 1.2, cy + oy + Math.sin(a) * d * 0.7, sz, sz);
+			}
+		};
+		const px = Math.max(1, r * 0.09);
+		dots(260, 0, r * 0.1, r * 0.95, dark, px);
+		dots(200, 0, -r * 0.05, r * 0.7, mid, px);
+		if (L.dl > 0.05) {
+			dots(70, L.sunDx * r * 0.3, -r * 0.3, r * 0.4, lit, px);
+			dots(2, L.sunDx * r * 0.25, -r * 0.1, r * 0.5, mix(L.night, [128, 140, 160], L.dl), px);   // berries
+		}
+		return c;
+	}
 	if (f.needle) {
 		// Tufts of needles: short strokes radiating from the clump, darker under.
 		const tuft = (n: number, oy: number, col: RGB, len0: number, len1: number) => {
