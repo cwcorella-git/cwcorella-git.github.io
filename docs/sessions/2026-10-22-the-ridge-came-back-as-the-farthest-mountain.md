@@ -404,7 +404,7 @@ Step 1 (shape) is `fae3df1`. It adds two tiers of turrets, a 0.35 grey band at t
 - Media `cwc-foreground`, `cwc-recheck` and `cwc-season` are waiting on the operator.
 - The new cloud shape has not been checked for timing and has not been seen on a phone.
 
-## Resume here
+## Resume here (superseded by the one at the end)
 **Row 27, stopped mid-edit.** In `src/lib/garden/detail.ts`, `renderNoiseCloud` has gained the parameter `sunAlt = 30`; nothing else has changed, and the edit is uncommitted.
 
 Next:
@@ -414,3 +414,46 @@ Next:
 4. Render 17:55 Oct 22 and 16:40 Jan 15, send them to Media `cwc-clouds3`, then commit and push.
 
 After that, rows 28 and 29 in the plan's order. Nothing is running in the background. Main is pushed through `fae3df1`.
+
+## 14. The text was unreadable because its colour came from the sky, not from what was behind it
+
+The operator asked how else the UI could be drawn instead of glass. I mocked four styles on /reading as injected CSS: text on the sky, paper cards, the ground holding the list, and the sky clearing behind it (Media `cwc-ui-styles`). The verdict was "none of these". The operator picked *text on sky · dusk · desktop* as "maybe a baseline", said "the text is unreadable", and asked how to keep the contrast adaptive.
+
+The cause: `--clr-text` is chosen against the garden's **sky bands** (`backdrop.ts`), and before this it always sat on glass. Without the glass, the list lies over the mountains and the meadow, so at dusk dark text lands on dark rock.
+
+The experiment, `$S/renders/adapt.cjs`, uses the same arguments as `live.cjs` plus a variant name: `line|halo|glass|tonal|ribbon`.
+- It strips the glass, screenshots the scene with `.inner` and `nav` hidden, and then, for each `.title`, `.meta`, guide letter and nav link, samples the pixels under that text's own box.
+- It chooses dark `#141416` or light `#f7f0e2` by the **worst case**: dark text is tested against the 95th-percentile luminance and light text against the 5th.
+
+Five variants went to Media `cwc-ui-contrast` (20 images: noon 12:30 and dusk 18:05, at 1280 and 390):
+- **line** on its own fixes dusk. At noon on the phone, the lines that cross the yellow tree are still busy.
+- **halo** adds a soft glow in the opposite tone.
+- **glass** blurs a row only when that row still fails 4.5:1.
+- **tonal** uses the scene's own hue behind the text, pushed to 6:1.
+- **ribbon** puts a faint pill behind every line.
+
+What I recommended to the operator: line + halo, with glass as the safety net.
+
+| # | item | state |
+|---|---|---|
+| 30 | UI without glass: text coloured per line from the pixels behind it (+ halo, glass as a fallback) | **proposed**: waiting on the operator's pick in `cwc-ui-contrast` |
+
+## Open
+- Media `cwc-ui-contrast` is waiting on the operator; `cwc-ui-styles` was answered ("none of these").
+- Everything in §14 is a **mock**. Nothing is in the repo. A real build has to re-sample when the light changes and when the page scrolls (the list moves over the scene), and it has to read the garden canvases directly, not a screenshot. Its cost is unmeasured, and so is its effect on `contrast.test.ts`, which today checks sky bands only.
+- Row 27 is still mid-edit (below). The open items from §13 still stand.
+
+## Resume here
+**Row 30 waits on `ops_pick cwc-ui-contrast`.** Read it once; do not poll. When the pick arrives, plan the real version: a sampler over the garden canvases in `Garden.svelte`, per-element colour via CSS vars, re-run on relight and scroll; then ask before building.
+
+**Row 27 is unchanged and still stopped mid-edit.** In `src/lib/garden/detail.ts`, `renderNoiseCloud` has gained the parameter `sunAlt = 30`. That is uncommitted.
+
+Next steps for row 27:
+1. Replace `const len = Math.hypot(sunSide * 0.7, 1); const lx…, ly = 1 / len;` with a light angle `e = sunAlt >= 0 ? min(80, sunAlt*3.2) : max(-18, sunAlt*3)` degrees, giving `lx = sunSide*cos e` and `ly = sin e`.
+2. Set `under = 1 - smooth(-1, 4, sunAlt)`, swap `lift` by `under`, and scale the grey-base band by `(1 - under)`.
+3. In `Garden.svelte`, set the `CLOUD_KF` `alt: 0` shadow to about [120,118,150]. `drawClouds` passes `altDeg` and adds `Math.round(altDeg)` to `colorKey`.
+4. Render 17:55 Oct 22 and 16:40 Jan 15, send them to Media `cwc-clouds3`, then commit and push.
+
+After that, rows 28 and 29 per `~/.claude/plans/crystalline-whistling-music.md`.
+
+`$S` = `/tmp/claude-1000/-home-user-Projects-cwcorella-git-github-io/a292417d-d3e3-4aba-ad17-fa902c0e6aba/scratchpad`. The mock CSS is in `$S/renders/ui-{sky,paper,ground,clear}.css`. Nothing is running in the background. Main is pushed through `9de37d7`.
