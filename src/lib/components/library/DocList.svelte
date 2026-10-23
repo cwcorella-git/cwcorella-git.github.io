@@ -35,6 +35,7 @@
 
 	let vlistRef: VListHandle | undefined = $state();
 	let topIndex = $state<number | null>(null);
+	let position = $state<number | null>(null);
 
 	// Index array of length `total`; VList renders only the visible slice.
 	const slots = $derived(total ? Array.from({ length: total }, (_, i) => i) : []);
@@ -55,6 +56,8 @@
 		const start = vlistRef.findItemIndex(offset);
 		const end = vlistRef.findItemIndex(offset + vp);
 		topIndex = start;
+		const room = vlistRef.getScrollSize() - vp;
+		position = room > 0 ? offset / room : 0;
 		onVisibleRange(start, end);
 	}
 
@@ -123,6 +126,7 @@
 			onSeek={handleJump}
 			{total}
 			{activeLabel}
+			{position}
 			onScrubTo={handleScrubTo}
 		/>
 	</div>

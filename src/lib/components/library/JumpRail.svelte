@@ -8,9 +8,14 @@
 		total: number | null;
 		activeLabel: string | null;
 		onScrubTo: (index: number) => void;
+		/** Where the view is, 0 (top) to 1 (end). Known at every scroll event, so
+		 *  the marker moves live even while the rows under it are still loading. */
+		position?: number | null;
+		/** Stay a vertical, scrubbable rail on phones instead of becoming a strip. */
+		vertical?: boolean;
 	}
 
-	const { anchors, onSeek, total, activeLabel, onScrubTo }: Props = $props();
+	const { anchors, onSeek, total, activeLabel, onScrubTo, position = null, vertical = false }: Props = $props();
 
 	const DRAG_THRESHOLD = 6; // px of travel before a press becomes a scrub
 
@@ -79,6 +84,7 @@
 	<nav
 		class="rail"
 		class:dragging
+		class:vertical
 		aria-label="jump to"
 		bind:this={railEl}
 		onpointerdown={onPointerDown}
@@ -97,6 +103,9 @@
 				{a.label}
 			</button>
 		{/each}
+		{#if position !== null && !dragging}
+			<span class="here" style="top: {Math.min(Math.max(position, 0), 1) * 100}%" aria-hidden="true"></span>
+		{/if}
 		{#if dragging && activeLabel}
 			<span class="scrub-bubble" style="top: {bubbleY}px" aria-hidden="true">{activeLabel}</span>
 		{/if}
@@ -125,7 +134,7 @@
 		line-height: 1.35;
 		padding: 0 0.25rem;
 		cursor: pointer;
-		opacity: 0.4;
+		opacity: 0.55;
 		transition: opacity 0.1s;
 		text-align: center;
 	}
@@ -140,6 +149,19 @@
 		content: '▸';
 		position: absolute;
 		margin-left: -0.7rem;
+	}
+	/* The live position marker: a short bar on the rail's inner edge. */
+	.here {
+		position: absolute;
+		left: 0;
+		width: 2px;
+		height: 1.4rem;
+		transform: translateY(-50%);
+		border-radius: 1px;
+		background: var(--clr-text);
+		opacity: 0.7;
+		pointer-events: none;
+		transition: top 0.08s linear;
 	}
 	.scrub-bubble {
 		position: absolute;
@@ -159,7 +181,7 @@
 	/* Below the mobile breakpoint the rail is a horizontal scroll strip: no scrub
 	   (pointerdown bails on a wider-than-tall rect), taps + highlight still work. */
 	@media (max-width: 480px) {
-		.rail {
+		.rail:not(.vertical) {
 			flex-direction: row;
 			justify-content: flex-start;
 			height: auto;

@@ -5,6 +5,7 @@
 	import { linksFor } from '$lib/bookDocLogic';
 	import { bookMeta, guideLetter, sortByTitle } from '$lib/readingLogic';
 	import BookView from '$lib/components/BookView.svelte';
+	import JumpRail from '$lib/components/library/JumpRail.svelte';
 
 	// Derive from shared booksState so BookForm updates are visible here
 	let books = $derived(booksState.books);
@@ -66,6 +67,46 @@
 					)
 				: books
 	));
+
+	// ── letter rail ──────────────────────────────────────────────
+	// The letters live in the rail at the side, not as headings in the list.
+	// Every book is in memory, so "you are here" is read on every scroll frame.
+	let listEl = $state<HTMLElement | undefined>();
+	let firstOf = $derived.by(() => {
+		const m = new Map<string, number>();
+		filtered.forEach((b, i) => { const l = guideLetter(b.title); if (!m.has(l)) m.set(l, i); });
+		return m;
+	});
+	let anchors = $derived([...firstOf.keys()].map((l) => ({ label: l, seek: l })));
+	let topIndex = $state(0);
+	let position = $state(0);
+	let activeLabel = $derived(filtered[topIndex] ? guideLetter(filtered[topIndex].title) : null);
+
+	const rowEl = (i: number) => listEl?.children[i] as HTMLElement | undefined;
+	function scrollToRow(i: number, smooth = false) {
+		const el = rowEl(i);
+		if (!el) return;
+		window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 80, behavior: smooth ? 'smooth' : 'auto' });
+	}
+
+	let scrollFrame = 0;
+	function trackScroll() {
+		if (scrollFrame) return;
+		scrollFrame = requestAnimationFrame(() => {
+			scrollFrame = 0;
+			const room = document.documentElement.scrollHeight - window.innerHeight;
+			position = room > 0 ? window.scrollY / room : 0;
+			// First row whose bottom is below the nav: binary search, rows are in order.
+			const n = listEl?.children.length ?? 0;
+			let lo = 0, hi = n - 1;
+			while (lo < hi) {
+				const mid = (lo + hi) >> 1;
+				if (rowEl(mid)!.getBoundingClientRect().bottom < 80) lo = mid + 1; else hi = mid;
+			}
+			topIndex = lo;
+		});
+	}
+	$effect(() => { void filtered; trackScroll(); });
 
 	function setTag(cat: string) { activeTag = cat; searchQuery = ''; }
 	function clearTag() { activeTag = ''; }
@@ -139,7 +180,7 @@
 	<title>cwcorella</title>
 </svelte:head>
 
-<svelte:window onkeydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} onscroll={trackScroll} onresize={trackScroll} />
 
 <!-- BookView overlay -->
 {#if bookViewBook}
@@ -204,12 +245,8 @@
 			</div>
 		</div>
 
-		<ul class="list">
-			{#each filtered as book, i (book.id)}
-				{#if i === 0 || guideLetter(book.title) !== guideLetter(filtered[i - 1].title)}
-					<!-- Letter guide, like the tabs in a card-catalogue drawer -->
-					<li class="guide" aria-hidden="true"><span>{guideLetter(book.title)}</span></li>
-				{/if}
+		<ul class="list" bind:this={listEl}>
+			{#each filtered as book (book.id)}
 				<li class:done={book.read}>
 					<div class="row-wrap">
 						<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -248,7 +285,21 @@
 			{/each}
 		</ul>
 
+
 		<p class="count">{filtered.length} {filtered.length === 1 ? 'title' : 'titles'}</p>
+	</div>
+
+	<!-- Outside .inner: its backdrop-filter would pin a fixed child to the panel. -->
+	<div class="rail-dock" data-glass>
+		<JumpRail
+			{anchors}
+			total={filtered.length}
+			{activeLabel}
+			{position}
+			vertical
+			onSeek={(l) => { const i = l === null ? 0 : firstOf.get(l); if (i !== undefined) scrollToRow(i, true); }}
+			onScrubTo={(i) => scrollToRow(i)}
+		/>
 	</div>
 </div>
 
@@ -411,25 +462,20 @@
 		color: var(--clr-meta);
 	}
 
-	.guide {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		margin: 2.2rem 0 0.4rem;
+	/* The letter rail, docked to the right edge of the window. */
+	.rail-dock {
+		position: fixed;
+		right: max(0.5rem, calc((100vw - 760px) / 2 - 2.5rem));
+		top: 15vh;
+		z-index: 2;
+		padding: 0.5rem 0.2rem;
+		border-radius: 999px;
+		background: var(--glass-bg);
+		backdrop-filter: var(--glass-blur);
+		-webkit-backdrop-filter: var(--glass-blur);
 	}
-	.guide:first-child { margin-top: 0; }
-	.guide span {
-		font-family: var(--font-ui);
-		font-weight: 600;
-		font-size: 1.5rem;
-		line-height: 1;
-		color: var(--clr-meta);
-	}
-	.guide::after {
-		content: '';
-		flex: 1;
-		border-top: 1px solid var(--clr-meta);
-		opacity: 0.35;
+	@media (max-width: 860px) {
+		.rail-dock { right: 0.15rem; }
 	}
 
 	.row-action-btn {
@@ -540,7 +586,7 @@
 	@media (max-width: 480px) {
 		.page { padding-top: 4.5rem; }
 		.search-area { margin-bottom: 1.5rem; }
-		.inner { padding: 1.5rem 1.25rem 4rem; }
+		.inner { padding: 1.5rem 2.1rem 4rem 1.25rem; }   /* right: clear of the letter rail */
 		.read-toggle {
 			padding: 0.5rem 0.4rem;
 			min-height: 44px;
