@@ -31,7 +31,7 @@ export const SCENE_DEFAULTS = {
 	dayFps: 4,         // redraws per second by day
 	nightFps: 15,      // and by night, for the twinkle
 	// text
-	contrast: 4.5,     // the floor every frame's text must reach; never below 4.5
+	contrast: 4,       // the floor every frame's text must reach; never below TEXT_FLOOR (4)
 	glassDay: 0.22,    // glass alpha before contrast thickens it
 	glassNight: 0.42,
 	textScale: 1,      // × root font size
@@ -52,7 +52,7 @@ export function cleanScene(s: unknown): Partial<SceneTune> {
 	for (const [k, v] of Object.entries(s)) {
 		if (k in SCENE_DEFAULTS && typeof v === typeof SCENE_DEFAULTS[k as SceneKey]) out[k] = v;
 	}
-	if (typeof out.contrast === 'number') out.contrast = Math.max(4.5, out.contrast);
+	if (typeof out.contrast === 'number') out.contrast = Math.max(4, out.contrast);
 	return out as Partial<SceneTune>;
 }
 

@@ -12,6 +12,8 @@ const MAX_MIX = 0.4;
 /** Daylight below which a light-glass palette's ground turns dark. */
 const TWILIGHT = 0.3;
 const MIN_RATIO = 4.5;
+/** The lowest text floor allowed (operator, 2026-10-23: lighter glass under pale text). */
+export const TEXT_FLOOR = 4;
 
 function channel(c: number): number {
 	const s = c / 255;
@@ -100,7 +102,7 @@ export interface FrameTune { target: number; glassDay: number; glassNight: numbe
 const FRAME_DEFAULTS: FrameTune = { target: 4.5, glassDay: 0.22, glassNight: 0.42 };
 
 export function lightFrame(p: LightPaletteSeeds, dl: number, backdrops?: readonly RGB[], tune: FrameTune = FRAME_DEFAULTS): LightFrame {
-	const target = Math.max(4.5, tune.target), cap = target > 4.5 ? 0.97 : 0.9;   // a higher target may need thicker glass
+	const target = Math.max(TEXT_FLOOR, tune.target), cap = target > 4.5 ? 0.97 : 0.9;   // a higher target may need thicker glass
 	const night = 1 - dl;
 	let glass = mix(p.glassDay, p.glassNight, night);
 	// The ground switches at twilight instead of fading: any continuous fade from a

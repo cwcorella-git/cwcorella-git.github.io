@@ -69,7 +69,7 @@ describe('cleanScene', () => {
 		expect(cleanScene(null)).toEqual({});
 	});
 
-	it('never lets the contrast floor fall below 4.5', () => {
-		expect(cleanScene({ contrast: 3 })).toEqual({ contrast: 4.5 });
+	it('never lets the contrast floor fall below 4', () => {
+		expect(cleanScene({ contrast: 3 })).toEqual({ contrast: 4 });
 	});
 });

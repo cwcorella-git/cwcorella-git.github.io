@@ -32,7 +32,7 @@
 			t('trees', 'trees'), t('sage', 'sagebrush'), t('treeShadows', 'tree shadows'), t('grass', 'grass'), r('windAmt', 'wind', 0, 3, 0.1),
 		] },
 		{ name: 'text', rows: [
-			r('contrast', 'contrast', 4.5, 7, 0.1, ':1'), r('glassDay', 'glass day', 0, 0.8, 0.01, ''), r('glassNight', 'glass night', 0, 0.9, 0.01, ''),
+			r('contrast', 'contrast', 4, 7, 0.1, ':1'), r('glassDay', 'glass day', 0, 0.8, 0.01, ''), r('glassNight', 'glass night', 0, 0.9, 0.01, ''),
 			r('textScale', 'size', 0.8, 1.4, 0.02), r('textWeight', 'weight', 300, 700, 50, ''), r('textHalo', 'halo', 0, 1, 0.05, ''),
 		] },
 		{ name: 'effects', rows: [t('grain', 'grain'), t('vignette', 'vignette'), r('grainAmt', 'grain', 0, 2, 0.05), r('vignetteAmt', 'vignette', 0, 2.5, 0.05),
