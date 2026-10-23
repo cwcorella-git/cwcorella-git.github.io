@@ -9,7 +9,7 @@
 	import { adminState } from '$lib/admin/state.svelte';
 	import { isUnlockDay } from '$lib/admin/tlock';
 	import { toast } from '$lib/admin/toast.svelte';
-	import { renderTreeArt, drawTreeArt, clumpsFromTips, broadleafShape, pineShape, juniperShape, cottonwoodFoliage, PINE_FOLIAGE, JUNIPER_FOLIAGE, type TreeArt, type Seg } from '$lib/garden/treeArt';
+	import { renderTreeArt, drawTreeArt, clumpsFromTips, broadleafShape, pineShape, juniperShape, sageShape, SAGE_FOLIAGE, cottonwoodFoliage, PINE_FOLIAGE, JUNIPER_FOLIAGE, type TreeArt, type Seg, type Clump } from '$lib/garden/treeArt';
 	import { weatherFor, type Weather } from '$lib/garden/weather';
 	import { renderMeadow, makeFlowers, flowerBloom, type Flower, renderNoiseCloud, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
 
@@ -944,7 +944,17 @@
 	const fgYf = () => narrow() ? 0.22 : 0.3;
 	const fgBaseX = () => W * (narrow() ? 0.18 : 0.28);
 	const fgBaseY = () => groundY(fgYf());
-	let treeCache: { key: string; fg: TreeArt | null; bg: TreeArt | null; mid: TreeArt[] } = { key: '', fg: null, bg: null, mid: [] };
+	let treeCache: { key: string; fg: TreeArt | null; bg: TreeArt | null; mid: TreeArt[]; sage: (TreeArt | null)[] } = { key: '', fg: null, bg: null, mid: [], sage: [] };
+
+	// Big sagebrush through the meadow, seeded so it stays put. Index 0 holds
+	// the shrubs behind the front cottonwood, 1 those in front of it.
+	function sagePlants(): { x: number; yf: number; h: number; seed: number }[] {
+		const r = makePRNG(0x5A6E);
+		return Array.from({ length: narrow() ? 8 : 13 }, () => {
+			const yf = 0.03 + Math.pow(r(), 1.2) * 0.62;
+			return { x: r() * W, yf, h: (20 + r() * 14) * dpr * depthK(yf), seed: Math.floor(r() * 0x7FFFFFFF) };
+		});
+	}
 
 	// tree.ts sizes its trees in fixed px. Generate in CSS px (segments are
 	// stored as fractions of W, H, so they scale up) and widen the limbs by dpr;
@@ -976,7 +986,7 @@
 		const key = `${geom}|${Math.round(altDeg)}|${Math.round(sxn * 40)}|${doy}`;
 		if (treeCache.key === key) return treeCache;
 		if (treePending?.key !== key) {
-			const next: typeof treeCache = { key, fg: null, bg: null, mid: [] };
+			const next: typeof treeCache = { key, fg: null, bg: null, mid: [], sage: [] };
 			treePending = { key, jobs: treeJobs(altDeg, sxn, doy, next), next, frame: -1 };
 		}
 		const P = treePending;
@@ -1027,6 +1037,32 @@
 			const hazeK = 0.3 * Math.max(0, 1 - m.yf / 0.15);
 			next.mid[i] = renderTreeArt(shape.segs, shape.clumps, f, { ...L, sunDx: sunX < x ? -1 : 1, hazeK }, seed + i);
 		}));
+		// Sagebrush: one bake per group, all shrubs in it as one art. It sits
+		// on the meadow, so it takes the meadow's light, not the trees'.
+		const tl = tuftLight(altDeg), groundLit = clamp01((tl[0] + tl[1] + tl[2]) / 3);
+		for (const k of [0, 1]) jobs.push(() => {
+			const segs: Seg[] = [], clumps: Clump[] = [];
+			for (const p of sagePlants()) {
+				if ((p.yf >= fgYf()) !== (k === 1)) continue;
+				const sh = sageShape(p.x, groundY(p.yf), p.h, p.seed);
+				segs.push(...sh.segs); clumps.push(...sh.clumps);
+			}
+			const art = segs.length ? renderTreeArt(segs, clumps, SAGE_FOLIAGE, { ...L, sunDx: sxn < 0.5 ? -1 : 1, hazeK: 0.08, dl: L.dl * groundLit }, 0x5A6E + k) : null;
+			if (art) {
+				// A soft contact shadow under each shrub, into the trunk layer so
+				// it sits beneath the foliage. The art's canvas is padded, so
+				// shadows near its edge may be clipped; they are small.
+				const g = art.trunk.getContext('2d')!;
+				g.fillStyle = `rgba(30,36,20,${(0.28 * dl).toFixed(2)})`;
+				for (const p of sagePlants()) {
+					if ((p.yf >= fgYf()) !== (k === 1)) continue;
+					g.beginPath();
+					g.ellipse(p.x - art.ox, groundY(p.yf) - art.oy, p.h * 0.75, p.h * 0.16, 0, 0, Math.PI * 2);
+					g.fill();
+				}
+			}
+			next.sage[k] = art;
+		});
 		return jobs;
 	}
 
@@ -1341,6 +1377,8 @@
 		drawHorizonBlend(ctx, altDeg);                   // under the trees: they carry their own haze by distance
 		drawBgTree(ctx, altDeg, sxn, windPx);            // space-colonization cottonwood — far right background
 		drawMidgroundTrees(ctx, altDeg, sxn, windPx);
+		const sageArt = treeArts(altDeg, sxn).sage;
+		if (sageArt[0]) drawTreeArt(ctx, sageArt[0], 0);
 		drawPlants(ctx, bgPlants, horizonY, H, tuftLight(altDeg), plantGreen);   // far grass — behind tree
 		drawCirrus(ctx, altDeg);
 		drawClouds(ctx, altDeg, sxn);
@@ -1357,6 +1395,7 @@
 			drawTreeArt(ctx, fgArt, windPx);
 			ctx.restore();
 		}
+		if (sageArt[1]) drawTreeArt(ctx, sageArt[1], 0);
 		drawPlants(ctx, fgPlants, horizonY, H, tuftLight(altDeg), plantGreen);   // near grass — in front of everything
 		drawGrain(ctx);
 		drawVignette(ctx);

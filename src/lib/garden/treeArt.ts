@@ -7,7 +7,7 @@ export type RGB = [number, number, number];
 
 export interface Seg { x1: number; y1: number; x2: number; y2: number; thick: number }
 export interface Clump { x: number; y: number; r: number }
-export interface Foliage { mid: RGB; amount: number; needle?: boolean; scale?: boolean }   // amount: 0 bare → 1 full leaf; needle: tufts; scale: juniper stipple
+export interface Foliage { mid: RGB; amount: number; needle?: boolean; scale?: boolean; tip?: RGB }   // tip: lit-top colour for scale foliage   // amount: 0 bare → 1 full leaf; needle: tufts; scale: juniper stipple
 
 export interface ArtLight {
 	sunDx: number;   // -1 sun to the left, +1 to the right
@@ -54,6 +54,8 @@ export function cottonwoodFoliage(doy: number): Foliage {
 	return { mid: mix(SUMMER, GOLD, ramp(272, 292)), amount: 1 - ramp(305, 332) };
 }
 export const PINE_FOLIAGE: Foliage    = { mid: [56, 80, 42], amount: 1, needle: true };
+// Big sagebrush: silver grey-green, lit tops paler and bluer (the photo).
+export const SAGE_FOLIAGE: Foliage    = { mid: [106, 116, 90], amount: 1, scale: true, tip: [170, 178, 158] };
 export const JUNIPER_FOLIAGE: Foliage = { mid: [60, 78, 52], amount: 1, scale: true };   // dark olive, not blue
 
 // ── shapes ────────────────────────────────────────────────────────────────
@@ -197,6 +199,24 @@ export function juniperShape(x: number, y: number, h: number, seed: number): { s
 	return { segs, clumps };
 }
 
+/** Big sagebrush: a low rounded shrub, a few woody stems fanning from the
+ *  ground and a dome of fine grey-green foliage, wider than tall. */
+export function sageShape(x: number, y: number, h: number, seed: number): { segs: Seg[]; clumps: Clump[] } {
+	const rng = makePRNG(seed);
+	const segs: Seg[] = [];
+	const n = 6 + Math.floor(rng() * 4);
+	for (let i = 0; i < n; i++) {
+		const a = Math.PI / 2 + ((i + 0.5) / n - 0.5) * 2.4 + (rng() - 0.5) * 0.3;
+		const l = h * (0.4 + rng() * 0.45);
+		const mx = x + Math.cos(a) * l * 0.5, my = y - Math.sin(a) * l * 0.5;
+		segs.push({ x1: x + (rng() - 0.5) * h * 0.1, y1: y, x2: mx, y2: my, thick: h * 0.05 });
+		segs.push({ x1: mx, y1: my, x2: x + Math.cos(a) * l * 1.1, y2: y - Math.sin(a) * l * 0.85, thick: h * 0.03 });
+	}
+	const clumps = clumpsFromTips(segs.flatMap((s) => [s, { ...s, x2: (s.x1 + s.x2) / 2, y2: (s.y1 + s.y2) / 2 }]), h * 0.26, Infinity, 1)
+		.map((c) => ({ ...c, r: c.r * 1.15 }));
+	return { segs, clumps };
+}
+
 // ── rendering ─────────────────────────────────────────────────────────────
 function barkFor(thick: number, maxThick: number): RGB {
 	const t = Math.min(1, thick / Math.max(1, maxThick));
@@ -259,7 +279,7 @@ function tone1Cols(own: RGB, f: Foliage, L: ArtLight): RGB[] {
 	const dark = hazed(mix(mix(mid0, [18, 26, 30], 0.5), [90, 74, 112], (conifer ? 0.08 : 0.3) * w), L);
 	const mid = hazed(mid0, L);
 	const lit = hazed(mix(L.night, mix(own, L.sunCol, 0.45 + 0.25 * w), L.dl), L);
-	const third = f.scale ? hazed(mix(L.night, mix(own, [176, 170, 84], 0.5), L.dl), L) : conifer ? mix(mid, lit, 0.45) : lit;
+	const third = f.scale ? mix(mid, hazed(mix(L.night, shade(mix(mix(own, f.tip ?? [176, 170, 84], 0.5), L.sunCol, 0.2 + 0.3 * w), 1 - 0.3 * w), L.dl), L), 0.6) : conifer ? mix(mid, lit, 0.45) : lit;
 	return [dark, mid, third];
 }
 
@@ -286,7 +306,7 @@ function renderClump(r: number, f: Foliage, L: ArtLight, seed: number, tone = 1)
 	// Conifers: a quieter split between shaded and sunlit clumps, and the lit
 	// colour only as a sprinkle on the upper sun-side edge, never a pale lid.
 	// Juniper's lit tops go gold-green (the photos), not just paler.
-	const soft = f.scale ? hazed(mix(L.night, mix(own, [176, 170, 84], 0.5), L.dl), L) : mix(mid, lit, 0.45);
+	const soft = f.scale ? mix(mid, hazed(mix(L.night, shade(mix(mix(own, f.tip ?? [176, 170, 84], 0.5), L.sunCol, 0.2 + 0.3 * w), 1 - 0.3 * w), L.dl), L), 0.6) : mix(mid, lit, 0.45);
 	// Broadleaf and scale foliage: one lumpy mass with a noisy edge, filled
 	// with a baked tile of small marks (shared per colour set; drawing each
 	// leaf per lobe cost ~2 s on a throttled phone), shaded across the lobe,
