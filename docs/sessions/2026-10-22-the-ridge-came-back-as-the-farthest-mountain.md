@@ -761,7 +761,21 @@ The operator was offered "snow on plants" and chose **"Add snow days"**. Snow on
 
 **Not checked:** snow at dusk and at night, and on a phone. The speckle on the distant rise when partly melted comes from the terrain's grain noise.
 
-## Resume here
+## Resume here (superseded by the one at the end)
 - Nothing is queued. Rows 43–62 are done and pushed.
+- Media verdicts are open. Read each once, only on /blockout.
+- Pull before pushing.
+
+## 31. Snow at dusk, at night and on a phone (row 63)
+
+| # | item | state |
+|---|---|---|
+| 63 | snow at dusk, at night and on a phone | **done**: `b07efb0`. The phone at 12:30 already read correctly. After sunset the snowy meadow went as dark as bare ground, because its light was scaled to the measured ground brightness. Real snow keeps a pale blue-grey from sky and moon light, so the snow light now has a cool floor of `[0.2, 0.23, 0.32]`, fading in from +1° to −5°. Checked 2026-12-14 at 16:30, 16:55, 17:15 and 19:30 |
+
+**Seen, not fixed:** the snow on the distant rise (terrain, row 62) still darkens with the terrain light after sunset, so it is darker than the near snow.
+
+## Resume here
+- Nothing is queued. Rows 43–63 are done and pushed.
+- Open, proposed: snow on the distant rise at night.
 - Media verdicts are open. Read each once, only on /blockout.
 - Pull before pushing.
