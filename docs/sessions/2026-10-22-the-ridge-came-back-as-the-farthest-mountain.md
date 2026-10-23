@@ -539,7 +539,7 @@ Nothing is queued. If the operator leaves notes, read `ops_pick cwc-crowns` / `c
 | 39 | a light-only change re-bakes one tree per frame, then swaps in all at once; geometry changes bake all at once | **done**: `1dda136` |
 | 40 | juniper: short trunk, 2–4 twisted stems, scale-leaf stipple (`Foliage.scale`), moved to x 0.93, clear of the far cottonwood | **done**: `bc5925f` |
 | 41 | foreground cottonwood forks at 45–55% into 2–3 leaders (a vase shape); the stacked scaffolds are gone; cache key `cwc:fg-tree-v2` | **done**: `0dfced8` |
-| 42 | on a phone, midground trees scale by dpr (`m.h * dpr`) but `generateFgTree` doesn't, so the near tree is smaller than the far ones | **proposed**: this was already the case before today; it shows in Media `cwc-trees2` |
+| 42 | on a phone, midground trees scale by dpr but `generateFgTree`/`generateBgTree` didn't | **done**: `186e04b`. Both trees are generated in CSS px with limbs ×dpr; cache keys are `cwc:fg-tree-v3` and `cwc:tree-v4`. A first-visit foreground tree is still smaller than the 150-yr midground cottonwood, by the growth design |
 
 **Row 39 is unmeasured end to end.** A long-task probe across a 5-minute clock jump (`$S/renders/hitch.cjs`, 4× throttle, phone) swung between 130 and 620 ms with or without the change. The large tasks look like an artefact of `clock.fastForward` firing many timers at once. The claim rests only on the per-job cost: the largest single tree is 43 ms, against about 100 ms for all of them in one frame.
 
@@ -548,4 +548,4 @@ Nothing is queued. If the operator leaves notes, read `ops_pick cwc-crowns` / `c
 - The end-to-end hitch measurement needs a better rig: a real phone, or a trace without `fastForward`.
 
 ## Resume here
-Row 42, unless the operator's notes say otherwise. Pull before pushing.
+Nothing queued; read the Media groups once if the operator leaves notes. Pull before pushing.
