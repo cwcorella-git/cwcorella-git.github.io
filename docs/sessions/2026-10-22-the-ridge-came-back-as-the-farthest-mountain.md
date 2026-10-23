@@ -916,3 +916,34 @@ Checked in headless renders only: the forms sheet, a growth strip at 8/15/25/40/
 - Pull before pushing (`glass.json` and `scene.json` are committed from the browser).
 - Background: the Vite dev server on :5191 (task `b6fxjz86u`, `npx vite dev --port 5191 --strictPort`) is still running for the render scripts; nothing waits on it. The dev-only `window.__clouds` hook in Garden.svelte serves those probes.
 - Media `cwc-stars-66` / `cwc-stars-69` still have no verdict; read once with `ops_pick`, do not poll.
+
+## 39. Text contrast was checked against a sky that wasn't the one behind it
+
+Rows 84–85, after the operator said text was "hard to read sometimes" after playing with the sliders.
+
+### What was wrong
+- **The check only knew two flat sky colours.** `lightFrame` compared text with two sky colours from `backdrop.ts`. It never saw the opaque clouds, the mountains or the trees drawn behind the panels. At sunset that meant dark text over dark mountains.
+- **The glass slider overrode the check.** It multiplied the glass alpha after the check had run, so turning it down thinned the glass below what the text needed.
+
+### What changed
+- **`8734ad6`: the check reads the real frame.**
+  - Garden samples its own frame every 500 ms and publishes the darkest and brightest 10% (`src/lib/garden/seen.svelte.ts`).
+  - The glass slider now sets where the glass starts, and the check can still thicken it.
+  - Measured at sunset with the slider at 0.5: the text read, but the glass went to 0.81, a grey slab.
+- **`ad423fb`: only what's behind the panels counts.**
+  - Only the pixels behind `[data-glass]` panels are sampled. That covers the nav bar and each page's main panel.
+  - The solver now tries dark text on day glass and pale text on night glass, as well as the blend, and keeps whichever needs the thinnest glass.
+  - The reason: the blended glass at dusk is a mid-grey that suits neither text.
+  - Result at sunset: pale text on alpha 0.15 glass, on both desktop and phone. Noon and golden hour keep dark text on glass at about 0.25.
+- **`285592c`: text halo on by default** (0.35).
+
+### Open
+- I've only seen this in renders from my test browser, not on a real phone.
+- The sky bands are still part of the check, as planned. Proposed: drop them once samples exist.
+- Proposed: the footer "github" link isn't on glass and gets dim over the meadow at golden hour.
+- Proposed: the dev-only `globalThis.__seen` debug hook stays in the code.
+
+## Resume here (updated)
+- **Next:** wait for the operator's notes from the real screen.
+- **Dev server:** running on port 5191 as task `b3wvfanti`; nothing waits on it.
+- **Render script:** `txt.cjs` in the scratchpad's `renders/` folder, as `<name> <width> <local ISO> <weather> [glass card]`.
