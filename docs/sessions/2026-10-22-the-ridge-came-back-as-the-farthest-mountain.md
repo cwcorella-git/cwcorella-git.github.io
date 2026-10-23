@@ -947,3 +947,39 @@ Rows 84–85, after the operator said text was "hard to read sometimes" after pl
 - **Next:** wait for the operator's notes from the real screen.
 - **Dev server:** running on port 5191 as task `b3wvfanti`; nothing waits on it.
 - **Render script:** `txt.cjs` in the scratchpad's `renders/` folder, as `<name> <width> <local ISO> <weather> [glass card]`.
+
+## 40. The rail lagged because it read the letter from rows not yet loaded
+
+Rows 86–89. The operator asked for the reading list's giant A/B/C headings to move into a side rail like the library's, and asked: "why doesn't the scrollbar update live? i have to let it rest before it tells you where you're at in the scroll."
+
+### Why the library rail waited
+`DocList` set the active letter from `rowAt(topIndex)`. That row only exists after a window loads, which is an 80 ms debounce in `ensureWindowsForRange` plus a fetch. While you scrolled, the top row was usually still unloaded, so the old letter held until scrolling stopped.
+
+### What changed
+- **`5decbd4`: footer link on glass.** The home page's "github" link sits on a glass pill marked `data-glass`, so the contrast check samples the meadow behind it.
+- **`24ad955`: the reading list gets the rail.**
+  - The letter headings are gone. `JumpRail` (from the library) sits beside the list.
+  - All 902 books are in memory, so the current row is found on every animation frame, by a binary search over the rows' positions.
+  - A position bar was added at the same time; it was removed again in `8d24a7c`.
+- **`4c2402b`: the library letter moves live.**
+  - `estimateLabel` in `railLogic.ts` (pure, tested) guesses the letter for an unloaded row.
+  - It fills in between the nearest rows whose letters are already known, in rail order. With none known, the two ends of the list stand in.
+  - The guesses start over when the query changes. The row's real letter replaces the guess as soon as it loads.
+- **`ab87cd4`: the rail sits inside the card.** On the reading list it's a sticky column beside the list, with no background of its own (operator: "it shouldn't be a separated element").
+  - Gotcha: a `position: fixed` child of `.inner` is pinned to the panel, not the window, because `backdrop-filter` makes the panel its containing block. The first try rendered off-screen for that reason.
+- **`8d24a7c`: the operator's pick from a states grid in Media.** Bold letter plus the ▸ arrow, and no position bar.
+  - The same grid showed the drag bubble was black text on a black box. Its text now takes `--body-bg`.
+
+### Open
+- The library rail has never been seen in a browser: the library needs the live server, which doesn't answer the test browser. The reading rail was rendered on desktop and at 390 px wide.
+- Proposed: a richer rail, shading each letter by how many entries start with it.
+- Proposed (from §39): drop the sky bands from the contrast check.
+
+## Resume here (updated)
+- **Next:** wait for the operator's notes from a real phone, on the rails and the contrast.
+- **Dev server:** task `b3wvfanti` on port 5191; nothing waits on it.
+- **Render scripts** (scratchpad `renders/` folder):
+  - `txt.cjs` and `dbg.cjs`: the page with text, at a given moment and glass setting;
+  - `pg.cjs` (`PAGE=` env var): the same for another page;
+  - `rail.cjs`: the reading rail mid-scroll, plus a jump test;
+  - `states2.cjs`: the rail in all four states.
