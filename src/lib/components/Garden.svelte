@@ -1345,9 +1345,10 @@
 		const sxn     = sunXNorm(now, 39.53);
 		const isNight = altDeg < -8;
 
-		// Day: draw at ~4fps (every 15 frames). Night: draw at ~30fps (every 2 frames).
+		// Day: draw at ~4fps (every 15 frames). Night: ~15fps (every 4 frames), enough
+		// for the twinkle; every 2nd frame redrew the whole screen for nothing (2026-10-23).
 		// Boost to every frame when cursor is active so interaction feels responsive.
-		const skip = cursorActive ? 1 : isNight ? 2 : 15;
+		const skip = cursorActive ? 1 : isNight ? 4 : 15;
 		if (frameCount % skip !== 0) {
 			animFrame = requestAnimationFrame(draw);
 			return;
