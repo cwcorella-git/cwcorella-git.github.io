@@ -21,7 +21,7 @@
 	const GROUPS: { name: string; rows: Row[] }[] = [
 		{ name: 'sky', rows: [t('sun', 'sun'), t('glow', 'sun glow'), t('rays', 'sunbeams'), t('venus', 'twilight bands')] },
 		{ name: 'clouds', rows: [
-			t('cumulus', 'cumulus'), t('sheets', 'sheets'), t('cirrus', 'wisps'), t('cloudShadows', 'cloud shadows'),
+			t('cumulus', 'cumulus'), t('sheets', 'sheets'), t('cirrus', 'wisps'), t('cloudShadows', 'cloud shadows'), t('cloudGrow', 'clouds grow'),
 			r('cloudAmount', 'amount', 0, 3, 0.1), r('cloudSize', 'size', 0.5, 2, 0.05), r('cloudOpacity', 'opacity', 0.3, 2, 0.05),
 			r('cloudDetail', 'detail', 0.5, 2.5, 0.1), r('cloudEdge', 'edge lumps', 0, 2, 0.1),
 		] },

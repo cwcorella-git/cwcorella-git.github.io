@@ -13,7 +13,7 @@
 	import { weatherFor, weatherForced, type Weather } from '$lib/garden/weather';
 	import { sceneTune } from '$lib/admin/sceneTune.svelte';
 	import { clock, sceneNow, sceneMs } from '$lib/garden/clock.svelte';
-	import { renderMeadow, renderRocks, renderSnow, makeFlowers, flowerBloom, type Flower, bakeNoiseCloud, type CloudBake, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
+	import { renderMeadow, renderRocks, renderSnow, makeFlowers, flowerBloom, type Flower, bakeNoiseCloud, cloudAlphaLUT, type CloudBake, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
 	import { moonPosition } from '$lib/garden/moon';
 	import { makeStars, drawStarField, siderealDeg, type StarField } from '$lib/garden/stars';
 
@@ -162,7 +162,8 @@
 		squash:        number;   // drawn height ÷ baked height; <1 flattens the high layer into a sheet
 		prngseed:      number;
 		speed:         number;   // px / minute
-		cache:         { canvas: HTMLCanvasElement; baseY: number; w: number; h: number } | null;
+		cache:         (CloudBake & { q: number }) | null;   // w, h, baseY in scene px; the bake's own size is img's
+		shown?:        { g: number; canvas: HTMLCanvasElement; of: CloudBake } | null;   // the bake at one growth stage
 		cacheColorKey: string;
 		job?:          { gen: Generator<void, CloudBake, void>; key: string; q: number } | null;   // a bake in progress
 		grey?:         boolean;  // an overcast deck: baked in the shadow colour
@@ -245,6 +246,10 @@
 				cacheColorKey: '',
 			});
 		}
+
+		// Far (low in the sky) first, so nearer clouds pass in front of them.
+		const nSheets = clouds.length - cumulusN;
+		clouds = [...clouds.slice(0, nSheets), ...clouds.slice(nSheets).sort((a, b) => b.yFrac - a.yFrac)];
 
 		const cirrng = makePRNG(weather.seed ^ 0xC19C1991);
 		cirrus = [];
@@ -503,7 +508,7 @@
 		for (const cloud of clouds) {
 			const at = cloudRect(cloud, minutes);
 			if (!at) continue;
-			lc.globalAlpha = Math.min(1, (0.3 + cloud.alpha) * 1.4 * sceneTune.cloudOpacity) * at.life;
+			lc.globalAlpha = Math.min(1, (cloud.life ? 1 : (0.3 + cloud.alpha) * 1.4) * sceneTune.cloudOpacity) * at.life;
 			lc.drawImage(at.img, at.x, at.y, at.w, at.h);
 		}
 		lc.globalAlpha = 1;
@@ -526,7 +531,8 @@
 	function drawMoon(ctx: CanvasRenderingContext2D, altDeg: number, now: Date): void {
 		const { x: moonX, y: moonY, alpha: moonAlpha, phase, waxing } = moonState(altDeg, now);
 		if (moonAlpha <= 0) return;
-		const R = 11 * sceneTune.moonSize;
+		// 11 physical px read as ~5 css px on a phone; narrow screens get a bigger disc.
+		const R = sceneTune.moonSize * (narrow() ? 9 * dpr : 11);
 
 		// Glow, stronger the fuller it is
 		const full = 1 - Math.abs(phase - 0.5) * 2;
@@ -1085,7 +1091,8 @@
 			            : broadleafShape(x, gy, h, seed);
 			const f = m.kind === 'pine' ? PINE_FOLIAGE : m.kind === 'juniper' ? JUNIPER_FOLIAGE : leaf;
 			// Haze by distance: the trees on the horizon fade most toward its colour.
-			const hazeK = 0.3 * Math.max(0, 1 - m.yf / 0.15);
+			// By moonlight the haze is held back, or the trees melt into the range.
+			const hazeK = 0.3 * Math.max(0, 1 - m.yf / 0.15) * (1 - 0.6 * ml);
 			next.mid[i] = renderTreeArt(shape.segs, shape.clumps, f, { ...L, sunDx: sunX < x ? -1 : 1, hazeK }, seed + i);
 		}));
 		// Sagebrush: one bake per group, all shrubs in it as one art. It sits
@@ -1271,10 +1278,30 @@
 		if (!(cloud.life ? sceneTune.cumulus : sceneTune.sheets)) return null;   // switched off in the scene tuner
 		const { a: life, k } = cloudLife(cloud, minutes);
 		if (!cloud.cache || life <= 0) return null;
+		// Growing: the life stage sets how much of the density shows. Off, the
+		// whole cloud shows and fades (the old way).
+		const grow = sceneTune.cloudGrow && !!cloud.life;
+		const img = grownImage(cloud, cloud.cache, grow ? life : 1);
+		if (!img) return null;
 		const baseY = cloud.cache.baseY * k, w = cloud.cache.w * k, h = cloud.cache.h * k;
 		let skyY = cloud.yFrac * horizonY * 0.84;     // base sits at this y in main canvas
 		skyY = Math.max(skyY, NAV_CLEAR * dpr + baseY * cloud.squash);   // keep the top out from behind the nav bar
-		return { img: cloud.cache.canvas, x: driftX(cloud, minutes) - w / 2, y: skyY - baseY * cloud.squash, w, h: h * cloud.squash, life };
+		return { img, x: driftX(cloud, minutes) - w / 2, y: skyY - baseY * cloud.squash, w, h: h * cloud.squash, life: grow ? 1 : life };
+	}
+
+	/** The bake with its alpha taken from density at growth g, cached per 1/24 of growth. */
+	function grownImage(cloud: CloudDef, bake: CloudBake, g: number): HTMLCanvasElement | null {
+		const gq = Math.round(g * 24) / 24;
+		if (gq <= 0) return null;
+		if (cloud.shown && cloud.shown.of === bake && cloud.shown.g === gq) return cloud.shown.canvas;
+		const lut = cloudAlphaLUT(gq), src = bake.img.data, out = new ImageData(new Uint8ClampedArray(src), bake.img.width, bake.img.height);
+		const d = out.data;
+		for (let i = 3; i < d.length; i += 4) d[i] = lut[d[i]];
+		const canvas = cloud.shown?.of === bake ? cloud.shown.canvas : document.createElement('canvas');
+		canvas.width = bake.img.width; canvas.height = bake.img.height;
+		canvas.getContext('2d')!.putImageData(out, 0, 0);
+		cloud.shown = { g: gq, canvas, of: bake };
+		return canvas;
 	}
 
 	function drawClouds(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
@@ -1298,12 +1325,15 @@
 		// on screen until the new one is done (2026-10-23). One whole bake a frame
 		// cost ~70 ms on a slow phone at 200 px, which is why clouds were baked
 		// small and stretched, and read soft and plain.
+		const sky = getSkyColors(altDeg);
 		for (const cloud of clouds) {
-			const key = colorKey + ':' + cloud.prngseed;   // a cumulus re-forms with a new seed each cycle
+			// Far clouds take the sky's colour at their height, not its transparency.
+			const env = { sky: lerpRGB(sky.mid, sky.horizon, clamp01(cloud.yFrac / 0.38) * 0.8), zenith: sky.zenith, ground: groundMid };
+			const key = colorKey + ':' + cloud.prngseed + ':' + quantizeColorKey(env.sky, groundMid);   // a cumulus re-forms with a new seed each cycle
 			if ((cloud.cache && cloud.cacheColorKey === key) || cloud.job?.key === key) continue;
 			// Baked at most ~320 px across (× the tuner's detail) and scaled up when drawn.
 			const q = Math.min(0.8 * sceneTune.cloudDetail, (320 * sceneTune.cloudDetail) / cloud.size);
-			cloud.job = { key, q, gen: bakeNoiseCloud(cloud.size * q, cloud.aspectRatio, cloud.prngseed, cloud.grey ? lerpRGB(top, shadow, 0.55) : top, shadow, sunSide, 1, cloud.haze, lightAlt, sceneTune.cloudEdge) };
+			cloud.job = { key, q, gen: bakeNoiseCloud(cloud.size * q, cloud.aspectRatio, cloud.prngseed, cloud.grey ? lerpRGB(top, shadow, 0.55) : top, shadow, sunSide, 1, cloud.haze, lightAlt, sceneTune.cloudEdge, env) };
 		}
 		pumpBakes();
 		if (import.meta.env.DEV) (window as unknown as { __clouds: CloudDef[] }).__clouds = clouds;   // for render probes
@@ -1311,8 +1341,8 @@
 		for (const cloud of clouds) {
 			const at = cloudRect(cloud, minutesSinceEpoch);
 			if (!at) continue;
-			// Cumulus cores read solid; sheets keep their thinness.
-			const base = cloud.life ? 0.45 + cloud.alpha * 1.1 : 0.3 + cloud.alpha;
+			// Cumulus are solid (only their outline lets the sky through); sheets keep their thinness.
+			const base = cloud.life ? 1 : 0.3 + cloud.alpha;
 			ctx.globalAlpha = Math.min(1, base * sceneTune.cloudOpacity) * cloudAlpha * at.life;   // cores read opaque; edges stay soft in the bake
 			ctx.drawImage(at.img, at.x, at.y, at.w, at.h);
 		}
@@ -1329,7 +1359,7 @@
 			while (performance.now() - start < BUDGET) {
 				const r = job.gen.next();
 				if (!r.done) continue;
-				cloud.cache = { ...r.value, w: r.value.w / job.q, h: r.value.h / job.q, baseY: r.value.baseY / job.q };
+				cloud.cache = { ...r.value, q: job.q, w: r.value.w / job.q, h: r.value.h / job.q, baseY: r.value.baseY / job.q };
 				cloud.cacheColorKey = job.key;
 				cloud.job = null;
 				break;

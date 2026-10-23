@@ -18,6 +18,7 @@ export const SCENE_DEFAULTS = {
 	cloudOpacity: 1,   // × drawn alpha
 	cloudDetail: 1,    // × bake resolution (cost grows with the square)
 	cloudEdge: 1,      // fine lumps along the edges
+	cloudGrow: true,   // cumulus grow from their cores and dissolve from the edges; off: the old whole-cloud fade
 	// night
 	starBright: 1,
 	milkyWayAmt: 1,

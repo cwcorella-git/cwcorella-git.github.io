@@ -281,7 +281,20 @@ export function makeFlowers(W: number, bandH: number, scale: number, seed = 0xF1
 // acts only at the outline, so the edges cauliflower while the body stays
 // smooth. Cores are opaque; only the outline and far haze let the sky through.
 export type CloudForm = 'heap' | 'tower' | 'flat' | 'broken';
-export interface CloudBake { canvas: HTMLCanvasElement; baseY: number; w: number; h: number }
+export interface CloudBake { canvas: HTMLCanvasElement; baseY: number; w: number; h: number; img: ImageData }
+/** The light around a cloud: the sky at its height (for distance), the sky
+ *  overhead (ambient on the tops) and the ground below (bounce on the base). */
+export interface CloudEnv { sky: RGB; zenith: RGB; ground: RGB }
+const NO_ENV: CloudEnv = { sky: [150, 180, 215], zenith: [90, 140, 210], ground: [120, 120, 90] };
+
+/** Cloud alpha from the baked density (alpha channel = density/0.6) at growth
+ *  `g` (0 nothing, 1 full): the threshold falls as the cloud grows, so a cloud
+ *  forms from its densest cores outward and dissolves from the edges in. */
+export function cloudAlphaLUT(g: number): Uint8Array {
+	const t = (1 - g) * 1.05, lut = new Uint8Array(256);
+	for (let i = 0; i < 256; i++) lut[i] = Math.round(255 * smooth(t, t + 0.12, i / 255));
+	return lut;
+}
 
 export function cloudForm(seed: number): CloudForm {
 	const u = makePRNG(seed ^ 0x5EED)();
@@ -290,16 +303,22 @@ export function cloudForm(seed: number): CloudForm {
 
 export function renderNoiseCloud(
 	size: number, aspect: number, seed: number,
-	top: RGB, shadow: RGB, sunSide: number, alpha: number, haze = 0, sunAlt = 30, edge = 1,
+	top: RGB, shadow: RGB, sunSide: number, alpha: number, haze = 0, sunAlt = 30, edge = 1, env: CloudEnv = NO_ENV,
 ): CloudBake {
-	const job = bakeNoiseCloud(size, aspect, seed, top, shadow, sunSide, alpha, haze, sunAlt, edge);
-	for (;;) { const r = job.next(); if (r.done) return r.value; }
+	const job = bakeNoiseCloud(size, aspect, seed, top, shadow, sunSide, alpha, haze, sunAlt, edge, env);
+	let r = job.next();
+	while (!r.done) r = job.next();
+	// The bake keeps density in alpha (for growth); a whole cloud is drawn at g = 1.
+	const lut = cloudAlphaLUT(1), d = r.value.img.data;
+	for (let i = 3; i < d.length; i += 4) d[i] = lut[d[i]] * alpha;
+	r.value.canvas.getContext('2d')!.putImageData(r.value.img, 0, 0);
+	return r.value;
 }
 
 /** The same bake, yielding every few rows so a caller can spread it over frames. */
 export function* bakeNoiseCloud(
 	size: number, aspect: number, seed: number,
-	top: RGB, shadow: RGB, sunSide: number, alpha: number, haze = 0, sunAlt = 30, edge = 1,
+	top: RGB, shadow: RGB, sunSide: number, alpha: number, haze = 0, sunAlt = 30, edge = 1, env: CloudEnv = NO_ENV,
 ): Generator<void, CloudBake, void> {
 	const form = cloudForm(seed);
 	const tall = form === 'tower' ? 1.6 : form === 'flat' ? 0.6 : 1;
@@ -360,13 +379,24 @@ export function* bakeNoiseCloud(
 	const ctx = c.getContext('2d')!;
 	const img = ctx.createImageData(CW, CH);
 
+	// Besides the density, each sample remembers the puff it lies in (as a
+	// sphere normal) and how close the next puff is (a crease between lobes).
+	let sNx = 0, sNy = 0, sGap = 1;
 	const density = (x: number, y: number): number => {
-		let d = -1;
-		for (const [px, py, pr] of puffs) {
+		let d = -1, d2 = -1, wx = 0, wy = 0, ws = 0;
+		for (let k = 0; k < puffs.length; k++) {
+			const [px, py, pr] = puffs[k];
 			const q = 1 - Math.hypot(x - px, (y - py) * 1.1) / pr;
-			if (q > d) d = q;
+			if (q > d) { d2 = d; d = q; } else if (q > d2) d2 = q;
+			// Normals blend softly between neighbouring puffs, so lobes merge
+			// instead of meeting along a hard circle.
+			if (q > -0.3) { const w = Math.exp(9 * q); wx += w * (x - px) / pr; wy += w * (y - py) * 1.1 / pr; ws += w; }
 		}
+		sNx = ws ? wx / ws : 0; sNy = ws ? wy / ws : 0; sGap = d - d2;
 		if (d < -0.35) return d;
+		// The surface billows: noise tilts the normal.
+		sNx += (fbm2(x * 14 + oy, y * 14 + ox, 2) - 0.5) * 0.5;
+		sNy += (fbm2(x * 14 + ox + 7, y * 14 + oy + 3, 2) - 0.5) * 0.5;
 		// Erosion: coarse lumps, then billows and finer cauliflower at the edge only.
 		d += (fbm2(x * 6 + ox, y * 6 + oy, 3) - 0.5) * 0.45;
 		const rim = 1 - smooth(0, 0.4, d);
@@ -381,22 +411,31 @@ export function* bakeNoiseCloud(
 	const e = (sunAlt >= 0 ? Math.min(80, sunAlt * 3.2) : Math.max(-18, sunAlt * 3)) * Math.PI / 180;
 	const lx = sunSide * Math.cos(e), ly = Math.sin(e);
 	const under = 1 - smooth(-1, 4, sunAlt);
-	const STEPS = [0.02, 0.045, 0.08, 0.13, 0.2, 0.3];
+	// A longer march than before, so deep cores fall into shade gradually.
+	const STEPS = [0.02, 0.045, 0.08, 0.12, 0.17, 0.24, 0.33, 0.45];
 	const rimCol = mixRGB(top, [255, 255, 255], 0.6);
-	// Far clouds sit in the air between: flatter light, toward the haze.
-	const far = mixRGB(top, shadow, 0.3);
 	const baseDark = mixRGB(shadow, [0, 0, 0], 0.12);
+	// The silver lining is a backlit effect: strong with a low sun, faint overhead.
+	const backlit = 0.25 + 0.75 * (1 - smooth(4, 30, Math.abs(sunAlt)));
+	const bounce = mixRGB(shadow, env.ground, 0.45);
+	const ambient = mixRGB(top, env.zenith, 0.35);
 	const ROWS = 24;   // rows per slice
 
 	// Density on a half-resolution grid, read back smoothly. The light march
 	// reads the grid too instead of re-evaluating the noise; phones need both.
 	const GW = Math.ceil(CW / 2) + 1, GH = Math.ceil(CH / 2) + 1;
-	const G = new Float32Array(GW * GH);
+	const G = new Float32Array(GW * GH), NX = new Float32Array(GW * GH), NY = new Float32Array(GW * GH), GAP = new Float32Array(GW * GH);
 	for (let gy = 0; gy < GH; gy++) {
 		const y = (baseY - gy * 2) / size;
-		for (let gx = 0; gx < GW; gx++) G[gy * GW + gx] = density((gx * 2 - CW / 2) / size, y);
+		for (let gx = 0; gx < GW; gx++) {
+			const k = gy * GW + gx;
+			G[k] = density((gx * 2 - CW / 2) / size, y);
+			NX[k] = sNx; NY[k] = sNy; GAP[k] = sGap;
+		}
 		if (gy % ROWS === ROWS - 1) yield;
 	}
+	// The light as a 3D direction, tipped a little toward the viewer.
+	const lz = 0.45, lnorm = Math.hypot(lx, ly, lz);
 	const at = (px: number, py: number): number => {
 		const fx = px / 2, fy = py / 2;
 		if (fx < 0 || fy < 0 || fx >= GW - 1 || fy >= GH - 1) return -1;
@@ -405,34 +444,63 @@ export function* bakeNoiseCloud(
 		return top + (bot - top) * ty;
 	};
 
+	// Shading (2026-10-23, after "you can see clouds behind clouds"): the body is
+	// opaque and distance changes only the colour, toward the sky at that height.
+	// Each lobe is shaded by its own surface normal (from the density gradient),
+	// so the puffs read as rounded forms; tops take some sky blue, bases some
+	// warm light bounced off the ground, and a multi-scatter floor keeps deep
+	// cores from going flat. Alpha holds the density (÷0.6), for growth.
+	const ng = Math.max(2, size * 0.03);
 	for (let py = 0; py < CH; py++) {
 		const y = (baseY - py) / size;
 		for (let px = 0; px < CW; px++) {
 			const d = at(px, py);
-			if (d <= 0) continue;
+			if (d <= -0.02) continue;
 			let acc = 0;
 			for (const s of STEPS) acc += Math.max(0, at(px + lx * s * size, py - ly * s * size)) * s;
-			const T = Math.exp(-acc * 6);
-			const powder = 1 - Math.exp(-d * 6);
+			const T = Math.max(Math.exp(-acc * 4), 0.08);
+			const scatter = 0.25 * (1 - T);                      // light that wandered in from elsewhere
+			// Outward normal, screen-up coordinates; it matters in the outer shell.
+			let nx = at(px - ng, py) - at(px + ng, py), ny = at(px, py + ng) - at(px, py - ng);
+			const nl = Math.hypot(nx, ny) || 1; nx /= nl; ny /= nl;
+			const shell = 1 - smooth(0.04, 0.35, d);
+			// Each puff is shaded as a sphere, so the lobes read as rounded forms;
+			// where two puffs meet, the crease sits in shade.
+			const gk = Math.min(GH - 1, Math.round(py / 2)) * GW + Math.min(GW - 1, Math.round(px / 2));
+			let sx = NX[gk] + nx * 0.35, sy = NY[gk] + ny * 0.35;
+			const s2 = sx * sx + sy * sy;
+			if (s2 > 1) { const k = 1 / Math.sqrt(s2); sx *= k; sy *= k; }
+			const sz = Math.sqrt(Math.max(0, 1 - sx * sx - sy * sy));
+			const lobe = Math.max(0, (sx * lx + sy * ly + sz * lz) / lnorm);
+			const crease = 1 - smooth(0, 0.3, GAP[gk]);
+			const direct = T * (0.5 + 0.65 * lobe) * (1 - 0.22 * crease * smooth(0.02, 0.2, d));
+			const powder = 1 - Math.exp(-Math.max(0, d) * 6);
 			const up = smooth(0, Math.max(0.05, aspect * 1.2), y);
 			const lift = up + (1 - 2 * up) * under;   // a low sun lifts the base instead of the top
-			let col = mixRGB(shadow, top, Math.min(1, 0.15 + T * (0.6 + 0.4 * powder) + lift * 0.35));
+			let col = mixRGB(shadow, top, Math.min(1, 0.1 + direct * (0.62 + 0.38 * powder) + scatter + lift * 0.25));
+			// Sky light on faces turned up, ground light on faces turned down.
+			col = mixRGB(col, ambient, 0.22 * Math.max(0, sy) * (1 - T * 0.6));
+			col = mixRGB(col, bounce, 0.3 * (1 - under) * Math.max(0, -ny * shell + (1 - smooth(0, 0.15 * aspect, y)) * 0.6));
 			// The flat underside stays grey even where light gets through, darkest
 			// in a narrow band along the base.
-			col = mixRGB(col, shadow, 0.35 * (1 - under) * (1 - smooth(0, 0.18 * aspect, y)));
+			col = mixRGB(col, shadow, 0.3 * (1 - under) * (1 - smooth(0, 0.18 * aspect, y)));
 			col = mixRGB(col, baseDark, 0.3 * (1 - under) * (1 - smooth(0, 0.05, y)) * smooth(0.05, 0.3, d));
-			// Silver lining: thin edge, lit side.
+			// Silver lining: thin edge on the lit side, strongest with the sun low.
 			const thin = 1 - smooth(0, 0.12, d);
-			col = mixRGB(col, rimCol, thin * T * 0.6);
-			col = mixRGB(col, far, haze * 0.55);
-			const a = smooth(0, 0.07, d) * alpha * (1 - 0.3 * haze);
+			col = mixRGB(col, rimCol, thin * T * 0.6 * backlit);
+			// Aerial perspective: far clouds take the colour of the sky at their height.
+			col = mixRGB(col, env.sky, haze * 0.6);
 			const i = (py * CW + px) * 4;
-			img.data[i] = col[0]; img.data[i + 1] = col[1]; img.data[i + 2] = col[2]; img.data[i + 3] = a * 255;
+			img.data[i] = col[0]; img.data[i + 1] = col[1]; img.data[i + 2] = col[2];
+			// Growth reads this channel: inside the body it is ragged with noise, so a
+			// forming cloud starts as torn tufts, not round cores. Near the edge (what
+			// a grown cloud shows) it is the density alone.
+			const g = d + (fbm2(px / size * 9 + ox, py / size * 9 + oy, 2) - 0.5) * 0.5 * smooth(0.07, 0.3, d);
+			img.data[i + 3] = Math.max(0, Math.min(255, (g / 0.6) * 255 + 0.5));
 		}
 		if (py % ROWS === ROWS - 1) yield;
 	}
-	ctx.putImageData(img, 0, 0);
-	return { canvas: c, baseY, w: CW, h: CH };
+	return { canvas: c, baseY, w: CW, h: CH, img };
 }
 
 /** Cirrus: noise stretched along the wind and thresholded into fibres. The
