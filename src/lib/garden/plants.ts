@@ -19,6 +19,7 @@ export interface PlantInstance {
 	y:    number;
 	kind: 'grass' | 'seedhead';
 	root: PlantSegment;
+	ground?: [number, number, number];   // the meadow's drawn colour under the plant (setPlantGround)
 }
 
 // ── seeded PRNG (mulberry32) ───────────────────────────────────────────────
@@ -174,15 +175,39 @@ function litColor(hex: string, light: RGB, green: number): string {
 	return out;
 }
 
+// Plants coloured from the ground under them: the palette colour only sets
+// how much darker or lighter than the meadow a piece is (relative to REF),
+// so a tuft is the meadow's own grass standing up, not a pasted-on green.
+const REF = [112, 128, 66];
+const rel = new Map<string, string>();
+function groundColor(hex: string, g: RGB): string {
+	const q = g.map((v) => Math.round(v / 4) * 4);
+	const key = hex + q.join(',');
+	let out = rel.get(key);
+	if (!out) {
+		const c = [1, 3, 5].map((i, k) => Math.round(Math.min(255, q[k] * Math.pow(parseInt(hex.slice(i, i + 2), 16) / REF[k], 0.8))));
+		out = `rgb(${c[0]},${c[1]},${c[2]})`;
+		if (rel.size > 4000) rel.clear();
+		rel.set(key, out);
+	}
+	return out;
+}
+
+/** Give each plant the colour of the drawn ground at its foot. */
+export function setPlantGround(plants: PlantInstance[], sample: (x: number, y: number) => [number, number, number]): void {
+	for (const p of plants) p.ground = sample(p.x, p.y);
+}
+
 function drawSeg(
 	ctx: CanvasRenderingContext2D,
 	x: number, y: number,
 	parentDir: number,
 	seg: PlantSegment,
 	light: RGB, green: number,
+	ground?: RGB,
 ): void {
 	if (seg.len === 0) {
-		for (const child of seg.children) drawSeg(ctx, x, y, parentDir, child, light, green);
+		for (const child of seg.children) drawSeg(ctx, x, y, parentDir, child, light, green, ground);
 		return;
 	}
 	const dir    = parentDir + seg.angle;
@@ -201,10 +226,10 @@ function drawSeg(
 	ctx.lineTo(ex + nx * w1, ey + ny * w1);
 	ctx.lineTo(ex - nx * w1, ey - ny * w1);
 	ctx.lineTo(x - nx * w0, y - ny * w0);
-	ctx.fillStyle = litColor(seg.color, light, green);
+	ctx.fillStyle = ground ? groundColor(seg.color, ground) : litColor(seg.color, light, green);
 	ctx.fill();
 
-	for (const child of seg.children) drawSeg(ctx, ex, ey, dir, child, light, green);
+	for (const child of seg.children) drawSeg(ctx, ex, ey, dir, child, light, green, ground);
 }
 
 export function drawPlants(
@@ -223,7 +248,7 @@ export function drawPlants(
 		// Far plants (near horizon) fade to 0.55 alpha; foreground is fully opaque.
 		const t = depthBand > 0 ? Math.max(0, Math.min(1, (plant.y - horizonY) / depthBand)) : 1;
 		ctx.globalAlpha = 0.55 + t * 0.45;
-		for (const child of plant.root.children) drawSeg(ctx, plant.x, plant.y, -90, child, light, green);
+		for (const child of plant.root.children) drawSeg(ctx, plant.x, plant.y, -90, child, light, green, plant.ground);
 	}
 	ctx.globalAlpha = 1;
 	ctx.restore();

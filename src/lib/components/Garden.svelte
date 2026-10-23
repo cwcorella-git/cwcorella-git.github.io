@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 	import { base } from '$app/paths';
 	import { loadTerrain, relightTerrain, snowLineFor, meadowLight, meadowSeason, type Terrain, type TerrainLight } from '$lib/garden/terrain';
-	import { makeGrassTuft, makeSeedHead, tickWind, drawPlants, applyMouseForce, type PlantInstance } from '$lib/garden/plants';
+	import { makeGrassTuft, makeSeedHead, tickWind, drawPlants, applyMouseForce, setPlantGround, type PlantInstance } from '$lib/garden/plants';
 	import { generateFgTree, loadFgTreeFromCache, saveFgTreeToCache, clearFgTreeCache, generateBgTree, loadBgTreeFromCache, saveBgTreeToCache, drawTree, drawLeaves, type TreeSegment } from '$lib/garden/tree';
 	import { loadGardenState, saveGardenState, creditVisit, accrueElapsedDays, growthFactor, treeGrowthFactor, addAgeUnits } from '$lib/garden/state';
 	import { adminState } from '$lib/admin/state.svelte';
@@ -680,6 +680,29 @@
 			ctx.fill();
 		}
 		ctx.restore();
+	}
+
+	// The tall grass takes its colour from the meadow drawn under it. Read
+	// back once per half-degree of sun, from a small downscaled copy, before
+	// flowers and cloud shadows are drawn over the ground.
+	let groundKey = '';
+	let groundSmall: HTMLCanvasElement | null = null;
+	function sampleGround(ctx: CanvasRenderingContext2D, altDeg: number): void {
+		const key = `${W}x${H}|${Math.round(altDeg * 2)}|${dayOfYear(new Date())}|${bgPlants.length + fgPlants.length}`;
+		if (key === groundKey || !canvas) return;
+		groundKey = key;
+		const sw = 64, sh = 32, band = H - horizonY;
+		groundSmall ??= document.createElement('canvas');
+		groundSmall.width = sw; groundSmall.height = sh;
+		const g = groundSmall.getContext('2d', { willReadFrequently: true })!;
+		g.drawImage(ctx.canvas, 0, horizonY, W, band, 0, 0, sw, sh);
+		const d = g.getImageData(0, 0, sw, sh).data;
+		const at = (x: number, y: number): [number, number, number] => {
+			const i = (Math.max(0, Math.min(sh - 1, Math.floor((y - horizonY) / band * sh))) * sw + Math.max(0, Math.min(sw - 1, Math.floor(x / W * sw)))) * 4;
+			return [d[i], d[i + 1], d[i + 2]];
+		};
+		setPlantGround(bgPlants, at);
+		setPlantGround(fgPlants, at);
 	}
 
 	// ── draw: meadow ──────────────────────────────────────────────────────────
@@ -1371,6 +1394,7 @@
 		drawGroundContours(ctx, altDeg);
 		drawTerrain(ctx, altDeg, sxn);
 		drawMeadow(ctx);
+		sampleGround(ctx, altDeg);
 		drawFlowers(ctx, altDeg);
 		drawCloudShadows(ctx, altDeg, sxn);
 		const windPx = (noise1D(time / 6) - 0.5) * 6 * dpr;
