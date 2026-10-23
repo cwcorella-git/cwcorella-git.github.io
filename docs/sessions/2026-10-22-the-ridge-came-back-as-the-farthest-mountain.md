@@ -592,7 +592,24 @@ On /blockout the operator said they couldn't tell which Media render showed whic
 
 **Media awaiting a verdict:** `cwc-real-44` (before and after), `cwc-real-45`, `cwc-real-47`. Read each once, only when the operator taps /blockout.
 
-## Resume here
+## Resume here (superseded by the one at the end)
 - Nothing is queued. Rows 43–47 are done and pushed (last commit `f58cd5b`).
 - The next step depends on the operator's Media verdicts. The proposed follow-ups are wildflowers as a separate pass, haze on the far trees, and the phone overlap.
 - Pull before pushing (`static/glass.json` is committed from the browser).
+
+## 21. Phone overlap, wildflowers, bolder seed heads (rows 48–50)
+
+| # | item | state |
+|---|---|---|
+| 48 | on a phone, tree 1 covered trees 2 and 3 | **done**: `06d5b7b`. Below 700 CSS px the tree stands at 0.18W (it was 0.28W) and at `yf` 0.22 (it was 0.3). Every use goes through `fgBaseX()` / `fgYf()`; `fgSegs` shifts the tree.ts geometry from its 0.28W origin |
+| 49 | wildflowers | **done**: `c3ff3d0`. `makeFlowers` in `detail.ts` places 160 specks in 6 drifts (mule's ears, lupine, yarrow, globemallow). Each is 0.45–0.95 × depth × dpr, capped at 2.6·dpr, and lit by `tuftLight`. `drawFlowers` draws them over the meadow. `flowerBloom(doy)` ramps them in from day 110 to 140 and out from day 200 to 258, so none show in October. Checked by eye in a 2026-06-01 render; the first try drew the near ones up to about 12 px, which looked like balloons |
+| 50 | seed heads hard to see | **done**: `297e4a6`. Stem 3.2 (it was 2.4), with a darker base `#6e6a3c`. Spikelets 2.4 / 1.8, with 7–10 per piece. 24 seed heads in 4 patches, ×(60–110) tall |
+
+**Not checked:** a phone at dusk, and how the flowers look at night (they are dimmed through `tuftLight`).
+
+**Media awaiting a verdict:** `cwc-real-48`, `cwc-real-49`, `cwc-real-50`, plus the three from §20.
+
+## Resume here
+- Nothing is queued. Rows 43–50 are done and pushed.
+- Next steps come from the operator's Media verdicts. The far-tree haze from §20 is still unbuilt.
+- Pull before pushing.
