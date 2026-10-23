@@ -185,14 +185,21 @@ export function relightTerrain(t: Terrain, L: TerrainLight, out?: HTMLCanvasElem
 		// below the horizon is covered by Garden's own snow layer, so only the
 		// rows above it), patchy as it melts, sparse on the steeper ground.
 		const vs = L.valleySnow ?? 0;
+		let lie = 0;
 		if (vs > 0 && i < (t.meta.nrowTop ?? 0) * ncol) {
-			const lie = sm(1 - vs - 0.1, 1 - vs + 0.15, g) * (t.meadow[i] ? 0.95 : 0.7 * (1 - sm(0.3, 0.55, slope)));
+			lie = sm(1 - vs - 0.1, 1 - vs + 0.15, g) * (t.meadow[i] ? 0.95 : 0.7 * (1 - sm(0.3, 0.55, slope)) * (1 - sm(f0 - 150, f0 + 100, e)));   // the valley and foothills, not the range
 			alb = mix(alb, SNOW, lie);
 		}
 
 		const li = lightOn(L, diff, 0.18 + 0.32 * nz * nz + (t.meadow[i] ? MEADOW_AMB : 0));
 		let col: RGB = [(alb[0] / 255) * li[0], (alb[1] / 255) * li[1], (alb[2] / 255) * li[2]];
 		col = mix(L.night, col, L.dl);
+		// Valley snow keeps a pale blue-grey after sunset, as Garden's near
+		// snow layer does (the same floor), where bare ground goes dark.
+		if (lie > 0) {
+			const nf = sm(-5, 1, -L.alt) * lie;
+			col = col.map((v, k) => Math.max(v, [0.2, 0.23, 0.32][k] * 238 * nf)) as RGB;
+		}
 		const haze = 1 - Math.exp(-L.beta * t.km[i] / 10);
 		col = mix(col, L.fog, Math.min(1, haze + (1 - haze) * t.pool[i] * 0.45 * Math.min(1, t.km[i] / 8)));
 		const o = i * 4;
