@@ -295,7 +295,10 @@ export function renderNoiseCloud(
 		const mid = Math.sqrt(Math.max(0, 1 - (x / (span * 1.1)) ** 2));
 		const r = (0.08 + aspect * 0.6) * (0.4 + 0.6 * mid) * (0.75 + rng() * 0.45);
 		const rr = Math.max(r, (1.5 * span) / n);           // neighbours always overlap
-		puffs.push([x, rr * (0.45 + rng() * 0.35), rr]);
+		// Centres well above the base, so the flat base is narrower than the body
+		// and the sides curve in under it; at 0.45 r the sides fell straight to the
+		// base and small clouds read as boxes at night (2026-10-23).
+		puffs.push([x, rr * (0.68 + rng() * 0.3), rr]);
 	}
 	// Turrets in two tiers: some riding on the big puffs, a few more on those.
 	const t1 = 3 + Math.floor(rng() * 3);
