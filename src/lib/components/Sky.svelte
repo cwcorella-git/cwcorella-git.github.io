@@ -4,6 +4,7 @@
 	import { themeState } from '$lib/admin/theme.svelte';
 	import { lightFrame, rgbCss } from '$lib/admin/contrast';
 	import { skyColorsAt } from '$lib/garden/backdrop';
+	import { seen } from '$lib/garden/seen.svelte';
 	import { glassTune, tuneAlpha, loadSiteGlass } from '$lib/admin/glassTune.svelte';
 	import { sceneTune, loadSiteScene } from '$lib/admin/sceneTune.svelte';
 	import { clock, sceneNow, sceneMs } from '$lib/garden/clock.svelte';
@@ -371,13 +372,15 @@
 	let lastDarkGlass  = false;
 	let lastTuneVer    = -1;
 	let lastSceneVer   = -1;
+	let lastSeenVer    = -1;
 	let lastSaved      = 0;
 
 	function updateTheme(altDeg: number): void {
-		const paletteChanged = themeState.version !== lastPaletteVer || glassTune.version !== lastTuneVer || sceneTune.version !== lastSceneVer;
+		const paletteChanged = themeState.version !== lastPaletteVer || glassTune.version !== lastTuneVer || sceneTune.version !== lastSceneVer || seen.version !== lastSeenVer;
 		if (!paletteChanged && Math.abs(altDeg - lastThemeAlt) < 0.4) return;
 		lastTuneVer    = glassTune.version;
 		lastSceneVer   = sceneTune.version;
+		lastSeenVer    = seen.version;
 		lastThemeAlt   = altDeg;
 		lastPaletteVer = themeState.version;
 
@@ -400,7 +403,12 @@
 		// The glass sits on Garden.svelte's sky, so text is picked against its bands.
 		const { mid, lower } = skyColorsAt(altDeg);
 		const t = sceneTune;
-		const f = lightFrame(themeState.palette, dl, [mid, lower], { target: t.contrast, glassDay: t.glassDay, glassNight: t.glassNight });
+		const g = glassTune;
+		// Text must read on the sky bands and on the darkest and brightest of what
+		// the garden actually drew (clouds, land). The glass slider scales the
+		// starting thickness; contrast may still thicken it past that.
+		const f = lightFrame(themeState.palette, dl, [mid, lower, ...seen.colors],
+			{ target: t.contrast, glassDay: t.glassDay * g.card, glassNight: t.glassNight * g.card });
 		// Text size, weight and halo from the scene tuner; at the defaults the
 		// inline styles are removed, so the stylesheet governs as before.
 		r.style.fontSize = t.textScale === 1 ? '' : `${Math.round(t.textScale * 100)}%`;
@@ -410,8 +418,7 @@
 			: '';
 		const [gr, gg, gb] = f.glass;
 		r.style.setProperty('--body-bg',      rgbCss(f.ground));
-		const g = glassTune;
-		r.style.setProperty('--glass-bg',     `rgba(${gr},${gg},${gb},${tuneAlpha(f.glassAlpha, g.card)})`);
+		r.style.setProperty('--glass-bg',     `rgba(${gr},${gg},${gb},${f.glassAlpha.toFixed(2)})`);
 		r.style.setProperty('--glass-border', `rgba(${gr},${gg},${gb},${tuneAlpha(0.40*dl + 0.15*(1-dl), g.border)})`);
 		r.style.setProperty('--glass-nav-bg', `rgba(${gr},${gg},${gb},${tuneAlpha(0.30*dl + 0.52*(1-dl), g.card)})`);
 		r.style.setProperty('--glass-blur',       `blur(${g.cardBlur}px)`);

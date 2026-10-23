@@ -15,6 +15,7 @@
 	import { clock, sceneNow, sceneMs } from '$lib/garden/clock.svelte';
 	import { renderMeadow, renderRocks, renderSnow, makeFlowers, flowerBloom, type Flower, bakeNoiseCloud, cloudAlphaLUT, type CloudBake, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
 	import { moonPosition } from '$lib/garden/moon';
+	import { extremes, publishSeen } from '$lib/garden/seen.svelte';
 	import { makeStars, drawStarField, siderealDeg, type StarField } from '$lib/garden/stars';
 
 	// ── constants ─────────────────────────────────────────────────────────────
@@ -1526,6 +1527,7 @@
 		if (T.grain) drawGrain(ctx);
 		if (T.vignette) drawVignette(ctx);
 		saveAverage(timestamp);
+		sampleSeen(timestamp);
 
 		animFrame = requestAnimationFrame(draw);
 	}
@@ -1534,6 +1536,18 @@
 	// so a reload opens on the garden's colour rather than the default theme.
 	let avgCanvas: HTMLCanvasElement | null = null;
 	let lastAvgAt = -1e9;
+	// The darkest and brightest of what was drawn, for Sky.svelte's text contrast.
+	// Downsampling stands in for the glass's own backdrop blur.
+	let seenCanvas: HTMLCanvasElement | null = null, lastSeenAt = -1e9;
+	function sampleSeen(timestamp: number): void {
+		if (!canvas || timestamp - lastSeenAt < 500) return;
+		lastSeenAt = timestamp;
+		seenCanvas ??= Object.assign(document.createElement('canvas'), { width: 32, height: 18 });
+		const a = seenCanvas.getContext('2d', { willReadFrequently: true })!;
+		a.drawImage(canvas, 0, 0, 32, 18);
+		publishSeen(extremes(a.getImageData(0, 0, 32, 18).data));
+	}
+
 	function saveAverage(timestamp: number): void {
 		if (!canvas || !terrain || clock.sim || timestamp - lastAvgAt < 20_000) return;   // a simulated moment is not replayed on the next load
 		lastAvgAt = timestamp;
