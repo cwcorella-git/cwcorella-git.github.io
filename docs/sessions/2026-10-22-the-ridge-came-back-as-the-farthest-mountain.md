@@ -728,8 +728,25 @@ They are saved in the session scratchpad, `refs/`, and the side-by-side sheets w
 
 **Seen, not fixed:** at 18:05 the sagebrush shows as pale patches, probably the 0.08 haze toward a bright twilight horizon.
 
-## Resume here
+## Resume here (superseded by the one at the end)
 - Nothing is queued. Rows 43–60 are done and pushed.
 - Open, proposed: sagebrush at twilight; snow on plants.
+- Media verdicts are open. Read each once, only on /blockout.
+- Pull before pushing.
+
+## 29. Sagebrush at dusk (row 61)
+
+| # | item | state |
+|---|---|---|
+| 61 | sagebrush as pale patches at dusk | **done**: `5353f26`. Sagebrush is now coloured from the meadow sample, the same way the grass is. `sageFoliage(groundMid)` gives a mid tone of about ground × [0.95, 0.98, 1.2], pulled 45% toward grey, with silvery tips. It is baked under `NEUTRAL_LIGHT` with its "sun" set to the ground ×1.3. Rocks now scale `tuftLight` to `groundLum` as the sun sets, fading in from +2° to −2°, like the trees. Checked at 12:30, 17:30 and 18:05 |
+
+**Three attempts that failed first:**
+1. **Tree light with a cap to `groundLum`:** black blobs at 17:30.
+2. **A multiply layer (colours as ratios of the ground):** consistent at every hour, but see-through, with the stems showing as dark sticks, and multiply can never be as light as the photo's sagebrush.
+3. **Neutral light with a white "sun":** the renderer's lit mix toward sunCol swamped a dark dusk ground and made pale ghosts.
+
+## Resume here
+- Nothing is queued. Rows 43–61 are done and pushed.
+- Open, proposed: snow on plants.
 - Media verdicts are open. Read each once, only on /blockout.
 - Pull before pushing.
