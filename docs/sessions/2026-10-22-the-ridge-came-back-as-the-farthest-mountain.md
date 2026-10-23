@@ -620,7 +620,25 @@ On /blockout the operator said they couldn't tell which Media render showed whic
 |---|---|---|
 | 51 | far trees fade toward the horizon | **done**: `02f3c1c`. `ArtLight` gained `haze` (from `getSkyColors(altDeg).horizon`) and `hazeK`. Every foliage and bark colour is mixed toward the haze. Midground trees use `hazeK = 0.3·(1 − yf/0.15)`; the far cottonwood uses 0.35. Checked by eye at 12:30 and 17:30. The old cottonwood (tree 2, yf 0.03) fades noticeably too |
 
-## Resume here
+## Resume here (superseded by the one at the end)
 - Nothing is queued. Rows 43–51 are done and pushed.
 - Seven Media groups have no verdict: `cwc-trees-key`, and `cwc-real-44`, `-45`, `-47`, `-48`, `-49`, `-50`. Read each once, only when the operator taps /blockout.
+- Pull before pushing.
+
+## 23. The operator: pine and juniper foliage didn't convince (row 52)
+
+| # | item | state |
+|---|---|---|
+| 52 | pine and juniper leaf layout | **done**: `ef449b6`. **Pine:** each clump is now 6–9 brushy needle clusters fanning up and out, lower ones drawn first, with a drooping dark underside; the lit colour is only a sprinkle on the upper sun side. The pale-lidded saucers are gone. **Juniper:** one dense mass of small overlapping scale specks inside a ragged noise edge, dark olive `[60,78,52]` (it was blue-green), with clumps ×1.35 so they run together. Conifers get a smaller shade/sun split and only a little of the evening purple |
+
+**What was really wrong:** the juniper and the young pine looked washed out at 17:30, and the tree colours weren't the cause. `drawHorizonBlend` ran after the trees and painted sky colour over the band they stand in. It now runs before them, since the trees carry their own haze (row 51).
+
+**Still not done:**
+- Pine 4 still fades strongly toward the bright horizon at dusk (hazeK 0.3).
+- The tall pine (3) has bare limbs on one side.
+- Not looked at at night.
+
+## Resume here
+- Nothing is queued. Rows 43–52 are done and pushed.
+- Media verdicts are open for `cwc-trees-key` and `cwc-real-44`…`-52`.
 - Pull before pushing.
