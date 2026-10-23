@@ -774,8 +774,19 @@ The operator was offered "snow on plants" and chose **"Add snow days"**. Snow on
 
 **Seen, not fixed:** the snow on the distant rise (terrain, row 62) still darkens with the terrain light after sunset, so it is darker than the near snow.
 
-## Resume here
+## Resume here (superseded by the one at the end)
 - Nothing is queued. Rows 43–63 are done and pushed.
 - Open, proposed: snow on the distant rise at night.
+- Media verdicts are open. Read each once, only on /blockout.
+- Pull before pushing.
+
+## 32. Distant snow at night (row 64)
+
+| # | item | state |
+|---|---|---|
+| 64 | the distant rise's snow went dark after sunset | **done**: `58966d3`. `relightTerrain` gives valley-snow pixels the same cool night floor as the near snow (`[0.2, 0.23, 0.32]·238`, scaled by how much snow lies there and fading in from +1° to −5°). **First attempt:** the floor speckled the whole mountain range at night, because the valley-snow pass covered every row above the horizon. It is now limited to below the forest line (`1 − sm(f0−150, f0+100, e)`). Checked at 12:30, 16:55 and 19:30 on 2026-12-14 |
+
+## Resume here
+- Nothing is queued. Rows 43–64 are done and pushed.
 - Media verdicts are open. Read each once, only on /blockout.
 - Pull before pushing.
