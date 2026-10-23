@@ -11,6 +11,8 @@
 	import { toast } from '$lib/admin/toast.svelte';
 	import AdminDrawer from '$lib/components/AdminDrawer.svelte';
 	import AdminToolbar from '$lib/components/AdminToolbar.svelte';
+	import ScenePanel from '$lib/components/ScenePanel.svelte';
+	import { scenePanel } from '$lib/admin/sceneTune.svelte';
 	import BookForm from '$lib/components/BookForm.svelte';
 	import Toasts from '$lib/components/Toasts.svelte';
 	import Sky from '$lib/components/Sky.svelte';
@@ -97,6 +99,10 @@
 			<button class="logout-confirm" onclick={confirmLogout}>× logout</button>
 		</div>
 	</div>
+{/if}
+
+{#if adminState.active && scenePanel.open}
+	<ScenePanel />
 {/if}
 
 <div class="page-content">

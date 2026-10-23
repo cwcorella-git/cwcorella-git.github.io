@@ -5,6 +5,8 @@
 	import { lightFrame, rgbCss } from '$lib/admin/contrast';
 	import { skyColorsAt } from '$lib/garden/backdrop';
 	import { glassTune, tuneAlpha, loadSiteGlass } from '$lib/admin/glassTune.svelte';
+	import { sceneTune, loadSiteScene } from '$lib/admin/sceneTune.svelte';
+	import { clock, sceneNow, sceneMs } from '$lib/garden/clock.svelte';
 	import { base } from '$app/paths';
 
 	// ── constants ─────────────────────────────────────────────────────────────
@@ -29,7 +31,7 @@
 
 	// ── moon phase (Julian date) ───────────────────────────────────────────────
 	function moonPhase(): number {
-		const JD = Date.now() / 86400000 + 2440587.5;
+		const JD = sceneMs() / 86400000 + 2440587.5;
 		return ((JD - 2451550.1) % 29.53058867) / 29.53058867;
 	}
 
@@ -368,12 +370,14 @@
 	let firstFrame     = true;
 	let lastDarkGlass  = false;
 	let lastTuneVer    = -1;
+	let lastSceneVer   = -1;
 	let lastSaved      = 0;
 
 	function updateTheme(altDeg: number): void {
-		const paletteChanged = themeState.version !== lastPaletteVer || glassTune.version !== lastTuneVer;
+		const paletteChanged = themeState.version !== lastPaletteVer || glassTune.version !== lastTuneVer || sceneTune.version !== lastSceneVer;
 		if (!paletteChanged && Math.abs(altDeg - lastThemeAlt) < 0.4) return;
 		lastTuneVer    = glassTune.version;
+		lastSceneVer   = sceneTune.version;
 		lastThemeAlt   = altDeg;
 		lastPaletteVer = themeState.version;
 
@@ -395,7 +399,15 @@
 		// for contrast in contrast.test.ts.
 		// The glass sits on Garden.svelte's sky, so text is picked against its bands.
 		const { mid, lower } = skyColorsAt(altDeg);
-		const f = lightFrame(themeState.palette, dl, [mid, lower]);
+		const t = sceneTune;
+		const f = lightFrame(themeState.palette, dl, [mid, lower], { target: t.contrast, glassDay: t.glassDay, glassNight: t.glassNight });
+		// Text size, weight and halo from the scene tuner; at the defaults the
+		// inline styles are removed, so the stylesheet governs as before.
+		r.style.fontSize = t.textScale === 1 ? '' : `${Math.round(t.textScale * 100)}%`;
+		document.body.style.fontWeight = t.textWeight === 400 ? '' : String(t.textWeight);
+		document.body.style.textShadow = t.textHalo > 0
+			? `0 0 ${(0.3 + t.textHalo * 0.5).toFixed(2)}em rgba(${f.panel.map(Math.round).join(',')},${(t.textHalo * 0.9).toFixed(2)})`
+			: '';
 		const [gr, gg, gb] = f.glass;
 		r.style.setProperty('--body-bg',      rgbCss(f.ground));
 		const g = glassTune;
@@ -422,7 +434,7 @@
 		}
 
 		// app.html replays these on the next load so the first paint is not the default theme.
-		if (Date.now() - lastSaved > 30_000) {
+		if (!clock.sim && Date.now() - lastSaved > 30_000) {   // a simulated moment is not replayed on the next load
 			lastSaved = Date.now();
 			const vars: Record<string, string> = {};
 			for (const k of ['--clr-text', '--clr-meta', '--clr-dark-text', '--glass-bg', '--glass-border', '--glass-nav-bg',
@@ -450,7 +462,7 @@
 		animFrame = requestAnimationFrame(draw);
 		if (++frameCount % SKIP !== 0) return;
 
-		const now = new Date();
+		const now = sceneNow();
 		const altDeg = sunAltitudeDeg(now);
 
 		// Update CSS vars based on sun altitude (time of day)
@@ -464,15 +476,16 @@
 
 	function resize(): void {
 		// CSS vars don't depend on canvas size, so resize is minimal
-		const altDeg = sunAltitudeDeg(new Date());
+		const altDeg = sunAltitudeDeg(sceneNow());
 		updateCSSVarsOnly(altDeg);
 	}
 
 	onMount(() => {
 		loadSiteGlass(base);
+		loadSiteScene(base);
 
 		// Initialize CSS vars immediately
-		const now = new Date();
+		const now = sceneNow();
 		const altDeg = sunAltitudeDeg(now);
 		updateCSSVarsOnly(altDeg);
 

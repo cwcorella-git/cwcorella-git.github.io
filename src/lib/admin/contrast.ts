@@ -96,7 +96,11 @@ export interface LightFrame {
  * twilight, and the text is whichever of day/night reads better on the
  * panel actually shown — so there is no cross-fade through illegible.
  */
-export function lightFrame(p: LightPaletteSeeds, dl: number, backdrops?: readonly RGB[]): LightFrame {
+export interface FrameTune { target: number; glassDay: number; glassNight: number }
+const FRAME_DEFAULTS: FrameTune = { target: 4.5, glassDay: 0.22, glassNight: 0.42 };
+
+export function lightFrame(p: LightPaletteSeeds, dl: number, backdrops?: readonly RGB[], tune: FrameTune = FRAME_DEFAULTS): LightFrame {
+	const target = Math.max(4.5, tune.target), cap = target > 4.5 ? 0.97 : 0.9;   // a higher target may need thicker glass
 	const night = 1 - dl;
 	const glass = mix(p.glassDay, p.glassNight, night);
 	// The ground switches at twilight instead of fading: any continuous fade from a
@@ -110,7 +114,7 @@ export function lightFrame(p: LightPaletteSeeds, dl: number, backdrops?: readonl
 	const behind = backdrops?.length ? backdrops : [ground];
 	// The glass thickens only when a moment needs it (sunset, where the sky is
 	// orange low and violet high), and only as far as 4.5:1 requires.
-	let glassAlpha = 0.22 * dl + 0.42 * night;
+	let glassAlpha = tune.glassDay * dl + tune.glassNight * night;
 	let text: RGB = p.textDay;
 	let panel: RGB = ground;
 	for (;;) {
@@ -118,8 +122,8 @@ export function lightFrame(p: LightPaletteSeeds, dl: number, backdrops?: readonl
 		const worst = (t: RGB) => Math.min(...panels.map((q) => contrast(t, q)));
 		text = worst(p.textDay) >= worst(p.textNight) ? p.textDay : p.textNight;
 		panel = panels.reduce((a, q) => (contrast(text, q) < contrast(text, a) ? q : a));
-		if (worst(text) >= 4.5 || glassAlpha >= 0.9) break;
-		glassAlpha = Math.min(0.9, glassAlpha + 0.02);
+		if (worst(text) >= target || glassAlpha >= cap) break;
+		glassAlpha = Math.min(cap, glassAlpha + 0.02);
 	}
 	const accent = legibleAccent(parseColor(p.accent).rgb, text, panel);
 	return { ground, glass, glassAlpha, panel, text, meta: metaFor(text, panel), accent };

@@ -26,6 +26,7 @@ export interface StarField {
 	band: HTMLCanvasElement;    // Milky Way glow, square, centred on the pole, at LST 0
 	field: HTMLCanvasElement;   // viewport-sized: band + faint stars at `lst`
 	lst: number;                // radians the field was last painted at (NaN = never)
+	painted: string;            // the tune the field was painted with
 	glow: HTMLCanvasElement;    // white halo sprite
 	cw: number; hy: number; dpr: number;
 }
@@ -156,7 +157,7 @@ export function makeStars(cw: number, hy: number, dpr: number, seed = 0xCAFEBABE
 
 	const field = document.createElement('canvas');
 	field.width = Math.max(1, Math.round(cw)); field.height = Math.max(1, Math.round(hy));
-	return { poleX, poleY, R, faint, bright, band, field, lst: NaN, glow, cw, hy, dpr };
+	return { poleX, poleY, R, faint, bright, band, field, lst: NaN, painted: '', glow, cw, hy, dpr };
 }
 
 /** Where a star is on screen with the sky turned to `lst` (radians). */
@@ -165,13 +166,19 @@ function place(sf: StarField, st: Star, lst: number): [number, number] {
 	return [sf.poleX - Math.sin(h) * st.r, sf.poleY - Math.cos(h) * st.r];
 }
 
-function paintField(sf: StarField, lst: number): void {
+/** Star and Milky Way strength from the scene tuner; 1 is as measured. */
+export interface StarTune { stars: number; band: number }
+
+function paintField(sf: StarField, lst: number, tune: StarTune): void {
 	const ctx = sf.field.getContext('2d')!, { cw, hy, dpr } = sf;
 	ctx.clearRect(0, 0, cw, hy);
 	ctx.save();
 	ctx.translate(sf.poleX, sf.poleY);
 	ctx.rotate(-lst);
-	ctx.drawImage(sf.band, -sf.R, -sf.R, 2 * sf.R, 2 * sf.R);
+	for (let k = tune.band; k > 0.01; k -= 1) {          // above 1, a second pass
+		ctx.globalAlpha = Math.min(1, k);
+		ctx.drawImage(sf.band, -sf.R, -sf.R, 2 * sf.R, 2 * sf.R);
+	}
 	ctx.restore();
 	// The band fades into the haze like the stars do.
 	ctx.globalCompositeOperation = 'destination-out';
@@ -183,7 +190,7 @@ function paintField(sf: StarField, lst: number): void {
 	for (const st of sf.faint) {
 		const [x, y] = place(sf, st, lst);
 		if (x < -2 || x > cw + 2 || y < -2 || y > hy) continue;
-		const a = Math.min(1, 0.12 + 0.88 * 10 ** (-0.4 * (st.m - 2))) * extinction(y / hy);
+		const a = Math.min(1, (0.12 + 0.88 * 10 ** (-0.4 * (st.m - 2))) * tune.stars) * extinction(y / hy);
 		if (a < 0.03) continue;
 		// Faint stars are near white; the colour comes up with brightness.
 		const t = Math.max(0, Math.min(1, (4.5 - st.m) / 4));
@@ -194,6 +201,7 @@ function paintField(sf: StarField, lst: number): void {
 		else { ctx.beginPath(); ctx.arc(x, y, rr, 0, Math.PI * 2); ctx.fill(); }
 	}
 	sf.lst = lst;
+	sf.painted = `${tune.stars}|${tune.band}`;
 }
 
 /**
@@ -201,12 +209,12 @@ function paintField(sf: StarField, lst: number): void {
  * `lstDeg`. `moonLight` (0–1) washes out the band and the faint stars first.
  * Twinkle grows toward the horizon, where the air is thickest.
  */
-export function drawStarField(ctx: CanvasRenderingContext2D, sf: StarField, vis: number, time: number, lstDeg: number, moonLight = 0): void {
+export function drawStarField(ctx: CanvasRenderingContext2D, sf: StarField, vis: number, time: number, lstDeg: number, moonLight = 0, tune: StarTune = { stars: 1, band: 1 }): void {
 	const lst = lstDeg * rad, hy = sf.hy;
-	if (!(Math.abs(lst - sf.lst) * sf.R < 0.5)) paintField(sf, lst);
+	if (!(Math.abs(lst - sf.lst) * sf.R < 0.5) || sf.painted !== `${tune.stars}|${tune.band}`) paintField(sf, lst, tune);
 	ctx.globalAlpha = vis * vis * (1 - 0.8 * moonLight);   // the band and the faint stars come out last
 	ctx.drawImage(sf.field, 0, 0);
-	const dim = vis * (1 - 0.35 * moonLight);
+	const dim = vis * (1 - 0.35 * moonLight) * tune.stars;
 	for (const st of sf.bright) {
 		const [x, y] = place(sf, st, lst);
 		if (x < -20 || x > sf.cw + 20 || y < -20 || y > hy) continue;

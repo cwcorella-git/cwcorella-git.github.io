@@ -69,10 +69,23 @@ export function weatherFor(d: Date): Weather {
 	const s = Math.floor(r() * 0x7FFFFFFF);
 	const snow = snowCover(d);
 	if (snowFell(d)) return { kind: 'overcast', seed: s, cumulus: 2, cumulusSize: 1.1, sheets: 5, cirrus: 0, cover: 0.6, snow };   // it snows under a grey sky
+	return shaped(kind, s, r, snow);
+}
+
+function shaped(kind: WeatherKind, s: number, r: () => number, snow: number): Weather {
 	switch (kind) {
 		case 'clear':    return { kind, seed: s, cumulus: r() < 0.5 ? 0 : 1, cumulusSize: 1,    sheets: 0, cirrus: 6, cover: 0, snow };
 		case 'fair':     return { kind, seed: s, cumulus: 6,                  cumulusSize: 1,    sheets: 3, cirrus: 6, cover: 0, snow };
 		case 'busy':     return { kind, seed: s, cumulus: 9 + Math.floor(r() * 3), cumulusSize: 1.25, sheets: 2, cirrus: 3, cover: 0.15, snow };
 		case 'overcast': return { kind, seed: s, cumulus: 2,                  cumulusSize: 1.1,  sheets: 5, cirrus: 0, cover: 0.6, snow };
 	}
+}
+
+/** The day's weather with its kind chosen by hand (the admin scene clock); the
+ *  day's seed still places the clouds. 'snow' is an overcast day with snow lying. */
+export function weatherForced(d: Date, pick: WeatherKind | 'snow'): Weather {
+	const w = weatherFor(d);
+	if (pick === 'snow') return { ...w, kind: 'overcast', cumulus: 2, cumulusSize: 1.1, sheets: 5, cirrus: 0, cover: 0.6, snow: 1 };
+	const r = prng(w.seed);
+	return shaped(pick, w.seed, r, 0);
 }

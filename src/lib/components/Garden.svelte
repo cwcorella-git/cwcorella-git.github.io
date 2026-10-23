@@ -10,7 +10,9 @@
 	import { isUnlockDay } from '$lib/admin/tlock';
 	import { toast } from '$lib/admin/toast.svelte';
 	import { renderTreeArt, drawTreeArt, clumpsFromTips, broadleafShape, pineShape, juniperShape, sageShape, sageFoliage, NEUTRAL_LIGHT, cottonwoodFoliage, PINE_FOLIAGE, JUNIPER_FOLIAGE, type TreeArt, type Seg, type Clump } from '$lib/garden/treeArt';
-	import { weatherFor, type Weather } from '$lib/garden/weather';
+	import { weatherFor, weatherForced, type Weather } from '$lib/garden/weather';
+	import { sceneTune } from '$lib/admin/sceneTune.svelte';
+	import { clock, sceneNow, sceneMs } from '$lib/garden/clock.svelte';
 	import { renderMeadow, renderRocks, renderSnow, makeFlowers, flowerBloom, type Flower, renderNoiseCloud, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
 	import { moonPosition } from '$lib/garden/moon';
 	import { makeStars, drawStarField, siderealDeg, type StarField } from '$lib/garden/stars';
@@ -199,10 +201,13 @@
 	// has its own sky. Rebuilt by draw() when the date changes.
 	let weather: Weather = weatherFor(new Date());
 	let weatherDay = '';
+	// What the clouds were built for: the day, the clock's weather pick and the
+	// tuner's cloud amount and size. A change in any of them rebuilds the sky.
+	const cloudsKey = (now: Date) => `${now.toDateString()}|${clock.weather}|${sceneTune.cloudAmount}|${sceneTune.cloudSize}`;
 	function buildClouds(): void {
-		const now = new Date();
-		weatherDay = now.toDateString();
-		weather = weatherFor(now);
+		const now = sceneNow();
+		weatherDay = cloudsKey(now);
+		weather = clock.weather === 'auto' ? weatherFor(now) : weatherForced(now, clock.weather);
 		const crng = makePRNG(weather.seed);
 		const over = weather.kind === 'overcast';
 		clouds = [];
@@ -212,20 +217,21 @@
 			clouds.push({
 				xFrac: over ? i / weather.sheets + crng() * 0.1 : crng(),
 				yFrac: over ? 0.02 + crng() * 0.12 : 0.03 + crng() * 0.08,
-				size: over ? 620 + crng() * 300 : 260 + crng() * 160, aspectRatio: over ? 0.2 : 0.12,
+				size: (over ? 620 + crng() * 300 : 260 + crng() * 160) * sceneTune.cloudSize, aspectRatio: over ? 0.2 : 0.12,
 				alpha: over ? 0.5 + crng() * 0.15 : 0.12 + crng() * 0.1, haze: over ? 0.5 : 0.4, grey: over,
 				squash: over ? 0.45 : 0.35, prngseed: Math.floor(crng() * 0x7FFFFFFF),
 				speed: (10 + crng() * 10) * dpr, cache: null, cacheColorKey: '',
 			});
 		}
-		for (let i = 0; i < weather.cumulus; i++) {
+		const cumulusN = Math.round(weather.cumulus * sceneTune.cloudAmount);
+		for (let i = 0; i < cumulusN; i++) {
 			const xFrac  = crng();
 			const yFrac  = 0.05 + crng() * 0.33;  // 0 = high, 0.38 = near horizon
 
 			// Perspective: clouds high in sky are taller + more opaque.
 			// perspFrac = 1 overhead, 0 near horizon.
 			const perspFrac  = 1 - yFrac / 0.38;
-			const size       = (110 + crng() * 130) * (0.50 + perspFrac * 0.50) * weather.cumulusSize;
+			const size       = (110 + crng() * 130) * (0.50 + perspFrac * 0.50) * weather.cumulusSize * sceneTune.cloudSize;
 			const aspectRatio = 0.20 + perspFrac * 0.32;   // 0.20 modest sliver → 0.52 tall dome
 			const alpha      = (0.52 + crng() * 0.32) * (0.38 + perspFrac * 0.62);
 			const prngseed   = Math.floor(crng() * 0x7FFFFFFF);
@@ -473,15 +479,15 @@
 
 		if (!starField || !starLayer) return;
 		const moon = moonState(altDeg, now);
-		const minutes = Date.now() / 60000;
+		const minutes = sceneMs() / 60000;
 		// Nothing over the stars (no cloud, no glare): draw them straight, skipping the layer.
 		if (moon.light <= 0.05 && !clouds.some((c) => cloudRect(c, minutes))) {
-			drawStarField(ctx, starField, starAlpha, time, siderealDeg(now), moon.light);
+			drawStarField(ctx, starField, starAlpha, time, siderealDeg(now), moon.light, starTune());
 			return;
 		}
 		const lc = starLayer.getContext('2d')!;
 		lc.clearRect(0, 0, starLayer.width, starLayer.height);
-		drawStarField(lc, starField, starAlpha, time, siderealDeg(now), moon.light);
+		drawStarField(lc, starField, starAlpha, time, siderealDeg(now), moon.light, starTune());
 
 		lc.globalCompositeOperation = 'destination-out';
 		// Glare: the sky near a bright moon loses its faint stars.
@@ -496,7 +502,7 @@
 		for (const cloud of clouds) {
 			const at = cloudRect(cloud, minutes);
 			if (!at) continue;
-			lc.globalAlpha = Math.min(1, (0.3 + cloud.alpha) * 1.4) * at.life;
+			lc.globalAlpha = Math.min(1, (0.3 + cloud.alpha) * 1.4 * sceneTune.cloudOpacity) * at.life;
 			lc.drawImage(at.img, at.x, at.y, at.w, at.h);
 		}
 		lc.globalAlpha = 1;
@@ -504,7 +510,8 @@
 		ctx.drawImage(starLayer, 0, 0);
 	}
 
-	/** Where the moon is and how much it lights the sky (0 at new moon or when down, ~1 for a high full moon). */
+	const starTune = () => ({ stars: sceneTune.starBright, band: sceneTune.milkyWay ? sceneTune.milkyWayAmt : 0 });
+
 	/** Where the moon is and how much it lights the sky (0 when new or down, ~1 for a high full moon). */
 	function moonState(altDeg: number, now: Date): { x: number; y: number; alt: number; alpha: number; phase: number; waxing: boolean; light: number } {
 		const m = moonPosition(now);
@@ -518,7 +525,7 @@
 	function drawMoon(ctx: CanvasRenderingContext2D, altDeg: number, now: Date): void {
 		const { x: moonX, y: moonY, alpha: moonAlpha, phase, waxing } = moonState(altDeg, now);
 		if (moonAlpha <= 0) return;
-		const R = 11;
+		const R = 11 * sceneTune.moonSize;
 
 		// Glow, stronger the fuller it is
 		const full = 1 - Math.abs(phase - 0.5) * 2;
@@ -590,7 +597,7 @@
 	 *  instead of squeezing the whole span in, so the slopes keep their shape. */
 	function drawRealTerrain(ctx: CanvasRenderingContext2D, t: Terrain, altDeg: number, sxn: number, dl: number, golden: number, horizon: RGB, zenith: RGB): void {
 		const m = t.meta;
-		const month = new Date().getMonth();
+		const month = sceneNow().getMonth();
 		const mid = (m.az0 + m.az1) / 2, half = (m.az1 - m.az0) / 2;
 		const az = mid + (sxn - 0.5) * 2 * half * 1.3;
 		const ph = horizonY * 0.36;                                       // panorama height on screen
@@ -598,7 +605,7 @@
 		const span = Math.min(total, (4 * W * frame) / ph);              // ≤ 4× vertical exaggeration
 		const cols = (span / total) * m.ncol;
 		const c0 = (m.ncol - cols) / 2;
-		const doy = dayOfYear(new Date());
+		const doy = dayOfYear(sceneNow());
 		const key = `${Math.round(altDeg * 2)}|${Math.round(az)}|${doy}|${Math.round(c0)}|${weather.kind}|${weather.snow}`;
 		if (terrainLit.key !== key) {
 			const L: TerrainLight = {
@@ -634,7 +641,7 @@
 	}
 
 	function drawFlowers(ctx: CanvasRenderingContext2D, altDeg: number): void {
-		const bloom = flowerBloom(dayOfYear(new Date()));
+		const bloom = flowerBloom(dayOfYear(sceneNow()));
 		if (bloom <= 0) return;
 		const L = tuftLight(altDeg);
 		ctx.save();
@@ -656,7 +663,7 @@
 	let groundMid: RGB = [139, 149, 90];
 	let groundSmall: HTMLCanvasElement | null = null;
 	function sampleGround(ctx: CanvasRenderingContext2D, altDeg: number): void {
-		const key = `${W}x${H}|${Math.round(altDeg * 2)}|${dayOfYear(new Date())}|${bgPlants.length + fgPlants.length}`;
+		const key = `${W}x${H}|${Math.round(altDeg * 2)}|${dayOfYear(sceneNow())}|${bgPlants.length + fgPlants.length}`;
 		if (key === groundKey || !canvas) return;
 		groundKey = key;
 		const sw = 64, sh = 32, band = H - horizonY;
@@ -683,7 +690,7 @@
 		const tl = tuftLight(altDeg), tm = (tl[0] + tl[1] + tl[2]) / 3 || 1;
 		const cw = clamp01((2 - altDeg) / 4);
 		const rl = tl.map((v) => v + (v / tm * groundLum - v) * cw) as RGB;
-		rocks = renderRocks(W, band, dpr, rl, sunXNorm(new Date(), 39.53) < 0.5 ? -1 : 1, at(W / 2, horizonY + band * 0.8), weather.snow);
+		rocks = renderRocks(W, band, dpr, rl, sunXNorm(sceneNow(), 39.53) < 0.5 ? -1 : 1, at(W / 2, horizonY + band * 0.8), weather.snow);
 		// Snow is white: light it mostly by the light's brightness, with only a
 		// third of its colour (the full tint, sky-blue by day, read cyan).
 		const rm = (rl[0] + rl[1] + rl[2]) / 3;
@@ -740,7 +747,7 @@
 	function drawCloudShadows(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
 		const sun = clamp01((altDeg - 2) / 12) * (1 - weather.cover / 0.6);
 		if (sun < 0.02) return;
-		const minutes = Date.now() / 60000;
+		const minutes = sceneMs() / 60000;
 		const sunX = sxn * W;
 		ctx.save();
 		ctx.beginPath(); ctx.rect(0, horizonY, W, H - horizonY); ctx.clip();
@@ -820,7 +827,9 @@
 			if (!grain) return;
 		}
 		ctx.fillStyle = grain;
+		ctx.globalAlpha = Math.min(1, sceneTune.grainAmt);
 		ctx.fillRect(0, 0, W, H);
+		ctx.globalAlpha = 1;
 	}
 
 	function fillMountainRange(
@@ -931,7 +940,7 @@
 		const g = ctx.createRadialGradient(cx, cy, inner, cx, cy, outer);
 		g.addColorStop(0,    'rgba(0,0,0,0)');
 		g.addColorStop(0.55, 'rgba(0,0,0,0)');
-		g.addColorStop(1,    'rgba(0,0,0,0.42)');
+		g.addColorStop(1,    `rgba(0,0,0,${Math.min(1, 0.42 * sceneTune.vignetteAmt).toFixed(3)})`);
 		ctx.fillStyle = g;
 		ctx.fillRect(0, 0, W, H);
 	}
@@ -996,7 +1005,7 @@
 	let treePending: { key: string; jobs: (() => void)[]; next: typeof treeCache; frame: number } | null = null;
 
 	function treeArts(altDeg: number, sxn: number): typeof treeCache {
-		const doy = dayOfYear(new Date());
+		const doy = dayOfYear(sceneNow());
 		const geom = `${W}x${H}|${gardenAgeUnits}|${fgTreeSegs.length}|${bgTreeSegs.length}`;
 		const key = `${geom}|${Math.round(altDeg)}|${Math.round(sxn * 40)}|${doy}`;
 		if (treeCache.key === key) return treeCache;
@@ -1217,7 +1226,7 @@
 		const alphaBase = Math.max(0, Math.min(1, (altDeg + 8) / 6));
 		if (alphaBase <= 0) return;
 
-		const minutesSinceEpoch = Date.now() / 60000;
+		const minutesSinceEpoch = sceneMs() / 60000;
 		const { top } = getCloudColors(altDeg);
 		const colorKey = quantizeColorKey(top, top);
 
@@ -1243,6 +1252,7 @@
 	// Perspective is baked in via aspectRatio: near-horizon slivers, overhead domes.
 	/** Where a baked cloud is drawn now, or null if it has no bake or has faded out. */
 	function cloudRect(cloud: CloudDef, minutes: number): { img: HTMLCanvasElement; x: number; y: number; w: number; h: number; life: number } | null {
+		if (!(cloud.life ? sceneTune.cumulus : sceneTune.sheets)) return null;   // switched off in the scene tuner
 		const { a: life, k } = cloudLife(cloud, minutes);
 		if (!cloud.cache || life <= 0) return null;
 		const baseY = cloud.cache.baseY * k, w = cloud.cache.w * k, h = cloud.cache.h * k;
@@ -1254,19 +1264,19 @@
 	function drawClouds(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
 		const cloudAlpha = 1;   // clouds stay at night, dark, and hide the stars behind them
 
-		const minutesSinceEpoch = Date.now() / 60000;
+		const minutesSinceEpoch = sceneMs() / 60000;
 		let { top, shadow } = getCloudColors(altDeg);
 		let sunSide = sxn < 0.5 ? -1 : 1, lightAlt = altDeg;
 		// At night the moon lights the tops from its side; with no moon the clouds
 		// are dark shapes, their bases faintly lit from below by the town.
 		const night = clamp01((-altDeg - 8) / 6);
 		if (night > 0) {
-			const moon = moonState(altDeg, new Date()), lit = clamp01(moon.light * 1.6);
+			const moon = moonState(altDeg, sceneNow()), lit = clamp01(moon.light * 1.6);
 			top    = lerpRGB(top,    lerpRGB([54, 56, 68], [132, 140, 162], lit), night);
 			shadow = lerpRGB(shadow, lerpRGB([24, 26, 38], [40, 46, 68], lit), night);
 			if (lit > 0.08) { sunSide = moon.x < W / 2 ? -1 : 1; lightAlt = Math.max(4, moon.alt) / 3.2; }
 		}
-		const colorKey = quantizeColorKey(top, shadow) + sunSide + ':' + Math.round(lightAlt);
+		const colorKey = quantizeColorKey(top, shadow) + sunSide + ':' + Math.round(lightAlt) + ':' + sceneTune.cloudDetail + ':' + sceneTune.cloudEdge;
 
 		// One bake per frame (~70 ms on a slow phone): stale clouds keep their
 		// old colours a moment longer, new ones appear a frame apart.
@@ -1278,14 +1288,14 @@
 				// Bake at most ~200 px across and scale up when drawn: clouds are soft,
 				// and full size cost 140 ms per cumulus, 870 ms per overcast sheet on a
 				// 4×-throttled phone (2026-10-22).
-				const q = Math.min(0.55, 200 / cloud.size);
+				const q = Math.min(0.55 * sceneTune.cloudDetail, (200 * sceneTune.cloudDetail) / cloud.size);
 				const r = renderNoiseCloud(cloud.size * q, cloud.aspectRatio, cloud.prngseed, cloud.grey ? lerpRGB(top, shadow, 0.55) : top, shadow, sunSide, 1, cloud.haze, lightAlt);
 				cloud.cache = { ...r, w: r.w / q, h: r.h / q, baseY: r.baseY / q };
 				cloud.cacheColorKey = colorKey;
 			}
 			const at = cloudRect(cloud, minutesSinceEpoch);
 			if (!at) continue;
-			ctx.globalAlpha = Math.min(1, 0.3 + cloud.alpha) * cloudAlpha * at.life;   // cores read opaque; edges stay soft in the bake
+			ctx.globalAlpha = Math.min(1, (0.3 + cloud.alpha) * sceneTune.cloudOpacity) * cloudAlpha * at.life;   // cores read opaque; edges stay soft in the bake
 			ctx.drawImage(at.img, at.x, at.y, at.w, at.h);
 		}
 		ctx.restore();
@@ -1355,15 +1365,16 @@
 		if (!ctx) return;
 
 		frameCount++;
-		const now     = new Date();
+		const now     = sceneNow();
 		const altDeg  = sunAltitudeDeg(now);
+		const T       = sceneTune;
 		const sxn     = sunXNorm(now, 39.53);
 		const isNight = altDeg < -8;
 
 		// Day: draw at ~4fps (every 15 frames). Night: ~15fps (every 4 frames), enough
 		// for the twinkle; every 2nd frame redrew the whole screen for nothing (2026-10-23).
 		// Boost to every frame when cursor is active so interaction feels responsive.
-		const skip = cursorActive ? 1 : isNight ? 4 : 15;
+		const skip = cursorActive ? 1 : Math.max(1, Math.round(60 / (isNight ? T.nightFps : T.dayFps)));
 		if (frameCount % skip !== 0) {
 			animFrame = requestAnimationFrame(draw);
 			return;
@@ -1380,7 +1391,7 @@
 
 		// Wind: slow noise-driven oscillation (degrees/s²)
 		// groundBand matches buildScene so depth attenuation is consistent.
-		const windForce  = noise1D(time / 6) * 28;
+		const windForce  = noise1D(time / 6) * 28 * T.windAmt;
 		const groundBand = (H - horizonY) * 0.65;
 		tickWind(bgPlants, windForce, dt, horizonY, groundBand);
 		tickWind(fgPlants, windForce, dt, horizonY, groundBand);
@@ -1391,7 +1402,7 @@
 
 		ctx.clearRect(0, 0, W, H);
 
-		if (now.toDateString() !== weatherDay) buildClouds();
+		if (cloudsKey(now) !== weatherDay) buildClouds();
 		drawSky(ctx, altDeg);
 		if (weather.cover > 0.3) {
 			// An overcast sky is greyed toward the cloud shadow colour.
@@ -1399,34 +1410,34 @@
 			ctx.fillStyle = css(lerpRGB(shadow, [196, 198, 204], clamp01((altDeg + 2) / 14)), 0.9 * weather.cover);
 			ctx.fillRect(0, 0, W, horizonY);
 		}
-		drawStars(ctx, altDeg, time, now);
-		drawMoon(ctx, altDeg, now);
-		drawCircumsolarGlow(ctx, altDeg, sxn);
-		drawSun(ctx, altDeg, sxn);
-		drawCrepuscularRays(ctx, altDeg, sxn);
-		drawBeltOfVenus(ctx, altDeg);
-		drawPurpleLight(ctx, altDeg, sxn);
+		if (T.stars) drawStars(ctx, altDeg, time, now);
+		if (T.moon) drawMoon(ctx, altDeg, now);
+		if (T.glow) drawCircumsolarGlow(ctx, altDeg, sxn);
+		if (T.sun) drawSun(ctx, altDeg, sxn);
+		if (T.rays) drawCrepuscularRays(ctx, altDeg, sxn);
+		if (T.venus) { drawBeltOfVenus(ctx, altDeg); drawPurpleLight(ctx, altDeg, sxn); }
 		drawGround(ctx, altDeg);
-		drawGroundContours(ctx, altDeg);
-		drawTerrain(ctx, altDeg, sxn);
-		drawMeadow(ctx);
+		if (T.contours) drawGroundContours(ctx, altDeg);
+		if (T.mountains) drawTerrain(ctx, altDeg, sxn);
+		if (T.meadow) drawMeadow(ctx);
 		sampleGround(ctx, altDeg);
-		if (snowLayer) ctx.drawImage(snowLayer, 0, horizonY);
-		if (rocks) ctx.drawImage(rocks, 0, horizonY);
-		if (!weather.snow) drawFlowers(ctx, altDeg);
-		drawCloudShadows(ctx, altDeg, sxn);
-		const windPx = (noise1D(time / 6) - 0.5) * 6 * dpr;
+		if (snowLayer && T.snow) ctx.drawImage(snowLayer, 0, horizonY);
+		if (rocks && T.rocks) ctx.drawImage(rocks, 0, horizonY);
+		if (!weather.snow && T.flowers) drawFlowers(ctx, altDeg);
+		if (T.cloudShadows) drawCloudShadows(ctx, altDeg, sxn);
+		const windPx = (noise1D(time / 6) - 0.5) * 6 * dpr * T.windAmt;
 		drawHorizonBlend(ctx, altDeg);                   // under the trees: they carry their own haze by distance
-		drawBgTree(ctx, altDeg, sxn, windPx);            // space-colonization cottonwood — far right background
-		drawMidgroundTrees(ctx, altDeg, sxn, windPx);
+		if (T.trees) {
+			drawBgTree(ctx, altDeg, sxn, windPx);        // space-colonization cottonwood — far right background
+			drawMidgroundTrees(ctx, altDeg, sxn, windPx);
+		}
 		const sageArt = treeArts(altDeg, sxn).sage;
-		if (sageArt[0]) drawTreeArt(ctx, sageArt[0], 0);
-		drawPlants(ctx, bgPlants, horizonY, H, tuftLight(altDeg), plantGreen);   // far grass — behind tree
-		drawCirrus(ctx, altDeg);
+		if (sageArt[0] && T.sage) drawTreeArt(ctx, sageArt[0], 0);
+		if (T.grass) drawPlants(ctx, bgPlants, horizonY, H, tuftLight(altDeg), plantGreen);   // far grass — behind tree
+		if (T.cirrus) drawCirrus(ctx, altDeg);
 		drawClouds(ctx, altDeg, sxn);
-		drawTreeCastShadow(ctx, altDeg, sxn);
-		drawTreeShadow(ctx, altDeg);
-		const fgArt = treeArts(altDeg, sxn).fg;
+		if (T.trees && T.treeShadows) { drawTreeCastShadow(ctx, altDeg, sxn); drawTreeShadow(ctx, altDeg); }
+		const fgArt = T.trees ? treeArts(altDeg, sxn).fg : null;
 		if (fgArt) {
 			// Seeded trunk lean — rotate the whole tree around its base
 			const bx = fgBaseX();
@@ -1437,10 +1448,10 @@
 			drawTreeArt(ctx, fgArt, windPx);
 			ctx.restore();
 		}
-		if (sageArt[1]) drawTreeArt(ctx, sageArt[1], 0);
-		drawPlants(ctx, fgPlants, horizonY, H, tuftLight(altDeg), plantGreen);   // near grass — in front of everything
-		drawGrain(ctx);
-		drawVignette(ctx);
+		if (sageArt[1] && T.sage) drawTreeArt(ctx, sageArt[1], 0);
+		if (T.grass) drawPlants(ctx, fgPlants, horizonY, H, tuftLight(altDeg), plantGreen);   // near grass — in front of everything
+		if (T.grain) drawGrain(ctx);
+		if (T.vignette) drawVignette(ctx);
 		saveAverage(timestamp);
 
 		animFrame = requestAnimationFrame(draw);
@@ -1451,7 +1462,7 @@
 	let avgCanvas: HTMLCanvasElement | null = null;
 	let lastAvgAt = -1e9;
 	function saveAverage(timestamp: number): void {
-		if (!canvas || !terrain || timestamp - lastAvgAt < 20_000) return;
+		if (!canvas || !terrain || clock.sim || timestamp - lastAvgAt < 20_000) return;   // a simulated moment is not replayed on the next load
 		lastAvgAt = timestamp;
 		avgCanvas ??= Object.assign(document.createElement('canvas'), { width: 16, height: 16 });
 		const a = avgCanvas.getContext('2d', { willReadFrequently: true })!;

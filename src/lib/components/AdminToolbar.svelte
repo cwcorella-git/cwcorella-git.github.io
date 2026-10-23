@@ -4,6 +4,7 @@
 	import ThemePanel from './ThemePanel.svelte';
 	import SettingsPanel from './SettingsPanel.svelte';
 	import NavPanel from './NavPanel.svelte';
+	import { scenePanel } from '$lib/admin/sceneTune.svelte';
 
 	let { onLogoutRequest, alwaysShowTheme = false }: { onLogoutRequest: () => void; alwaysShowTheme?: boolean } = $props();
 
@@ -87,6 +88,15 @@
 				<NavPanel />
 			{/if}
 		</div>
+
+		<!-- Scene tuner (admin only); the panel itself is drawn by the layout -->
+		<button
+			class="admin-menu-btn"
+			class:active={scenePanel.open}
+			onclick={() => (scenePanel.open = !scenePanel.open)}
+			aria-expanded={scenePanel.open}
+			aria-label="Scene tuner"
+		>✦ <span class="btn-label">scene</span></button>
 
 		<!-- Admin settings (admin only) -->
 		<div class="admin-menu-wrapper">
