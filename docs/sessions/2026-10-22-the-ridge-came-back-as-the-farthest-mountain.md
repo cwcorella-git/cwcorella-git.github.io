@@ -914,3 +914,5 @@ Checked in headless renders only: the forms sheet, a growth strip at 8/15/25/40/
 - The operator will tune with the scene panel; wait for their notes.
 - Render tools in `$S/renders/`: `sim.cjs`, `big.cjs`, `grow.cjs`, `forms.cjs`, `clip.cjs`, `frametime.cjs`.
 - Pull before pushing (`glass.json` and `scene.json` are committed from the browser).
+- Background: the Vite dev server on :5191 (task `b6fxjz86u`, `npx vite dev --port 5191 --strictPort`) is still running for the render scripts; nothing waits on it. The dev-only `window.__clouds` hook in Garden.svelte serves those probes.
+- Media `cwc-stars-66` / `cwc-stars-69` still have no verdict; read once with `ops_pick`, do not poll.
