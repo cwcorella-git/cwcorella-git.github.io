@@ -506,13 +506,13 @@
 
 	/** Where the moon is and how much it lights the sky (0 at new moon or when down, ~1 for a high full moon). */
 	/** Where the moon is and how much it lights the sky (0 when new or down, ~1 for a high full moon). */
-	function moonState(altDeg: number, now: Date): { x: number; y: number; alpha: number; phase: number; waxing: boolean; light: number } {
+	function moonState(altDeg: number, now: Date): { x: number; y: number; alt: number; alpha: number; phase: number; waxing: boolean; light: number } {
 		const m = moonPosition(now);
 		// Seen only once the sky is dark enough (sun below -6°), and only while it is up.
 		const alpha = Math.max(0, Math.min(1, (-altDeg - 6) / 8)) * Math.max(0, Math.min(1, (m.alt + 1) / 3));
 		const sinMoon = Math.sin(Math.max(0, m.alt) * Math.PI / 180);
 		const lit = Math.abs(m.phase - 0.5) * 2;   // 0=full, 1=new
-		return { x: m.xNorm * W, y: horizonY - sinMoon * horizonY * 0.88, alpha, phase: m.phase, waxing: m.waxing, light: alpha * (1 - lit) ** 1.5 * Math.sqrt(sinMoon) };
+		return { x: m.xNorm * W, y: horizonY - sinMoon * horizonY * 0.88, alt: m.alt, alpha, phase: m.phase, waxing: m.waxing, light: alpha * (1 - lit) ** 1.5 * Math.sqrt(sinMoon) };
 	}
 
 	function drawMoon(ctx: CanvasRenderingContext2D, altDeg: number, now: Date): void {
@@ -1255,9 +1255,18 @@
 		const cloudAlpha = 1;   // clouds stay at night, dark, and hide the stars behind them
 
 		const minutesSinceEpoch = Date.now() / 60000;
-		const { top, shadow } = getCloudColors(altDeg);
-		const sunSide  = sxn < 0.5 ? -1 : 1;
-		const colorKey = quantizeColorKey(top, shadow) + sunSide + ':' + Math.round(altDeg);
+		let { top, shadow } = getCloudColors(altDeg);
+		let sunSide = sxn < 0.5 ? -1 : 1, lightAlt = altDeg;
+		// At night the moon lights the tops from its side; with no moon the clouds
+		// are dark shapes, their bases faintly lit from below by the town.
+		const night = clamp01((-altDeg - 8) / 6);
+		if (night > 0) {
+			const moon = moonState(altDeg, new Date()), lit = clamp01(moon.light * 1.6);
+			top    = lerpRGB(top,    lerpRGB([54, 56, 68], [132, 140, 162], lit), night);
+			shadow = lerpRGB(shadow, lerpRGB([24, 26, 38], [40, 46, 68], lit), night);
+			if (lit > 0.08) { sunSide = moon.x < W / 2 ? -1 : 1; lightAlt = Math.max(4, moon.alt) / 3.2; }
+		}
+		const colorKey = quantizeColorKey(top, shadow) + sunSide + ':' + Math.round(lightAlt);
 
 		// One bake per frame (~70 ms on a slow phone): stale clouds keep their
 		// old colours a moment longer, new ones appear a frame apart.
@@ -1270,7 +1279,7 @@
 				// and full size cost 140 ms per cumulus, 870 ms per overcast sheet on a
 				// 4×-throttled phone (2026-10-22).
 				const q = Math.min(0.55, 200 / cloud.size);
-				const r = renderNoiseCloud(cloud.size * q, cloud.aspectRatio, cloud.prngseed, cloud.grey ? lerpRGB(top, shadow, 0.55) : top, shadow, sunSide, 1, cloud.haze, altDeg);
+				const r = renderNoiseCloud(cloud.size * q, cloud.aspectRatio, cloud.prngseed, cloud.grey ? lerpRGB(top, shadow, 0.55) : top, shadow, sunSide, 1, cloud.haze, lightAlt);
 				cloud.cache = { ...r, w: r.w / q, h: r.h / q, baseY: r.baseY / q };
 				cloud.cacheColorKey = colorKey;
 			}
