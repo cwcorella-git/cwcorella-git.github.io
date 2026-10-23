@@ -237,7 +237,7 @@ function leafTile(cols: RGB[], ms: number, style: Style, amount: number): HTMLCa
 	t.width = t.height = T;
 	const ctx = t.getContext('2d')!;
 	const rng = makePRNG(T * 31 + Math.round(ms * 10));
-	const n = Math.round((style === 'needle' ? 0.7 : 1.5) * T * T / (ms * ms) * Math.max(0.25, amount));
+	const n = Math.round((style === 'needle' ? 0.7 : 1.5) * T * T / (ms * ms) * Math.max(0.1, amount * amount));   // thins faster than linear: half-fallen reads half-bare
 	const w = [0.4, 0.42, 0.18];
 	ctx.lineCap = 'round';
 	ctx.lineWidth = Math.max(0.6, ms * 0.4);
@@ -329,6 +329,29 @@ function renderClump(r: number, f: Foliage, L: ArtLight, seed: number, tone = 1)
 		ctx.lineTo(x + Math.cos(a - 1.9) * sz * 0.7, y + Math.sin(a - 1.9) * sz * 0.7);
 		ctx.closePath();
 	};
+	// Bare or thinning cottonwood: the fine twigs of the crown show, a grey
+	// haze filling the lobe (photographs of winter cottonwoods), fading in as
+	// the leaves fall.
+	const bare = !f.needle && !f.scale ? Math.min(1, (1 - f.amount) * 1.3) : 0;
+	if (bare > 0.05) {
+		ctx.save();
+		ctx.globalAlpha = bare;
+		ctx.strokeStyle = rgb(hazed(mix(L.night, shade(mix([114, 110, 104], L.sunCol, 0.15 * w), 1 - 0.3 * w), L.dl), L));
+		ctx.lineCap = 'round';
+		const twig = (x: number, y: number, a: number, l: number, wd: number, depth: number) => {
+			const x2 = x + Math.cos(a) * l, y2 = y + Math.sin(a) * l;
+			ctx.lineWidth = wd;
+			ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x2, y2); ctx.stroke();
+			if (depth === 0) return;
+			const n = 2 + (rng() < 0.4 ? 1 : 0);
+			for (let i = 0; i < n; i++) twig(x2, y2, a + (i - (n - 1) / 2) * 0.55 + (rng() - 0.5) * 0.4, l * (0.62 + rng() * 0.15), Math.max(0.5, wd * 0.7), depth - 1);
+		};
+		for (let i = 0; i < 5; i++) {
+			const a = -Math.PI / 2 + (i - 2) * 0.45 + (rng() - 0.5) * 0.3;
+			twig(cx + (rng() - 0.5) * r * 0.4, cy + r * 0.55, a, r * 0.42, Math.max(0.6, r * 0.03), 4);
+		}
+		ctx.restore();
+	}
 	if (f.amount > 0.02) {
 		const tile = leafTile(t1, ms, style, f.amount);
 		ctx.save();
@@ -395,7 +418,7 @@ function renderClump(r: number, f: Foliage, L: ArtLight, seed: number, tone = 1)
 	if (f.needle) return c;
 	// A few gaps where the sky shows through.
 	ctx.globalCompositeOperation = 'destination-out';
-	for (let i = 0, n = 8 + Math.floor(rng() * 4); i < n; i++) {
+	for (let i = 0, n = 8 + Math.floor(rng() * 4 + 26 * (1 - f.amount)); i < n; i++) {   // more sky through a thinning crown
 		const a = rng() * Math.PI * 2, d = (0.35 + rng() * 0.55) * r;
 		ctx.beginPath();
 		ctx.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, r * (0.08 + rng() * 0.08), 0, Math.PI * 2);
@@ -497,7 +520,7 @@ export function renderTreeArt(segs: Seg[], clumps: Clump[], f: Foliage, L: ArtLi
 		const v = (L.sunDx * (c.x - cx) * 0.8 - (c.y - cy)) / cr;
 		return v > 0.25 ? 2 : v < -0.2 ? 0 : 1;
 	};
-	const sprites = f.amount > 0.02
+	const sprites = f.amount > 0.02 || (!f.needle && !f.scale)
 		? clumps.map((c, i) => ({ c, i, t: toneOf(c) })).sort((a, b) => a.t - b.t)
 			.map(({ c, i, t }) => ({ x: c.x, y: c.y, img: spriteFor(c.r, i, t), sway: Math.max(0, (baseY - c.y) / height) }))
 		: [];
