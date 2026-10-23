@@ -407,8 +407,9 @@
 		// Text must read on the sky bands and on the darkest and brightest of what
 		// the garden actually drew (clouds, land). The glass slider scales the
 		// starting thickness; contrast may still thicken it past that.
+		// Text is pale all day (operator, 2026-10-23): the glass darkens behind it instead.
 		const f = lightFrame(themeState.palette, dl, [mid, lower, ...seen.colors],
-			{ target: t.contrast, glassDay: t.glassDay * g.card, glassNight: t.glassNight * g.card });
+			{ target: t.contrast, glassDay: t.glassDay * g.card, glassNight: t.glassNight * g.card, pale: true });
 		// Text size, weight and halo from the scene tuner; at the defaults the
 		// inline styles are removed, so the stylesheet governs as before.
 		r.style.fontSize = t.textScale === 1 ? '' : `${Math.round(t.textScale * 100)}%`;

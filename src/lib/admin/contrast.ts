@@ -96,7 +96,7 @@ export interface LightFrame {
  * twilight, and the text is whichever of day/night reads better on the
  * panel actually shown — so there is no cross-fade through illegible.
  */
-export interface FrameTune { target: number; glassDay: number; glassNight: number }
+export interface FrameTune { target: number; glassDay: number; glassNight: number; pale?: boolean }
 const FRAME_DEFAULTS: FrameTune = { target: 4.5, glassDay: 0.22, glassNight: 0.42 };
 
 export function lightFrame(p: LightPaletteSeeds, dl: number, backdrops?: readonly RGB[], tune: FrameTune = FRAME_DEFAULTS): LightFrame {
@@ -127,7 +127,10 @@ export function lightFrame(p: LightPaletteSeeds, dl: number, backdrops?: readonl
 			a = Math.min(cap, a + 0.02);
 		}
 	};
-	const tries = [solve(glass, p.textDay), solve(glass, p.textNight), solve(p.glassDay, p.textDay), solve(p.glassNight, p.textNight)];
+	// `pale`: always the night text, on whichever glass needs the least thickening.
+	const tries = tune.pale
+		? [solve(glass, p.textNight), solve(p.glassNight, p.textNight)]
+		: [solve(glass, p.textDay), solve(glass, p.textNight), solve(p.glassDay, p.textDay), solve(p.glassNight, p.textNight)];
 	const best = tries.reduce((x, y) => {
 		const xo = x.worst >= target, yo = y.worst >= target;
 		if (xo !== yo) return xo ? x : y;

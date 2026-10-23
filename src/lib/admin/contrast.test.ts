@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { contrast, composite, lightFrame, metaFor, parseColor } from './contrast';
+import { contrast, composite, lightFrame, metaFor, parseColor, type RGB, type LightPaletteSeeds } from './contrast';
 import { PALETTES, fixedAccent, fixedMeta } from './theme.svelte';
 import { SKY_KF, skyColorsAt } from '$lib/garden/backdrop';
 
@@ -60,5 +60,15 @@ describe('sky over the garden is legible at every sun altitude', () => {
 			const nums = (s: string) => s.replace(/\s+/g, '');
 			expect(nums(src), `keyframe ${k.alt}`).toContain(nums(row));
 		}
+	});
+});
+
+describe('lightFrame pale', () => {
+	it('keeps the night text at noon and still reaches 4.5:1 on a bright sky', () => {
+		const p = PALETTES.sky as unknown as LightPaletteSeeds;
+		const sky: RGB[] = [[128, 188, 228], [240, 242, 245]];
+		const f = lightFrame(p, 1, sky, { target: 4.5, glassDay: 0.22, glassNight: 0.42, pale: true });
+		expect(f.text).toEqual(p.textNight);
+		for (const b of sky) expect(contrast(f.text, composite(f.glass, f.glassAlpha, b))).toBeGreaterThanOrEqual(4.5);
 	});
 });
