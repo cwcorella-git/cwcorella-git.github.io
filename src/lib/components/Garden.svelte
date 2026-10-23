@@ -12,10 +12,10 @@
 	import { renderTreeArt, drawTreeArt, clumpsFromTips, broadleafShape, pineShape, juniperShape, sageShape, sageFoliage, NEUTRAL_LIGHT, cottonwoodFoliage, PINE_FOLIAGE, JUNIPER_FOLIAGE, type TreeArt, type Seg, type Clump } from '$lib/garden/treeArt';
 	import { weatherFor, type Weather } from '$lib/garden/weather';
 	import { renderMeadow, renderRocks, renderSnow, makeFlowers, flowerBloom, type Flower, renderNoiseCloud, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
+	import { makeStars, drawStarField, type StarField } from '$lib/garden/stars';
 
 	// ── constants ─────────────────────────────────────────────────────────────
 	const HORIZON_FRAC = 0.68;   // horizon at 68% down canvas
-	const STAR_COUNT   = 700;
 	const NAV_CLEAR    = 70;   // CSS px kept clear above clouds
 
 	let canvas = $state<HTMLCanvasElement | undefined>();
@@ -153,14 +153,6 @@
 	}
 
 	// ── scene data (rebuilt on resize) ────────────────────────────────────────
-	interface Star {
-		x: number; y: number;
-		r: number;
-		color: string;
-		twinklePhase: number;
-		twinkleSpeed: number;
-		isMilkyWay: boolean;
-	}
 
 	interface CloudDef {
 		xFrac:         number;   // initial x fraction (0–1)
@@ -190,17 +182,8 @@
 		cacheColorKey: string;
 	}
 
-	const SPECTRAL: Array<{ color: string; weight: number }> = [
-		{ color: '#aabfff', weight: 3  },
-		{ color: '#cad7ff', weight: 5  },
-		{ color: '#f8f7ff', weight: 10 },
-		{ color: '#fff4ea', weight: 15 },
-		{ color: '#ffd2a1', weight: 30 },
-		{ color: '#ffcc6f', weight: 37 },
-	];
-	const SPECTRAL_TOTAL = SPECTRAL.reduce((s, e) => s + e.weight, 0);
 
-	let stars: Star[]               = [];
+	let starField: StarField | null = null;
 	let clouds: CloudDef[]          = [];
 	let cirrus: CirrusDef[]         = [];
 	let bgPlants: PlantInstance[]   = [];  // drawn before midground trees (far, near horizon)
@@ -280,38 +263,7 @@
 	}
 
 	function buildScene(cw: number, ch: number, hy: number): void {
-		const rng = makePRNG(0xCAFEBABE);
-		stars = [];
-
-		for (let i = 0; i < STAR_COUNT; i++) {
-			const mag = rng() * 6.5;
-			const r   = Math.max(0.25, 2.6 - mag * 0.35);
-			let w = rng() * SPECTRAL_TOTAL, colorStr = '#fff4ea';
-			for (const s of SPECTRAL) { w -= s.weight; if (w <= 0) { colorStr = s.color; break; } }
-
-			const isMilkyWay = i < 200;
-			let x: number, y: number;
-			if (isMilkyWay) {
-				// Diagonal band: runs from lower-right to upper-left
-				const t      = rng();
-				const spread = (rng() - 0.5) * 0.26;
-				x = Math.max(0.01, Math.min(0.99, (t + spread * 0.4) % 1.0));
-				y = Math.max(0.02, Math.min(0.97, 1 - t * 0.78 + spread * 0.55));
-			} else {
-				x = rng();
-				y = rng() * 0.96 + 0.02;
-			}
-
-			stars.push({
-				x: x * cw,
-				y: y * hy,
-				r,
-				color: colorStr,
-				twinklePhase: rng() * Math.PI * 2,
-				twinkleSpeed: 1.5 + rng() * 3.0,
-				isMilkyWay,
-			});
-		}
+		starField = makeStars(cw, hy, dpr);
 
 		buildClouds();
 
@@ -520,31 +472,7 @@
 		const starAlpha = Math.max(0, Math.min(1, (-altDeg - 8) / 6));
 		if (starAlpha <= 0) return;
 
-		// Milky Way haze: soft blue-gray smear over the band stars
-		if (starAlpha > 0.3) {
-			ctx.save();
-			ctx.globalAlpha = starAlpha * 0.10;
-			ctx.fillStyle = '#b8c8e0';
-			for (let i = 0; i < 200 && i < stars.length; i++) {
-				const s = stars[i];
-				ctx.beginPath();
-				ctx.arc(s.x, s.y, s.r * 3, 0, Math.PI * 2);
-				ctx.fill();
-			}
-			ctx.restore();
-		}
-
-		// Individual stars
-		for (const s of stars) {
-			const twinkle = 0.70 + 0.30 * Math.sin(time * s.twinkleSpeed + s.twinklePhase);
-			const alpha   = starAlpha * twinkle * (s.isMilkyWay ? 0.55 : 1.0);
-			ctx.globalAlpha = alpha;
-			ctx.fillStyle   = s.color;
-			ctx.beginPath();
-			ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-			ctx.fill();
-		}
-		ctx.globalAlpha = 1;
+		if (starField) drawStarField(ctx, starField, horizonY, starAlpha, time);
 	}
 
 	// ── draw: moon ────────────────────────────────────────────────────────────
