@@ -866,9 +866,37 @@ The operator reviewed the scene: clouds see-through and plain, light good. They 
 - **Proposed:** cumulus form by growing from wisps instead of fading as a whole; towers still read a little blocky; midground trees blend into the range on moonlit nights; far clouds hiding the stars fully; a bigger moon on phones (§35); vertical seams between puffs show as faint stripes inside clouds at high sun.
 - The moon (panorama arc) and the stars (polar rotation) still use different projections (§34).
 
-## Resume here
+## Resume here (superseded by the one at the end)
 - Nothing is queued. Rows 43–78 are done and pushed (last code commit `1d96c10`).
 - **Proposed:** see §36 Open.
 - Dev-only hook: `window.__clouds` (Garden.svelte, `import.meta.env.DEV`) lets render probes reach the cloud list. Render scripts: `$S/renders/sim.cjs <name> <width> <local ISO> <weather> [tune JSON]` uses the sim clock; `forms.cjs` draws a sheet of cloud forms.
 - Media groups `cwc-stars-66` and `cwc-stars-69` have no verdict yet; read them once with `ops_pick`, do not poll.
+- Pull before pushing (`glass.json` and `scene.json` are committed from the browser).
+
+## 37. Distance had been drawn as transparency (rows 79–82)
+
+After row 76 the operator wrote: "clouds are still semi-transparent. you can see clouds behind clouds. we need a type of transparency but not like that. clouds already interact with light somehow, why can't we improve the look?" Three causes:
+- **Distance drawn as transparency.** `cloud.alpha` falls with distance and was a draw-alpha factor (`0.45 + 1.1·alpha`, ~65% opaque far away). The bake also took `1 − 0.3·haze` off its alpha. Real far clouds are opaque; distance only moves their colour toward the sky.
+- **Whole-cloud fade.** A cumulus's life faded the whole thing, so a forming cloud was a ghost of a full one.
+- **Random draw order.**
+
+| # | item | state |
+|---|---|---|
+| 79 | opaque bodies, depth by colour | **done**: `7437bae`. The bake's alpha is the density alone, and haze is a colour blend toward the sky at the cloud's height (`CloudEnv.sky`, from `getSkyColors` mid→horizon by `yFrac`). Cumulus draw at alpha 1 (× the tuner's opacity); sheets stay translucent. Cumulus are sorted far to near in `buildClouds`. Star cut-outs use the same alpha, so clouds now hide the stars fully (closes that §35 proposal) |
+| 80 | better light | **done**: `7437bae`. Each sample carries the soft-blended normal of the puffs it lies in (weights `exp(9q)`) plus noise, so every lobe is lit as a sphere (`lz` 0.45 toward the viewer). Creases where two puffs meet are softly shaded. The march is longer (8 steps to 0.45·size, `exp(−4·acc)`) with a multi-scatter floor. Tops face-up take sky light (`zenith`) and bases take ground bounce (`groundMid`). The silver lining is scaled by `backlit`, strong only with the sun low. A first try with hard per-puff normals looked like bubbles, which led to the soft blend |
+| 81 | clouds that grow | **done**: `7437bae`. The bake's alpha channel holds density/0.6, made ragged with noise inside the body only. `cloudAlphaLUT(g)` thresholds it, so a forming cloud starts as torn tufts from its densest cores and dissolves from the edges in. `grownImage()` caches one canvas per 1/24 of growth. The tuner's "clouds grow" turns it off (the old fade). `renderNoiseCloud` applies the full-growth LUT for callers that want a finished cloud |
+| 82 | night leftovers | **done**: `7437bae`. The moon is 9 css px in radius on narrow screens (was 11 physical px, ~5 css). By moonlight the midground trees' haze is ×(1 − 0.6·m), so they no longer melt into the range |
+
+**Cost:** day and night median frame intervals are both 16 ms on a 4×-throttled phone. The night p90 of 153 ms is a full redraw in headless software canvas (§34), not the bake.
+
+## Open
+- **Never seen by the operator on a real screen.** All of this was checked in headless renders (Media: one cloud close up, growth strip, sunset, phone moon).
+- Towers still lean blocky. The growth's first tufts can look like scattered dots for a moment.
+- Sheets (overcast decks) did not get the lobe shading's attention; they use the same bake but are squashed and translucent.
+- The moon and stars still use different projections (§34).
+
+## Resume here
+- Nothing is queued. Rows 43–82 are done and pushed (last code commit `7437bae`).
+- The operator said they will tune with the scene panel first; wait for their notes.
+- Render tools in `$S/renders/`: `sim.cjs` (scene at a sim moment, weather, tune), `big.cjs` (one cloud close up, noon and sunset), `grow.cjs` (growth strip), `forms.cjs`, `clip.cjs` (bake edge clipping), `frametime.cjs`.
 - Pull before pushing (`glass.json` and `scene.json` are committed from the browser).
