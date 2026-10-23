@@ -932,7 +932,7 @@
 		{ xf: 0.74, yf: 0.0,  bornAgo: 0,     kind: 'pine',       h: 120 },  // same age as the site
 		{ xf: 0.49, yf: 0.03, bornAgo: 54750, kind: 'cottonwood', h: 130 },  // +150yr
 		{ xf: 0.61, yf: 0.07, bornAgo: 10950, kind: 'pine',       h: 150 },  // +30yr
-		{ xf: 0.93, yf: 0.12, bornAgo: -5475, kind: 'juniper',    h: 110 },  // −15yr
+		{ xf: 0.93, yf: 0.12, bornAgo: -5475, kind: 'juniper',    h: 140 },  // −15yr
 	];
 	const depthK = (yf: number) => 1.233 / (1.233 - yf);
 	const groundY = (yf: number) => horizonY + yf * (H - horizonY);
@@ -1012,8 +1012,8 @@
 			return renderTreeArt(segs, clumps, leaf, { ...L, sunDx: sunX < xs ? -1 : 1, hazeK }, seed);
 		};
 		const jobs: (() => void)[] = [
-			() => { next.fg = fgTreeSegs.length ? bake(fgSegs(), 12 * dpr * depthK(fgYf()), 101) : null; },
-			() => { next.bg = bgTreeSegs.length ? bake(segsFromTree(bgTreeSegs), 15 * dpr, 211, 0.35) : null; },
+			() => { next.fg = fgTreeSegs.length ? bake(fgSegs(), 22 * dpr * depthK(fgYf()), 101) : null; },
+			() => { next.bg = bgTreeSegs.length ? bake(segsFromTree(bgTreeSegs), 26 * dpr, 211, 0.35) : null; },
 		];
 		MIDGROUND.forEach((m, i) => jobs.push(() => {
 			const gf = treeGrowthFactor(Math.max(0, gardenAgeUnits + m.bornAgo));
