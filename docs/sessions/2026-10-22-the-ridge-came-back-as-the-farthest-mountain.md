@@ -895,8 +895,22 @@ After row 76 the operator wrote: "clouds are still semi-transparent. you can see
 - Sheets (overcast decks) did not get the lobe shading's attention; they use the same bake but are squashed and translucent.
 - The moon and stars still use different projections (§34).
 
-## Resume here
+## Resume here (superseded by the one at the end)
 - Nothing is queued. Rows 43–82 are done and pushed (last code commit `7437bae`).
 - The operator said they will tune with the scene panel first; wait for their notes.
 - Render tools in `$S/renders/`: `sim.cjs` (scene at a sim moment, weather, tune), `big.cjs` (one cloud close up, noon and sunset), `grow.cjs` (growth strip), `forms.cjs`, `clip.cjs` (bake edge clipping), `frametime.cjs`.
+- Pull before pushing (`glass.json` and `scene.json` are committed from the browser).
+
+## 38. The rough spots from §37 (row 83)
+
+| # | item | state |
+|---|---|---|
+| 83 | rough spots | **done**: `88b7257`. **Towers:** each tier is pulled in toward the axis (×0.72 − 0.08·tier), with a bulge on each flank a little below it, so they taper like a building cumulus instead of standing as blocks. **Early growth:** `cloudAlphaLUT` has a ramp width of 0.12 + 0.3·(1−g) and alpha × (0.35 + 0.65·smooth(0, 0.35, g)), so young clouds condense out of faint, soft wisps rather than appearing as dots. **Overcast:** cumulus tops are pulled toward their shadow colour by cover (no direct sun under a deck), and the deck has ~1.8× the sheets, so it spans the drift loop and covers the sky instead of a few blobs |
+
+Checked in headless renders only: the forms sheet, a growth strip at 8/15/25/40/65/100%, and an overcast noon on 2026-10-23. A young cloud is translucent while it forms. That is deliberate, and the only transparency left on cumulus bodies.
+
+## Resume here
+- Nothing is queued. Rows 43–83 are done and pushed.
+- The operator will tune with the scene panel; wait for their notes.
+- Render tools in `$S/renders/`: `sim.cjs`, `big.cjs`, `grow.cjs`, `forms.cjs`, `clip.cjs`, `frametime.cjs`.
 - Pull before pushing (`glass.json` and `scene.json` are committed from the browser).
