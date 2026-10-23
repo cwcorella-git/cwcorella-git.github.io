@@ -158,6 +158,39 @@ export function renderMeadow(W: number, bandH: number, scale: number): HTMLCanva
 	return c;
 }
 
+// ── wildflowers ───────────────────────────────────────────────────────────
+// Specks of colour over the meadow, in loose drifts: mule's ears, lupine,
+// yarrow, globemallow. Drawn on top (the meadow layer only darkens).
+export interface Flower { x: number; y: number; r: number; col: RGB; on: number }
+
+const FLOWER_COLS: RGB[] = [[232, 197, 71], [139, 111, 184], [236, 232, 220], [217, 119, 58]];
+
+/** Bloom, 0–1: from late April, full through June, gone by mid-September. */
+export function flowerBloom(doy: number): number {
+	const ramp = (a: number, b: number) => Math.max(0, Math.min(1, (doy - a) / (b - a)));
+	return ramp(110, 140) * (1 - ramp(200, 258));
+}
+
+/** `on` is the bloom level a flower needs to show, so a thin season shows a few. */
+export function makeFlowers(W: number, bandH: number, scale: number, seed = 0xF10E5): Flower[] {
+	const rng = makePRNG(seed);
+	const out: Flower[] = [];
+	const drifts = Array.from({ length: 6 }, () => ({ x: rng() * W, t: 0.08 + Math.pow(rng(), 0.8) * 0.85, col: Math.floor(rng() * 4) }));
+	for (let i = 0; i < 160; i++) {
+		const d = drifts[i % drifts.length];
+		const t = Math.max(0.03, Math.min(0.98, d.t + (rng() - 0.5) * 0.14));
+		const k = 1.233 / (1.233 - t);
+		out.push({
+			x: d.x + (rng() - 0.5) * W * 0.12 * k,
+			y: t * bandH,
+			r: Math.min(2.6, (0.45 + rng() * 0.5) * k) * scale,
+			col: FLOWER_COLS[rng() < 0.75 ? d.col : Math.floor(rng() * 4)],
+			on: rng(),
+		});
+	}
+	return out;
+}
+
 // ── clouds ────────────────────────────────────────────────────────────────
 // A cumulus is a cluster of puffs on a flat base: the middle puffs largest,
 // each one's edge eroded by fine noise so the outline billows instead of

@@ -11,7 +11,7 @@
 	import { toast } from '$lib/admin/toast.svelte';
 	import { renderTreeArt, drawTreeArt, clumpsFromTips, broadleafShape, pineShape, juniperShape, cottonwoodFoliage, PINE_FOLIAGE, JUNIPER_FOLIAGE, type TreeArt, type Seg } from '$lib/garden/treeArt';
 	import { weatherFor, type Weather } from '$lib/garden/weather';
-	import { renderMeadow, renderNoiseCloud, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
+	import { renderMeadow, makeFlowers, flowerBloom, type Flower, renderNoiseCloud, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
 
 	// ── constants ─────────────────────────────────────────────────────────────
 	const HORIZON_FRAC = 0.68;   // horizon at 68% down canvas
@@ -212,6 +212,7 @@
 	let W = 0, H = 0, horizonY = 0;
 	let dpr = 1;   // devicePixelRatio — canvas works in physical pixels so zoom has no effect
 	let meadow: HTMLCanvasElement | null = null;   // multiply layer over the ground band
+	let flowers: Flower[] = [];
 	let grain: CanvasPattern | null = null;
 
 	// Today's clouds, from weatherFor: the seeds include the date, so each day
@@ -317,6 +318,7 @@
 		terrainLit = { key: '', canvas: terrainLit.canvas };
 		shadowCache = { key: '', canvas: null };
 		meadow = renderMeadow(cw, ch - hy, dpr);
+		flowers = makeFlowers(cw, ch - hy, dpr);
 
 		// ── plants ──────────────────────────────────────────────────────────────────────────
 		const prng = makePRNG(0xBADC0FFE);
@@ -663,6 +665,21 @@
 		if (terrain && plantLight) return plantLight;
 		const v = clamp01((altDeg + 6) / 12) * 0.9 + 0.1;   // no terrain: the old dimming
 		return [v, v, v];
+	}
+
+	function drawFlowers(ctx: CanvasRenderingContext2D, altDeg: number): void {
+		const bloom = flowerBloom(dayOfYear(new Date()));
+		if (bloom <= 0) return;
+		const L = tuftLight(altDeg);
+		ctx.save();
+		for (const f of flowers) {
+			if (f.on > bloom) continue;
+			ctx.fillStyle = `rgb(${Math.min(255, f.col[0] * L[0]) | 0},${Math.min(255, f.col[1] * L[1]) | 0},${Math.min(255, f.col[2] * L[2]) | 0})`;
+			ctx.beginPath();
+			ctx.arc(f.x, horizonY + f.y, Math.max(0.6, f.r), 0, Math.PI * 2);
+			ctx.fill();
+		}
+		ctx.restore();
 	}
 
 	// ── draw: meadow ──────────────────────────────────────────────────────────
@@ -1315,6 +1332,7 @@
 		drawGroundContours(ctx, altDeg);
 		drawTerrain(ctx, altDeg, sxn);
 		drawMeadow(ctx);
+		drawFlowers(ctx, altDeg);
 		drawCloudShadows(ctx, altDeg, sxn);
 		const windPx = (noise1D(time / 6) - 0.5) * 6 * dpr;
 		drawBgTree(ctx, altDeg, sxn, windPx);            // space-colonization cottonwood — far right background
