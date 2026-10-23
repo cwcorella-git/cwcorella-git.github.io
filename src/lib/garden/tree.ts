@@ -5,8 +5,8 @@
 const SEG_LEN     = 7;    // px — growth step length (at generation canvas)
 const INFLUENCE_R = 90;   // px — attractor influence radius
 const KILL_DIST   = 14;   // px — attractor consumed within this distance of a tip
-const BG_CACHE_KEY = 'cwc:tree-v3';
-const FG_CACHE_KEY = 'cwc:fg-tree-v2';   // v2 (2026-10-22): vase form, no stacked scaffolds
+const BG_CACHE_KEY = 'cwc:tree-v4';   // v4 (2026-10-23): sized per dpr
+const FG_CACHE_KEY = 'cwc:fg-tree-v3';   // v2 (2026-10-22): vase form, no stacked scaffolds; v3: sized per dpr
 
 // ── types ─────────────────────────────────────────────────────────────────
 export interface TreeSegment {
@@ -218,7 +218,7 @@ export function loadBgTreeFromCache(W: number, H: number, gf: number): TreeSegme
 		const raw = localStorage.getItem(BG_CACHE_KEY);
 		if (!raw) return null;
 		const cached = JSON.parse(raw) as { version: number; W: number; H: number; gf: number; segments: TreeSegment[] };
-		if (cached.version !== 3) return null;
+		if (cached.version !== 4) return null;
 		if (Math.abs(cached.W - W) > 4 || Math.abs(cached.H - H) > 4) return null;
 		if (Math.abs(cached.gf - quantizeGF(gf)) > 0.005) return null;
 		return cached.segments;
@@ -229,7 +229,7 @@ export function loadBgTreeFromCache(W: number, H: number, gf: number): TreeSegme
 
 export function saveBgTreeToCache(segments: TreeSegment[], W: number, H: number, gf: number): void {
 	try {
-		localStorage.setItem(BG_CACHE_KEY, JSON.stringify({ version: 3, W, H, gf: quantizeGF(gf), segments }));
+		localStorage.setItem(BG_CACHE_KEY, JSON.stringify({ version: 4, W, H, gf: quantizeGF(gf), segments }));
 	} catch {}
 }
 

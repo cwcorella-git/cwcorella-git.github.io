@@ -913,6 +913,13 @@
 	];
 	let treeCache: { key: string; fg: TreeArt | null; bg: TreeArt | null; mid: TreeArt[] } = { key: '', fg: null, bg: null, mid: [] };
 
+	// tree.ts sizes its trees in fixed px. Generate in CSS px (segments are
+	// stored as fractions of W, H, so they scale up) and widen the limbs by dpr;
+	// before this the phone's foreground tree was half the size of the far ones.
+	const byDpr = (t: TreeSegment[]) => t.map((s) => ({ ...s, thick: s.thick * dpr }));
+	function fgTreeFor(tgf: number): TreeSegment[] { return byDpr(generateFgTree(W / dpr, H / dpr, horizonY / dpr, tgf)); }
+	function bgTreeFor(tgf: number): TreeSegment[] { return byDpr(generateBgTree(W / dpr, H / dpr, horizonY / dpr, tgf)); }
+
 	function segsFromTree(t: TreeSegment[]): Seg[] {
 		return t.map((s) => ({ x1: s.x1f * W, y1: s.y1f * H, x2: s.x2f * W, y2: s.y2f * H, thick: s.thick }));
 	}
@@ -1199,13 +1206,13 @@
 		const px = e.clientX * dpr;
 		const py = e.clientY * dpr;
 		// Hit-test: rough bounding area of the foreground tree
-		const trunkH = Math.min(horizonY * 0.44, 195) * treeGrowthFactor(gardenAgeUnits);
-		if (Math.abs(px - W * 0.28) > 200 || py > horizonY + 20 || py < horizonY - trunkH - 180) return;
+		const trunkH = Math.min(horizonY * 0.44, 195 * dpr) * treeGrowthFactor(gardenAgeUnits);
+		if (Math.abs(px - W * 0.28) > 200 * dpr || py > horizonY + 20 || py < horizonY - trunkH - 180) return;
 		addAgeUnits(365);
 		gardenAgeUnits += 365;
 		const tgf = treeGrowthFactor(gardenAgeUnits);
 		clearFgTreeCache();
-		fgTreeSegs = generateFgTree(W, H, horizonY, tgf);
+		fgTreeSegs = fgTreeFor(tgf);
 		saveFgTreeToCache(fgTreeSegs, W, H, tgf);
 		toast.success(`+1 yr of growth · tree age ${Math.round(gardenAgeUnits / 365.25)} yr`);
 	}
@@ -1345,9 +1352,9 @@
 		buildScene(W, H, horizonY);
 		if (Math.abs(W - prevW) > 4 || Math.abs(H - prevH) > 4) {
 			const tgf = treeGrowthFactor(gardenAgeUnits);
-			fgTreeSegs = generateFgTree(W, H, horizonY, tgf);
+			fgTreeSegs = fgTreeFor(tgf);
 			saveFgTreeToCache(fgTreeSegs, W, H, tgf);
-			bgTreeSegs = generateBgTree(W, H, horizonY, tgf);
+			bgTreeSegs = bgTreeFor(tgf);
 			saveBgTreeToCache(bgTreeSegs, W, H, tgf);
 		}
 	}
@@ -1380,7 +1387,7 @@
 		// (space colonization) is deferred 80ms so the first frame paints first.
 		const tgf     = treeGrowthFactor(gardenAgeUnits);
 		const fgCache = loadFgTreeFromCache(W, H, tgf);
-		fgTreeSegs    = fgCache ?? generateFgTree(W, H, horizonY, tgf);
+		fgTreeSegs    = fgCache ?? fgTreeFor(tgf);
 		if (!fgCache) saveFgTreeToCache(fgTreeSegs, W, H, tgf);
 
 		const bgCache = loadBgTreeFromCache(W, H, tgf);
@@ -1388,7 +1395,7 @@
 			bgTreeSegs = bgCache;
 		} else {
 			setTimeout(() => {
-				bgTreeSegs = generateBgTree(W, H, horizonY, tgf);
+				bgTreeSegs = bgTreeFor(tgf);
 				saveBgTreeToCache(bgTreeSegs, W, H, tgf);
 			}, 80);
 		}
