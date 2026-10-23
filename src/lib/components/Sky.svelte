@@ -421,7 +421,8 @@
 		r.style.setProperty('--body-bg',      rgbCss(f.ground));
 		r.style.setProperty('--glass-bg',     `rgba(${gr},${gg},${gb},${f.glassAlpha.toFixed(2)})`);
 		r.style.setProperty('--glass-border', `rgba(${gr},${gg},${gb},${tuneAlpha(0.40*dl + 0.15*(1-dl), g.border)})`);
-		r.style.setProperty('--glass-nav-bg', `rgba(${gr},${gg},${gb},${tuneAlpha(0.30*dl + 0.52*(1-dl), g.card)})`);
+		// The nav carries the same pale text, so it is never thinner than the solved panel.
+		r.style.setProperty('--glass-nav-bg', `rgba(${gr},${gg},${gb},${Math.max(+tuneAlpha(0.30*dl + 0.52*(1-dl), g.card), f.glassAlpha).toFixed(2)})`);
 		r.style.setProperty('--glass-blur',       `blur(${g.cardBlur}px)`);
 		r.style.setProperty('--glass-blur-nav',   `blur(${Math.round(g.cardBlur * 0.9)}px)`);
 		r.style.setProperty('--glass-blur-heavy', `blur(${g.menuBlur}px)`);

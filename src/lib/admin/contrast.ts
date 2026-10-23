@@ -111,7 +111,9 @@ export function lightFrame(p: LightPaletteSeeds, dl: number, backdrops?: readonl
 	// What the glass actually sits on. With the garden drawn (2026-10-21) that is
 	// the garden's sky, which darkens well before the flat ground switches; the
 	// panel spans more than one sky band, so text must read on every one of them.
-	const behind = backdrops?.length ? backdrops : [ground];
+	let behind = backdrops?.length ? backdrops : [ground];
+	// Pale text must also read before the garden draws (or if it never does).
+	if (tune.pale && backdrops?.length) behind = [...backdrops, ground];
 	// The glass thickens only when a moment needs it (sunset, where the sky is
 	// orange low and violet high), and only as far as 4.5:1 requires. At dusk the
 	// blended glass is a mid-grey that suits neither text, so two pairings are

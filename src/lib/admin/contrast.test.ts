@@ -67,8 +67,9 @@ describe('lightFrame pale', () => {
 	it('keeps the night text at noon and still reaches 4.5:1 on a bright sky', () => {
 		const p = PALETTES.sky as unknown as LightPaletteSeeds;
 		const sky: RGB[] = [[128, 188, 228], [240, 242, 245]];
+		const ground = parseColor(p.bodyBg).rgb;
 		const f = lightFrame(p, 1, sky, { target: 4.5, glassDay: 0.22, glassNight: 0.42, pale: true });
 		expect(f.text).toEqual(p.textNight);
-		for (const b of sky) expect(contrast(f.text, composite(f.glass, f.glassAlpha, b))).toBeGreaterThanOrEqual(4.5);
+		for (const b of [...sky, ground]) expect(contrast(f.text, composite(f.glass, f.glassAlpha, b))).toBeGreaterThanOrEqual(4.5);
 	});
 });
