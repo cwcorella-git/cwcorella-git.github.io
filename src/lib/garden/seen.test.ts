@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extremes } from './seen.svelte';
+import { extremes, cellsIn } from './seen.svelte';
 
 describe('extremes', () => {
 	it('finds the darkest and brightest of a sample', () => {
@@ -9,5 +9,14 @@ describe('extremes', () => {
 	});
 	it('is empty for no pixels', () => {
 		expect(extremes([])).toEqual([]);
+	});
+});
+
+describe('cellsIn', () => {
+	it('covers the cells under a box, clipped to the viewport', () => {
+		expect(cellsIn([{ left: -50, top: 0, right: 50, bottom: 50 }], 100, 100, 4, 4)).toEqual([0, 1, 4, 5]);
+	});
+	it('is the whole frame when no box is on screen', () => {
+		expect(cellsIn([{ left: 0, top: 200, right: 10, bottom: 300 }], 100, 100, 2, 2)).toEqual([0, 1, 2, 3]);
 	});
 });

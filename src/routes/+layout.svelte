@@ -78,7 +78,7 @@
 	/>
 {/if}
 
-<nav>
+<nav data-glass>
 	<div class="nav-items">
 		{#each navLinks as item (item.id)}
 			<a href={item.href} class:active={$page.url.pathname === item.href}>{item.label}</a>

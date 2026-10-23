@@ -29,7 +29,7 @@
 		{#if editing}
 			<HomeEditor content={content} onSave={save} onCancel={() => (editing = false)} />
 		{:else}
-			<div class="content-panel">
+			<div class="content-panel" data-glass>
 				<div class="prose">
 					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 					{@html rendered}

@@ -24,8 +24,27 @@ export function extremes(data: ArrayLike<number>, share = 0.1): RGB[] {
 	return [mean(px.slice(0, n)), mean(px.slice(-n))];
 }
 
+export interface Box { left: number; top: number; right: number; bottom: number }
+
+/**
+ * Indices of the cells of a `cols`×`rows` sample of a `w`×`h` viewport that the
+ * boxes cover, clipped to the viewport. Every cell when no box is on screen.
+ * Pure.
+ */
+export function cellsIn(boxes: Box[], w: number, h: number, cols: number, rows: number): number[] {
+	const hit = new Set<number>();
+	for (const b of boxes) {
+		const x0 = Math.max(0, Math.floor((b.left / w) * cols)), x1 = Math.min(cols, Math.ceil((b.right / w) * cols));
+		const y0 = Math.max(0, Math.floor((b.top / h) * rows)), y1 = Math.min(rows, Math.ceil((b.bottom / h) * rows));
+		for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) hit.add(y * cols + x);
+	}
+	if (!hit.size) return Array.from({ length: cols * rows }, (_, i) => i);
+	return [...hit].sort((a, b) => a - b);
+}
+
 /** Publish `colors` if they moved enough to matter (each channel by 6+). */
 export function publishSeen(colors: RGB[]): void {
+	if (import.meta.env.DEV) (globalThis as any).__seen = colors;
 	const same = colors.length === seen.colors.length
 		&& colors.every((c, i) => c.every((v, k) => Math.abs(v - seen.colors[i][k]) < 6));
 	if (same) return;

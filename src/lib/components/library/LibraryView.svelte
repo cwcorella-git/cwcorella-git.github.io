@@ -143,7 +143,7 @@
 {#if adminState.active}
 
 <div class="page">
-	<div class="inner">
+	<div class="inner" data-glass>
 		<div class="heading-row">
 			<h1 class="heading">library</h1>
 			{#if libraryState.status === 'ready'}

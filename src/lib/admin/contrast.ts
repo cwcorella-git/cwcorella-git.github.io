@@ -102,7 +102,7 @@ const FRAME_DEFAULTS: FrameTune = { target: 4.5, glassDay: 0.22, glassNight: 0.4
 export function lightFrame(p: LightPaletteSeeds, dl: number, backdrops?: readonly RGB[], tune: FrameTune = FRAME_DEFAULTS): LightFrame {
 	const target = Math.max(4.5, tune.target), cap = target > 4.5 ? 0.97 : 0.9;   // a higher target may need thicker glass
 	const night = 1 - dl;
-	const glass = mix(p.glassDay, p.glassNight, night);
+	let glass = mix(p.glassDay, p.glassNight, night);
 	// The ground switches at twilight instead of fading: any continuous fade from a
 	// light to a dark ground passes a mid-grey on which neither the day nor the
 	// night text reaches 4.5:1 (~3.7:1 at worst for these seeds). The 1.5s
@@ -113,18 +113,29 @@ export function lightFrame(p: LightPaletteSeeds, dl: number, backdrops?: readonl
 	// panel spans more than one sky band, so text must read on every one of them.
 	const behind = backdrops?.length ? backdrops : [ground];
 	// The glass thickens only when a moment needs it (sunset, where the sky is
-	// orange low and violet high), and only as far as 4.5:1 requires.
-	let glassAlpha = tune.glassDay * dl + tune.glassNight * night;
-	let text: RGB = p.textDay;
-	let panel: RGB = ground;
-	for (;;) {
-		const panels = behind.map((b) => composite(glass, glassAlpha, b));
-		const worst = (t: RGB) => Math.min(...panels.map((q) => contrast(t, q)));
-		text = worst(p.textDay) >= worst(p.textNight) ? p.textDay : p.textNight;
-		panel = panels.reduce((a, q) => (contrast(text, q) < contrast(text, a) ? q : a));
-		if (worst(text) >= target || glassAlpha >= cap) break;
-		glassAlpha = Math.min(cap, glassAlpha + 0.02);
-	}
+	// orange low and violet high), and only as far as 4.5:1 requires. At dusk the
+	// blended glass is a mid-grey that suits neither text, so two pairings are
+	// tried, dark text on day glass and pale text on night glass, alongside the
+	// blend, and the one that needs the thinnest glass wins.
+	const start = tune.glassDay * dl + tune.glassNight * night;
+	const solve = (g: RGB, t: RGB) => {
+		let a = start;
+		for (;;) {
+			const panels = behind.map((b) => composite(g, a, b));
+			const worst = Math.min(...panels.map((q) => contrast(t, q)));
+			if (worst >= target || a >= cap) return { g, t, a, worst, panels };
+			a = Math.min(cap, a + 0.02);
+		}
+	};
+	const tries = [solve(glass, p.textDay), solve(glass, p.textNight), solve(p.glassDay, p.textDay), solve(p.glassNight, p.textNight)];
+	const best = tries.reduce((x, y) => {
+		const xo = x.worst >= target, yo = y.worst >= target;
+		if (xo !== yo) return xo ? x : y;
+		return (xo ? x.a - y.a : y.worst - x.worst) <= 0 ? x : y;
+	});
+	const text = best.t, glassAlpha = best.a;
+	const panel = best.panels.reduce((a, q) => (contrast(text, q) < contrast(text, a) ? q : a));
+	glass = best.g;
 	const accent = legibleAccent(parseColor(p.accent).rgb, text, panel);
 	return { ground, glass, glassAlpha, panel, text, meta: metaFor(text, panel), accent };
 }

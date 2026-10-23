@@ -590,7 +590,7 @@
 
 <!-- ── main page ──────────────────────────────────────────────────────── -->
 <div class="page">
-	<div class="inner">
+	<div class="inner" data-glass>
 		<div class="search-area">
 			<div class="search-row">
 				<div class="search-bar" bind:this={searchBarEl}>

@@ -15,7 +15,7 @@
 	import { clock, sceneNow, sceneMs } from '$lib/garden/clock.svelte';
 	import { renderMeadow, renderRocks, renderSnow, makeFlowers, flowerBloom, type Flower, bakeNoiseCloud, cloudAlphaLUT, type CloudBake, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
 	import { moonPosition } from '$lib/garden/moon';
-	import { extremes, publishSeen } from '$lib/garden/seen.svelte';
+	import { extremes, publishSeen, cellsIn } from '$lib/garden/seen.svelte';
 	import { makeStars, drawStarField, siderealDeg, type StarField } from '$lib/garden/stars';
 
 	// ── constants ─────────────────────────────────────────────────────────────
@@ -1542,10 +1542,15 @@
 	function sampleSeen(timestamp: number): void {
 		if (!canvas || timestamp - lastSeenAt < 500) return;
 		lastSeenAt = timestamp;
-		seenCanvas ??= Object.assign(document.createElement('canvas'), { width: 32, height: 18 });
+		const C = 64, R = 36;
+		seenCanvas ??= Object.assign(document.createElement('canvas'), { width: C, height: R });
 		const a = seenCanvas.getContext('2d', { willReadFrequently: true })!;
-		a.drawImage(canvas, 0, 0, 32, 18);
-		publishSeen(extremes(a.getImageData(0, 0, 32, 18).data));
+		a.drawImage(canvas, 0, 0, C, R);
+		const d = a.getImageData(0, 0, C, R).data;
+		// Only what lies behind the glass panels on screen (the whole frame if none).
+		const boxes = [...document.querySelectorAll('[data-glass]')].map((e) => e.getBoundingClientRect()).filter((b) => b.width && b.height);
+		const cells = cellsIn(boxes, window.innerWidth, window.innerHeight, C, R);
+		publishSeen(extremes(cells.flatMap((i) => [d[i * 4], d[i * 4 + 1], d[i * 4 + 2], 255])));
 	}
 
 	function saveAverage(timestamp: number): void {

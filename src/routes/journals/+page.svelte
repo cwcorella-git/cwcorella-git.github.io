@@ -397,7 +397,7 @@
 
 <!-- ── main page ──────────────────────────────────────────────────────── -->
 <div class="page">
-	<div class="inner">
+	<div class="inner" data-glass>
 		<div class="page-header">
 			<div class="search-bar">
 				<input
@@ -492,7 +492,7 @@
 
 <!-- ── public view (no login) ─────────────────────────────────────────── -->
 <div class="page">
-	<div class="inner">
+	<div class="inner" data-glass>
 		<div class="page-header">
 			<h1 class="heading">journals</h1>
 		</div>
