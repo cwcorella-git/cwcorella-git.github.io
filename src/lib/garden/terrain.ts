@@ -174,12 +174,16 @@ export function relightTerrain(t: Terrain, L: TerrainLight, out?: HTMLCanvasElem
 		const e = t.elev[i], g = t.grain[i];
 		const slope = 1 - nz;                           // 0 flat … ~1 cliff
 		let alb = MEADOW;
+		let peakSnow = 0;
 		if (t.meadow[i]) alb = mix(STRAW, mix(mix(GRASS, MEADOW, g * 0.35), DRY, Math.min(1, t.dry[i] * 1.3)), green);
 		else {
 			const woods = sm(f0, f0 + 150, e) * (1 - sm(f1 - 100, f1 + 100, e + g * 80)) * (0.6 + 0.4 * g) * (1 - sm(0.35, 0.6, slope));
 			alb = mix(alb, FOREST, woods);
 			alb = mix(alb, ROCK, Math.max(sm(f1, f1 + 250, e + g * 120), sm(0.3, 0.55, slope) * 0.85));
-			if (L.snowLine !== null) alb = mix(alb, SNOW, sm(L.snowLine, L.snowLine + 250, e + g * 150) * (1 - sm(0.4, 0.65, slope)));
+			if (L.snowLine !== null) {
+				peakSnow = sm(L.snowLine, L.snowLine + 250, e + g * 150) * (1 - sm(0.4, 0.65, slope));
+				alb = mix(alb, SNOW, peakSnow);
+			}
 		}
 		// A snow day: snow on the valley floor in the distance (the meadow
 		// below the horizon is covered by Garden's own snow layer, so only the
@@ -194,10 +198,11 @@ export function relightTerrain(t: Terrain, L: TerrainLight, out?: HTMLCanvasElem
 		const li = lightOn(L, diff, 0.18 + 0.32 * nz * nz + (t.meadow[i] ? MEADOW_AMB : 0));
 		let col: RGB = [(alb[0] / 255) * li[0], (alb[1] / 255) * li[1], (alb[2] / 255) * li[2]];
 		col = mix(L.night, col, L.dl);
-		// Valley snow keeps a pale blue-grey after sunset, as Garden's near
-		// snow layer does (the same floor), where bare ground goes dark.
-		if (lie > 0) {
-			const nf = sm(-5, 1, -L.alt) * lie;
+		// Snow keeps a pale blue-grey after sunset, as Garden's near snow
+		// layer does (the same floor), where bare ground and rock go dark.
+		const snowy = Math.max(lie, peakSnow * 0.8);        // the peaks a little less: far, and in the haze
+		if (snowy > 0) {
+			const nf = sm(-5, 1, -L.alt) * snowy * (0.35 + 0.65 * nz * nz) * (0.85 + 0.3 * g);   // sky-facing snow brightest: keep the relief
 			col = col.map((v, k) => Math.max(v, [0.2, 0.23, 0.32][k] * 238 * nf)) as RGB;
 		}
 		const haze = 1 - Math.exp(-L.beta * t.km[i] / 10);
