@@ -840,8 +840,35 @@ The operator was offered "snow on plants" and chose **"Add snow days"**. Snow on
 
 **Seen, not fixed:** faint far clouds (low alpha) only partly cut the stars, so on moonless nights the Milky Way shows through them faintly. The moon is still 11 physical px, about 5 css px on a phone.
 
-## Resume here
+## Resume here (superseded by the one at the end)
 - Nothing is queued. Rows 43–74 are done and pushed (last code commit `038751c`).
 - **Proposed:** far clouds hiding the stars fully; a bigger moon on phones (§35).
 - Media groups `cwc-stars-66` and `cwc-stars-69` have no verdict yet; read them once with `ops_pick`, do not poll.
 - Pull before pushing.
+
+## 36. A tuner, a clock, and clouds that were stretched (rows 75–78, 2026-10-23)
+
+The operator reviewed the scene: clouds see-through and plain, light good. They asked for saved toggles and sliders on every element, settings for the adaptive text, and simulated time of day and season, to tune the feel themselves.
+
+**The clouds were plain because they were small.** Every bake was capped at 200 px and stretched to size, because a whole bake in one frame cost ~70 ms on a slow phone. Cumulus were drawn at alpha `0.3 + alpha`, which left far ones see-through, and every cloud was the same heap. The fix that unlocks the rest: bakes now run in slices, 6 ms per animation frame (drawn or skipped), and the old bake stays on screen until the new one is done. Day frames on a 4×-throttled phone: median 16 ms, p90 19 ms.
+
+| # | item | state |
+|---|---|---|
+| 75 | scene tuner and simulated clock | **done**: `c9e7355`. `src/lib/admin/sceneTune.svelte.ts` follows glassTune's pattern: defaults, then `static/scene.json` (save for everyone), then localStorage. It has ~23 on/off switches and sliders for clouds, night sky, wind, grain, vignette and fps. The text settings are: contrast floor (never below 4.5, enforced in `cleanScene`), the glass alphas before thickening, size, weight and halo. `lightFrame` takes them as an optional `FrameTune`, so the defaults are unchanged and `contrast.test.ts` stays green. `src/lib/garden/clock.svelte.ts` gives `sceneNow()`, which replaces every scene-time `Date` in Garden and Sky. It lives in sessionStorage only, so visitors see real time. The paint-replay caches skip simulated moments. Presets come from stepping the real sun and moon: dawn … night, full moon (high), new moon, snow day. There are also speeds (pause to 1 h/s) and a forced weather (`weatherForced`). `ScenePanel.svelte` sits at the layout level, opened by "✦ scene" in the admin toolbar. It stays open while you look, has "hide page", and double-click resets a slider. `clock.test.ts` has 8 tests |
+| 76 | cloud overhaul | **done**: `0e29db6`. `bakeNoiseCloud` is a generator, pumped by `pumpBakes()` each frame. The bake cap is 320 px × detail. Each cloud has a seeded form (`cloudForm`): heap, tower, flat or broken. There are flank puffs, a fine edge-noise layer (× `cloudEdge`, acting only near the outline) and a darker band along the base. The canvas is sized from the puffs, because towers clipped at the top in 5% of bakes at a fixed height; now 0 of 600. Cumulus cores are drawn solid (`0.45 + 1.1·alpha`). Cirrus curve and have fall-streak tails. A re-formed cumulus restarts its bake (the key includes `prngseed`), so a stale bake can't install the old shape |
+| 77 | weaker elements | **done (part)**: `1d96c10`. Moonlight on the land: the range is lit from the moon's position and altitude (cool, `dl` ≥ 0.3·m) and keeps its relief, and night silhouettes lift toward cool tones by `landMoon()`, which you can tune with the "moonlight" slider. **The ground texture was not changed:** the noon renders already show grass strokes in the near band, so the plan's claim that "the near band reads flat" did not hold |
+| 78 | session doc | **done**: this section |
+
+**A box in the sky that wasn't a bug.** At golden hour on 10-23 a faint rectangle showed at upper left. Turning layers off one at a time pinned it to one cumulus (cloud 12): a large heap frozen partway through its fade-in, because the sim clock was paused, with its flat base reading as a box at low alpha. The bake itself is fine. Cumulus fade in and out as a whole; real cumulus grow from wisps. That is listed below, not fixed.
+
+## Open
+- **Never seen by the operator:** the tuner, the clock and the new clouds were checked only in headless Chromium renders (Media `row-76-*`, `row-77-*`). "Save for everyone" was never run; it uses the same `commitFiles` path as the glass.
+- **Proposed:** cumulus form by growing from wisps instead of fading as a whole; towers still read a little blocky; midground trees blend into the range on moonlit nights; far clouds hiding the stars fully; a bigger moon on phones (§35); vertical seams between puffs show as faint stripes inside clouds at high sun.
+- The moon (panorama arc) and the stars (polar rotation) still use different projections (§34).
+
+## Resume here
+- Nothing is queued. Rows 43–78 are done and pushed (last code commit `1d96c10`).
+- **Proposed:** see §36 Open.
+- Dev-only hook: `window.__clouds` (Garden.svelte, `import.meta.env.DEV`) lets render probes reach the cloud list. Render scripts: `$S/renders/sim.cjs <name> <width> <local ISO> <weather> [tune JSON]` uses the sim clock; `forms.cjs` draws a sheet of cloud forms.
+- Media groups `cwc-stars-66` and `cwc-stars-69` have no verdict yet; read them once with `ops_pick`, do not poll.
+- Pull before pushing (`glass.json` and `scene.json` are committed from the browser).
