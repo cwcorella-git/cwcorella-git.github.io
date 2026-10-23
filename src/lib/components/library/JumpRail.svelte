@@ -8,14 +8,11 @@
 		total: number | null;
 		activeLabel: string | null;
 		onScrubTo: (index: number) => void;
-		/** Where the view is, 0 (top) to 1 (end). Known at every scroll event, so
-		 *  the marker moves live even while the rows under it are still loading. */
-		position?: number | null;
 		/** Stay a vertical, scrubbable rail on phones instead of becoming a strip. */
 		vertical?: boolean;
 	}
 
-	const { anchors, onSeek, total, activeLabel, onScrubTo, position = null, vertical = false }: Props = $props();
+	const { anchors, onSeek, total, activeLabel, onScrubTo, vertical = false }: Props = $props();
 
 	const DRAG_THRESHOLD = 6; // px of travel before a press becomes a scrub
 
@@ -103,9 +100,6 @@
 				{a.label}
 			</button>
 		{/each}
-		{#if position !== null && !dragging}
-			<span class="here" style="top: {Math.min(Math.max(position, 0), 1) * 100}%" aria-hidden="true"></span>
-		{/if}
 		{#if dragging && activeLabel}
 			<span class="scrub-bubble" style="top: {bubbleY}px" aria-hidden="true">{activeLabel}</span>
 		{/if}
@@ -145,18 +139,10 @@
 		opacity: 1;
 		font-weight: 700;
 	}
-	/* The live position marker: a short bar on the rail's inner edge. */
-	.here {
+	.rail-btn.active::before {
+		content: '▸';
 		position: absolute;
-		left: 0;
-		width: 2px;
-		height: 1.4rem;
-		transform: translateY(-50%);
-		border-radius: 1px;
-		background: var(--clr-text);
-		opacity: 0.7;
-		pointer-events: none;
-		transition: top 0.08s linear;
+		margin-left: -0.7rem;
 	}
 	.scrub-bubble {
 		position: absolute;
@@ -165,7 +151,7 @@
 		transform: translateY(-50%);
 		padding: 0.15rem 0.4rem;
 		background: var(--clr-text);
-		color: var(--clr-bg, #000);
+		color: var(--body-bg);   /* the page ground: the opposite of the text, day or night */
 		border-radius: 3px;
 		font-family: var(--font-ui);
 		font-size: 0.7rem;

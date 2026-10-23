@@ -79,7 +79,6 @@
 	});
 	let anchors = $derived([...firstOf.keys()].map((l) => ({ label: l, seek: l })));
 	let topIndex = $state(0);
-	let position = $state(0);
 	let activeLabel = $derived(filtered[topIndex] ? guideLetter(filtered[topIndex].title) : null);
 
 	const rowEl = (i: number) => listEl?.children[i] as HTMLElement | undefined;
@@ -94,8 +93,6 @@
 		if (scrollFrame) return;
 		scrollFrame = requestAnimationFrame(() => {
 			scrollFrame = 0;
-			const room = document.documentElement.scrollHeight - window.innerHeight;
-			position = room > 0 ? window.scrollY / room : 0;
 			// First row whose bottom is below the nav: binary search, rows are in order.
 			const n = listEl?.children.length ?? 0;
 			let lo = 0, hi = n - 1;
@@ -291,7 +288,6 @@
 					{anchors}
 					total={filtered.length}
 					{activeLabel}
-					{position}
 					vertical
 					onSeek={(l) => { const i = l === null ? 0 : firstOf.get(l); if (i !== undefined) scrollToRow(i, true); }}
 					onScrubTo={(i) => scrollToRow(i)}
