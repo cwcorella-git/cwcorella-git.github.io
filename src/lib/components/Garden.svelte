@@ -466,15 +466,21 @@
 	}
 
 	// ── draw: stars & Milky Way ────────────────────────────────────────────────
-	function drawStars(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number, time: number, now: Date): void {
+	function drawStars(ctx: CanvasRenderingContext2D, altDeg: number, time: number, now: Date): void {
 		// Fade in from alt -8° (0) to -14° (1)
 		const starAlpha = Math.max(0, Math.min(1, (-altDeg - 8) / 6));
 		if (starAlpha <= 0) return;
 
 		if (!starField || !starLayer) return;
+		const moon = moonState(altDeg, now);
+		const minutes = Date.now() / 60000;
+		// Nothing over the stars (no cloud, no glare): draw them straight, skipping the layer.
+		if (moon.light <= 0.05 && !clouds.some((c) => cloudRect(c, minutes))) {
+			drawStarField(ctx, starField, starAlpha, time, siderealDeg(now), moon.light);
+			return;
+		}
 		const lc = starLayer.getContext('2d')!;
 		lc.clearRect(0, 0, starLayer.width, starLayer.height);
-		const moon = moonState(altDeg, now);
 		drawStarField(lc, starField, starAlpha, time, siderealDeg(now), moon.light);
 
 		lc.globalCompositeOperation = 'destination-out';
@@ -487,7 +493,6 @@
 			lc.fillRect(moon.x - gr, moon.y - gr, gr * 2, gr * 2);
 		}
 		// Clouds hide what is behind them.
-		const minutes = Date.now() / 60000;
 		for (const cloud of clouds) {
 			const at = cloudRect(cloud, minutes);
 			if (!at) continue;
@@ -1385,7 +1390,7 @@
 			ctx.fillStyle = css(lerpRGB(shadow, [196, 198, 204], clamp01((altDeg + 2) / 14)), 0.9 * weather.cover);
 			ctx.fillRect(0, 0, W, horizonY);
 		}
-		drawStars(ctx, altDeg, sxn, time, now);
+		drawStars(ctx, altDeg, time, now);
 		drawMoon(ctx, altDeg, now);
 		drawCircumsolarGlow(ctx, altDeg, sxn);
 		drawSun(ctx, altDeg, sxn);
