@@ -42,7 +42,7 @@
 	</main>
 
 	<footer>
-		<a href="https://github.com/cwcorella-git" target="_blank" rel="noopener noreferrer">github</a>
+		<a data-glass href="https://github.com/cwcorella-git" target="_blank" rel="noopener noreferrer">github</a>
 	</footer>
 </div>
 
@@ -126,7 +126,15 @@
 		letter-spacing: 0.1em;
 		color: var(--clr-text);
 	}
+	/* A small glass pill: the link sits over the meadow, which the contrast
+	   check only sees through [data-glass]. */
 	footer a {
+		display: inline-block;
+		padding: 0.35rem 0.7rem;
+		border-radius: 999px;
+		background: var(--glass-bg);
+		backdrop-filter: var(--glass-blur);
+		-webkit-backdrop-filter: var(--glass-blur);
 		text-decoration: none;
 		transition: color 0.2s;
 	}
