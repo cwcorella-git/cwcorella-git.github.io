@@ -909,7 +909,7 @@
 		{ xf: 0.49, bornAgo: 54750, kind: 'cottonwood', h: 130 },  // +150yr
 		{ xf: 0.61, bornAgo: 10950, kind: 'pine',       h: 150 },  // +30yr
 		{ xf: 0.74, bornAgo: 0,     kind: 'pine',       h: 120 },  // same age as the site
-		{ xf: 0.93, bornAgo: -5475, kind: 'juniper',    h: 70  },  // −15yr
+		{ xf: 0.93, bornAgo: -5475, kind: 'juniper',    h: 130 },  // −15yr
 	];
 	let treeCache: { key: string; fg: TreeArt | null; bg: TreeArt | null; mid: TreeArt[] } = { key: '', fg: null, bg: null, mid: [] };
 

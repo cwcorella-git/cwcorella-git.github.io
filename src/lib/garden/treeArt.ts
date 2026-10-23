@@ -112,7 +112,7 @@ export function pineShape(x: number, y: number, h: number, seed: number): { segs
 		const a = at(i / 4), b = at((i + 1) / 4);
 		segs.push({ x1: a.x, y1: a.y, x2: b.x, y2: b.y, thick: h * 0.05 * (1 - i * 0.2) });
 	}
-	const clear = 0.35 + rng() * 0.05;
+	const clear = 0.26 + rng() * 0.05;
 	const limbs = 10 + Math.floor(rng() * 5);
 	let side = rng() < 0.5 ? -1 : 1;
 	for (let i = 0; i < limbs; i++) {
@@ -127,7 +127,8 @@ export function pineShape(x: number, y: number, h: number, seed: number): { segs
 		const thick = h * (0.016 - u * 0.006);
 		segs.push({ x1: o.x, y1: o.y, x2: ex, y2: ey, thick });
 		clumps.push({ x: ex, y: ey - h * 0.008, r: h * (0.08 + rng() * 0.05) });
-		clumps.push({ x: o.x + (ex - o.x) * 0.55, y: o.y + (ey - o.y) * 0.55 - h * 0.01, r: h * (0.05 + rng() * 0.03) });
+		clumps.push({ x: o.x + (ex - o.x) * 0.55, y: o.y + (ey - o.y) * 0.55 - h * 0.01, r: h * (0.065 + rng() * 0.03) });
+		clumps.push({ x: o.x + (ex - o.x) * 0.25, y: o.y + (ey - o.y) * 0.25 - h * 0.01, r: h * (0.05 + rng() * 0.02) });   // foliage runs back to the trunk
 		// One or two sub-limbs off the outer half, each with its own tuft.
 		const subs = 1 + (rng() < 0.5 ? 1 : 0);
 		for (let k = 0; k < subs; k++) {
@@ -182,7 +183,10 @@ function barkFor(thick: number, maxThick: number): RGB {
 	return mix([125, 112, 98], [61, 49, 40], Math.sqrt(t));
 }
 
-function renderClump(r: number, f: Foliage, L: ArtLight, seed: number): HTMLCanvasElement {
+// tone: where the clump sits in the whole crown. 0 the shaded side and
+// underside, 1 between, 2 facing the sun. A crown lit only clump by clump
+// reads as a pile of identical balls.
+function renderClump(r: number, f: Foliage, L: ArtLight, seed: number, tone = 1): HTMLCanvasElement {
 	const rng = makePRNG(seed);
 	const S = Math.ceil(r * 2.8);
 	const c = document.createElement('canvas');
@@ -192,9 +196,11 @@ function renderClump(r: number, f: Foliage, L: ArtLight, seed: number): HTMLCanv
 	// Each clump drifts a little in hue, so a crown is never one flat colour.
 	const own = mix(f.mid, [112, 124, 64], rng() * 0.3);
 	const w = L.warm ?? 0;
-	const mid = mix(L.night, shade(mix(own, L.sunCol, 0.08 + 0.25 * w), 1 - 0.3 * w), L.dl);
+	const toneK = [0.68, 0.92, 1.08][tone];
+	const mid = mix(L.night, shade(mix(own, L.sunCol, 0.08 + 0.25 * w), (1 - 0.3 * w) * toneK), L.dl);
 	const dark = mix(mix(mid, [18, 26, 30], 0.5), [90, 74, 112], 0.3 * w);   // evening shade goes purple-grey, as the clouds do
 	const lit = mix(L.night, mix(own, L.sunCol, 0.45 + 0.25 * w), L.dl);
+	const litN = [0, 0.6, 1.6][tone];     // how much of the lit layer this side gets
 	const blobs = (n: number, ox: number, oy: number, spread: number, r0: number, r1: number, col: RGB) => {
 		ctx.fillStyle = rgb(col);
 		for (let i = 0; i < Math.round(n * f.amount); i++) {
@@ -217,7 +223,7 @@ function renderClump(r: number, f: Foliage, L: ArtLight, seed: number): HTMLCanv
 		dots(260, 0, r * 0.1, r * 0.95, dark, px);
 		dots(200, 0, -r * 0.05, r * 0.7, mid, px);
 		if (L.dl > 0.05) {
-			dots(70, L.sunDx * r * 0.3, -r * 0.3, r * 0.4, lit, px);
+			dots(Math.round(70 * litN), L.sunDx * r * 0.3, -r * 0.3, r * 0.4 + tone * r * 0.15, lit, px);
 			dots(2, L.sunDx * r * 0.25, -r * 0.1, r * 0.5, mix(L.night, [128, 140, 160], L.dl), px);   // berries
 		}
 		return c;
@@ -231,27 +237,29 @@ function renderClump(r: number, f: Foliage, L: ArtLight, seed: number): HTMLCanv
 			ctx.beginPath();
 			for (let i = 0; i < n; i++) {
 				const a = rng() * Math.PI * 2, d = Math.sqrt(rng()) * r * 0.55;
-				const px = cx + Math.cos(a) * d, py = cy + oy + Math.sin(a) * d * 0.6;
-				const ra = a + (rng() - 0.5) * 0.8, l = r * (len0 + rng() * (len1 - len0));
+				// Jeffrey pine foliage hangs in flat-topped pads along the limb,
+				// needles splaying up and out: wide, shallow, a dark underside.
+				const px = cx + Math.cos(a) * d * 1.35, py = cy + oy + Math.sin(a) * d * 0.5;
+				const ra = -Math.PI / 2 + (rng() - 0.5) * 3.2, l = r * (len0 + rng() * (len1 - len0));
 				ctx.moveTo(px, py);
-				ctx.lineTo(px + Math.cos(ra) * l, py + Math.sin(ra) * l * 0.7);
+				ctx.lineTo(px + Math.cos(ra) * l * 0.8, py + Math.sin(ra) * l * 0.55);
 			}
 			ctx.stroke();
 		};
-		tuft(110, r * 0.12, dark, 0.3, 0.55);
-		tuft(90, 0, mid, 0.25, 0.5);
-		if (L.dl > 0.05) tuft(30, -r * 0.15, lit, 0.15, 0.3);
+		tuft(150, r * 0.14, dark, 0.3, 0.55);
+		tuft(120, 0, mid, 0.25, 0.5);
+		if (L.dl > 0.05 && litN) tuft(Math.round(22 * litN), -r * 0.12, lit, 0.15, 0.32);
 		return c;
 	}
 	// Many small blobs rather than a few big ones: big circles read as popcorn.
 	blobs(34, -L.sunDx * r * 0.1, r * 0.18, r * 0.85, 0.12, 0.26, dark);
 	blobs(40, 0, -r * 0.05, r * 0.75, 0.1, 0.22, mid);
-	if (L.dl > 0.05) blobs(24, L.sunDx * r * 0.3, -r * 0.35, r * 0.45, 0.06, 0.15, lit);
-	blobs(18, 0, 0, r * 1.05, 0.03, 0.07, mid);     // loose leaves at the edge
+	if (L.dl > 0.05 && litN) blobs(Math.round(24 * litN), L.sunDx * r * 0.3, -r * 0.35, r * (0.45 + tone * 0.12), 0.06, 0.15, lit);
+	blobs(30, 0, 0, r * 1.15, 0.025, 0.06, mid);     // loose leaves: a broken edge, not a ball's outline
 	// A few gaps where the sky shows through.
 	ctx.globalCompositeOperation = 'destination-out';
-	for (let i = 0, n = 5 + Math.floor(rng() * 3); i < n; i++) {
-		const a = rng() * Math.PI * 2, d = (0.3 + rng() * 0.5) * r;
+	for (let i = 0, n = 8 + Math.floor(rng() * 4); i < n; i++) {
+		const a = rng() * Math.PI * 2, d = (0.35 + rng() * 0.55) * r;
 		ctx.beginPath();
 		ctx.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, r * (0.08 + rng() * 0.08), 0, Math.PI * 2);
 		ctx.fill();
@@ -279,7 +287,8 @@ export function renderTreeArt(segs: Seg[], clumps: Clump[], f: Foliage, L: ArtLi
 		const dx = s.x2 - s.x1, dy = s.y2 - s.y1, len = Math.hypot(dx, dy) || 1;
 		const nx = -dy / len, ny = dx / len;
 		const w0 = s.thick / 2, w1 = (s.thick * 0.7) / 2;
-		const col = mix(L.night, shade(mix(barkFor(s.thick, maxThick), L.sunCol, 0.15 * (L.warm ?? 0)), 1 - 0.3 * (L.warm ?? 0)), L.dl);
+		const bark = f.needle ? mix(barkFor(s.thick, maxThick), [150, 94, 62], 0.35) : barkFor(s.thick, maxThick);   // Jeffrey pine: cinnamon plates
+		const col = mix(L.night, shade(mix(bark, L.sunCol, 0.15 * (L.warm ?? 0)), 1 - 0.3 * (L.warm ?? 0)), L.dl);
 		ctx.fillStyle = rgb(col);
 		ctx.beginPath();
 		ctx.moveTo(s.x1 + nx * w0, s.y1 + ny * w0);
@@ -306,15 +315,28 @@ export function renderTreeArt(segs: Seg[], clumps: Clump[], f: Foliage, L: ArtLi
 	// Clumps share sprites: a few variants per 3 px size bucket, picked by
 	// index. A crown of 75 unique clumps cost ~70 ms on a throttled phone.
 	const pool = new Map<number, HTMLCanvasElement[]>();
-	const spriteFor = (r: number, i: number) => {
+	const spriteFor = (r: number, i: number, tone: number) => {
 		const b = Math.max(1, Math.round(r / 3));
-		const list = pool.get(b) ?? [];
-		pool.set(b, list);
-		if (list.length < 4) list.push(renderClump(b * 3, f, L, seed + b * 7919 + list.length * 104729));
+		const k = b * 3 + tone;
+		const list = pool.get(k) ?? [];
+		pool.set(k, list);
+		if (list.length < 3) list.push(renderClump(b * 3, f, L, seed + b * 7919 + tone * 31 + list.length * 104729, tone));
 		return list[i % list.length];
 	};
+	// Light over the whole crown: from its centre, toward the sun and up is
+	// lit, away and under is shade. Shaded clumps draw first, so the lit ones
+	// sit on top of them.
+	let cx = 0, cy = 0, cr = 1;
+	for (const c of clumps) { cx += c.x; cy += c.y; }
+	cx /= clumps.length || 1; cy /= clumps.length || 1;
+	for (const c of clumps) cr = Math.max(cr, Math.hypot(c.x - cx, c.y - cy));
+	const toneOf = (c: Clump) => {
+		const v = (L.sunDx * (c.x - cx) * 0.8 - (c.y - cy)) / cr;
+		return v > 0.25 ? 2 : v < -0.2 ? 0 : 1;
+	};
 	const sprites = f.amount > 0.02
-		? clumps.map((c, i) => ({ x: c.x, y: c.y, img: spriteFor(c.r, i), sway: Math.max(0, (baseY - c.y) / height) }))
+		? clumps.map((c, i) => ({ c, i, t: toneOf(c) })).sort((a, b) => a.t - b.t)
+			.map(({ c, i, t }) => ({ x: c.x, y: c.y, img: spriteFor(c.r, i, t), sway: Math.max(0, (baseY - c.y) / height) }))
 		: [];
 	return { trunk, ox: x0 - pad, oy: y0 - pad, sprites };
 }
