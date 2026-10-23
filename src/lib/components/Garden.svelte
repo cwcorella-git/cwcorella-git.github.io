@@ -349,9 +349,9 @@
 			(yFrac < bgCut ? bgPlants : fgPlants).push(plant);
 		}
 
-		// Seed heads — 18 in four patches, mostly in the near field, kept off the very horizon
+		// Seed heads — 24 in four patches, mostly in the near field, kept off the very horizon
 		const patches = Array.from({ length: 4 }, () => ({ x: prng() * cw, y: Math.pow(prng(), 0.7) * 0.7 + 0.1 }));
-		for (let i = 0; i < 18; i++) {
+		for (let i = 0; i < 24; i++) {
 			const p      = patches[i % 4];
 			const yFrac  = Math.max(0.06, Math.min(0.92, p.y + (prng() - 0.5) * 0.12));
 			const x      = p.x + (prng() - 0.5) * cw * 0.08;
@@ -359,7 +359,7 @@
 			const bornAt = prng() * 6000;
 			const scale  = growthFactor(Math.max(0, gardenAgeUnits - bornAt));
 			const depth  = 0.431 / (1.233 - yFrac);
-			const h      = (50 + prng() * 50) * scale * depth;
+			const h      = (60 + prng() * 50) * scale * depth;
 			const seed   = Math.floor(prng() * 0x7FFFFFFF);
 			const plant  = makeSeedHead(x, y, h, seed);
 			(yFrac < bgCut ? bgPlants : fgPlants).push(plant);

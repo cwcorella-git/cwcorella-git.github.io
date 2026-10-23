@@ -34,7 +34,7 @@ function makePRNG(seed: number): () => number {
 
 // ── palettes ──────────────────────────────────────────────────────────────
 const GRASS_PALETTE = ['#6b7c3a', '#7a8c45', '#5a6e2e', '#8a9c50', '#4e6228'];
-const SEED_PALETTE  = ['#7e7a44', '#9a8650', '#ae975e'];   // stem, panicle, spikelet tips: straw a shade darker than the meadow, so they show
+const SEED_PALETTE  = ['#6e6a3c', '#9a8650', '#ae975e'];   // stem, panicle, spikelet tips: straw a shade darker than the meadow, so they show
 
 /** A hex colour lightened (k > 1) or darkened (k < 1). */
 function tone(hex: string, k: number): string {
@@ -97,15 +97,16 @@ export function makeSeedHead(
 	const stemLen = maxHeight * 0.3;
 	const pieces: PlantSegment[] = [];
 	for (let i = 0; i < 4; i++) {
-		pieces.push(seg(stemLen * (1 - i * 0.08), 2.4 - i * 0.35, i === 0 ? (rng() - 0.5) * 10 : bend, SEED_PALETTE[0]));
+		pieces.push(seg(stemLen * (1 - i * 0.08), 3.2 - i * 0.45, i === 0 ? (rng() - 0.5) * 10 : bend, SEED_PALETTE[0]));
 		if (i > 0) pieces[i - 1].children.push(pieces[i]);
 	}
 	for (const p of pieces.slice(2)) {
-		const n = 5 + Math.floor(rng() * 3);
+		const n = 7 + Math.floor(rng() * 4);
 		for (let k = 0; k < n; k++) {
 			const side = k % 2 ? 1 : -1;
 			const spike = seg(stemLen * (0.4 + rng() * 0.25), 1.7, side * (12 + rng() * 18), SEED_PALETTE[1]);
-			spike.children.push(seg(stemLen * (0.25 + rng() * 0.15), 1.3, side * (18 + rng() * 18), SEED_PALETTE[2]));   // the tip droops
+			spike.thick = 2.4;
+			spike.children.push(seg(stemLen * (0.25 + rng() * 0.15), 1.8, side * (18 + rng() * 18), SEED_PALETTE[2]));   // the tip droops
 			p.children.push(spike);
 		}
 	}
