@@ -12,6 +12,7 @@
 	import { renderTreeArt, drawTreeArt, clumpsFromTips, broadleafShape, pineShape, juniperShape, sageShape, sageFoliage, NEUTRAL_LIGHT, cottonwoodFoliage, PINE_FOLIAGE, JUNIPER_FOLIAGE, type TreeArt, type Seg, type Clump } from '$lib/garden/treeArt';
 	import { weatherFor, type Weather } from '$lib/garden/weather';
 	import { renderMeadow, renderRocks, renderSnow, makeFlowers, flowerBloom, type Flower, renderNoiseCloud, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
+	import { moonPosition } from '$lib/garden/moon';
 	import { makeStars, drawStarField, siderealDeg, type StarField } from '$lib/garden/stars';
 
 	// ── constants ─────────────────────────────────────────────────────────────
@@ -63,11 +64,6 @@
 	// ── sun position ──────────────────────────────────────────────────────────
 	// In $lib/garden/sun.ts, shared with the terrain.
 
-	// ── moon phase (Julian date) ───────────────────────────────────────────────
-	function moonPhase(): number {
-		const JD = Date.now() / 86400000 + 2440587.5;
-		return ((JD - 2451550.1) % 29.53058867) / 29.53058867;
-	}
 
 	// ── color utilities ────────────────────────────────────────────────────────
 	type RGB = [number, number, number];
@@ -478,7 +474,7 @@
 		if (!starField || !starLayer) return;
 		const lc = starLayer.getContext('2d')!;
 		lc.clearRect(0, 0, starLayer.width, starLayer.height);
-		const moon = moonState(altDeg, sxn);
+		const moon = moonState(altDeg, now);
 		drawStarField(lc, starField, starAlpha, time, siderealDeg(now), moon.light);
 
 		lc.globalCompositeOperation = 'destination-out';
@@ -504,27 +500,26 @@
 	}
 
 	/** Where the moon is and how much it lights the sky (0 at new moon or when down, ~1 for a high full moon). */
-	function moonState(altDeg: number, sxn: number): { x: number; y: number; alpha: number; phase: number; light: number } {
-		// Moon fades in below sun alt -6°
-		const alpha = Math.max(0, Math.min(1, (-altDeg - 6) / 8));
-		// Simplified: moon roughly opposite sun, altitude = -altDeg * 0.65
-		const alt = Math.min(72, Math.max(2, -altDeg * 0.65));
-		const sinMoon = Math.sin(alt * Math.PI / 180);
-		const phase = moonPhase(); // 0=new, 0.5=full, 1=new
-		const lit = Math.abs(phase - 0.5) * 2;   // 0=full, 1=new
-		return { x: (1 - sxn) * W, y: horizonY - sinMoon * horizonY * 0.88, alpha, phase, light: alpha * (1 - lit) ** 1.5 * Math.sqrt(sinMoon) };
+	/** Where the moon is and how much it lights the sky (0 when new or down, ~1 for a high full moon). */
+	function moonState(altDeg: number, now: Date): { x: number; y: number; alpha: number; phase: number; waxing: boolean; light: number } {
+		const m = moonPosition(now);
+		// Seen only once the sky is dark enough (sun below -6°), and only while it is up.
+		const alpha = Math.max(0, Math.min(1, (-altDeg - 6) / 8)) * Math.max(0, Math.min(1, (m.alt + 1) / 3));
+		const sinMoon = Math.sin(Math.max(0, m.alt) * Math.PI / 180);
+		const lit = Math.abs(m.phase - 0.5) * 2;   // 0=full, 1=new
+		return { x: m.xNorm * W, y: horizonY - sinMoon * horizonY * 0.88, alpha, phase: m.phase, waxing: m.waxing, light: alpha * (1 - lit) ** 1.5 * Math.sqrt(sinMoon) };
 	}
 
-	// ── draw: moon ────────────────────────────────────────────────────────────
-	function drawMoon(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
-		const { x: moonX, y: moonY, alpha: moonAlpha, phase } = moonState(altDeg, sxn);
+	function drawMoon(ctx: CanvasRenderingContext2D, altDeg: number, now: Date): void {
+		const { x: moonX, y: moonY, alpha: moonAlpha, phase, waxing } = moonState(altDeg, now);
 		if (moonAlpha <= 0) return;
 		const R = 11;
 
-		// Glow
+		// Glow, stronger the fuller it is
+		const full = 1 - Math.abs(phase - 0.5) * 2;
 		const glow = ctx.createRadialGradient(moonX, moonY, 0, moonX, moonY, R * 5);
-		glow.addColorStop(0,   `rgba(220,210,175,${(moonAlpha * 0.28).toFixed(3)})`);
-		glow.addColorStop(0.5, `rgba(200,195,160,${(moonAlpha * 0.07).toFixed(3)})`);
+		glow.addColorStop(0,   `rgba(220,210,175,${(moonAlpha * (0.08 + 0.2 * full)).toFixed(3)})`);
+		glow.addColorStop(0.5, `rgba(200,195,160,${(moonAlpha * 0.07 * full).toFixed(3)})`);
 		glow.addColorStop(1,   'rgba(0,0,0,0)');
 		ctx.fillStyle = glow;
 		ctx.fillRect(moonX - R * 5, moonY - R * 5, R * 10, R * 10);
@@ -532,19 +527,25 @@
 		ctx.save();
 		ctx.globalAlpha = moonAlpha;
 
-		// Lit disc
+		// The dark part hides the stars behind it, with a trace of earthshine.
 		ctx.beginPath();
 		ctx.arc(moonX, moonY, R, 0, Math.PI * 2);
-		ctx.fillStyle = '#E8DFC0';
+		ctx.fillStyle = 'rgba(22,24,38,0.96)';
 		ctx.fill();
 
-		// Shadow overlay (crescent via two overlapping arcs)
-		const lit      = Math.abs(phase - 0.5) * 2;   // 0=full, 1=new
-		const shadowCx = moonX + (phase < 0.5 ? -1 : 1) * R * lit * 0.82;
+		// Lit part: the limb on the sun's side (west, left, while waxing) and the
+		// terminator, an ellipse whose width follows the phase.
+		const side = waxing ? -1 : 1, c = Math.cos(2 * Math.PI * phase);
 		ctx.beginPath();
-		ctx.arc(moonX, moonY, R, -Math.PI / 2, Math.PI / 2);
-		ctx.arc(shadowCx, moonY, R, Math.PI / 2, -Math.PI / 2, true);
-		ctx.fillStyle = 'rgba(5,4,18,0.94)';
+		for (let i = 0; i <= 24; i++) {
+			const t = -Math.PI / 2 + Math.PI * i / 24;
+			ctx.lineTo(moonX + side * R * Math.cos(t), moonY + R * Math.sin(t));
+		}
+		for (let i = 24; i >= 0; i--) {
+			const t = -Math.PI / 2 + Math.PI * i / 24;
+			ctx.lineTo(moonX + side * R * c * Math.cos(t), moonY + R * Math.sin(t));
+		}
+		ctx.fillStyle = '#E8DFC0';
 		ctx.fill();
 
 		ctx.restore();
@@ -1385,7 +1386,7 @@
 			ctx.fillRect(0, 0, W, horizonY);
 		}
 		drawStars(ctx, altDeg, sxn, time, now);
-		drawMoon(ctx, altDeg, sxn);
+		drawMoon(ctx, altDeg, now);
 		drawCircumsolarGlow(ctx, altDeg, sxn);
 		drawSun(ctx, altDeg, sxn);
 		drawCrepuscularRays(ctx, altDeg, sxn);
