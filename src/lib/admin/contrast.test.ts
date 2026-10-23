@@ -73,3 +73,15 @@ describe('lightFrame pale', () => {
 		for (const b of [...sky, ground]) expect(contrast(f.text, composite(f.glass, f.glassAlpha, b))).toBeGreaterThanOrEqual(4.5);
 	});
 });
+
+describe('lightFrame pale, garden seen', () => {
+	it('drops the bare ground once the garden has drawn, so the glass is thinner', () => {
+		const p = PALETTES.sky as unknown as LightPaletteSeeds;
+		const sky: RGB[] = [[128, 188, 228], [70, 110, 50]];
+		const tune = { target: 4.5, glassDay: 0.22, glassNight: 0.42, pale: true };
+		const bare = lightFrame(p, 1, sky, { ...tune, bare: true });
+		const seen = lightFrame(p, 1, sky, { ...tune, bare: false });
+		expect(seen.glassAlpha).toBeLessThan(bare.glassAlpha);
+		for (const b of sky) expect(contrast(seen.text, composite(seen.glass, seen.glassAlpha, b))).toBeGreaterThanOrEqual(4.5);
+	});
+});

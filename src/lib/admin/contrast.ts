@@ -96,7 +96,7 @@ export interface LightFrame {
  * twilight, and the text is whichever of day/night reads better on the
  * panel actually shown — so there is no cross-fade through illegible.
  */
-export interface FrameTune { target: number; glassDay: number; glassNight: number; pale?: boolean }
+export interface FrameTune { target: number; glassDay: number; glassNight: number; pale?: boolean; bare?: boolean }
 const FRAME_DEFAULTS: FrameTune = { target: 4.5, glassDay: 0.22, glassNight: 0.42 };
 
 export function lightFrame(p: LightPaletteSeeds, dl: number, backdrops?: readonly RGB[], tune: FrameTune = FRAME_DEFAULTS): LightFrame {
@@ -112,8 +112,9 @@ export function lightFrame(p: LightPaletteSeeds, dl: number, backdrops?: readonl
 	// the garden's sky, which darkens well before the flat ground switches; the
 	// panel spans more than one sky band, so text must read on every one of them.
 	let behind = backdrops?.length ? backdrops : [ground];
-	// Pale text must also read before the garden draws (or if it never does).
-	if (tune.pale && backdrops?.length) behind = [...backdrops, ground];
+	// Pale text must also read before the garden draws (or if it never does):
+	// `bare` says nothing of the garden has been seen yet, so the flat ground shows.
+	if (tune.pale && (tune.bare ?? true) && backdrops?.length) behind = [...backdrops, ground];
 	// The glass thickens only when a moment needs it (sunset, where the sky is
 	// orange low and violet high), and only as far as 4.5:1 requires. At dusk the
 	// blended glass is a mid-grey that suits neither text, so two pairings are
