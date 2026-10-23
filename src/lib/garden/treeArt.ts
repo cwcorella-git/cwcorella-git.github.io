@@ -55,7 +55,18 @@ export function cottonwoodFoliage(doy: number): Foliage {
 }
 export const PINE_FOLIAGE: Foliage    = { mid: [56, 80, 42], amount: 1, needle: true };
 // Big sagebrush: silver grey-green, lit tops paler and bluer (the photo).
-export const SAGE_FOLIAGE: Foliage    = { mid: [106, 116, 90], amount: 1, scale: true, tip: [170, 178, 158] };
+/** Big sagebrush, coloured from the meadow as drawn under it (as the tall
+ *  grass is), so it is lit as the ground is at every hour: about as bright
+ *  as the grass but greyer and cooler (photo: sagebrush steppe), with
+ *  silvery tips. Baked under NEUTRAL_LIGHT, since the sample is already lit. */
+export function sageFoliage(ground: RGB): Foliage {
+	const k = (m: RGB): RGB => [0, 1, 2].map((i) => Math.min(255, ground[i] * m[i])) as RGB;
+	const lum = (ground[0] + ground[1] + ground[2]) / 3;
+	const grey = (c: RGB): RGB => mix(c, [lum, lum, lum], 0.45);
+	return { mid: grey(k([0.95, 0.98, 1.2])), amount: 1, scale: true, tip: grey(k([1.18, 1.2, 1.4])) };
+}
+/** The neutral light a multiply-layer plant is baked under. */
+export const NEUTRAL_LIGHT = { sunDx: 1, sunCol: [255, 255, 255] as RGB, dl: 1, night: [0, 0, 0] as RGB, warm: 0 };
 export const JUNIPER_FOLIAGE: Foliage = { mid: [60, 78, 52], amount: 1, scale: true };   // dark olive, not blue
 
 // ── shapes ────────────────────────────────────────────────────────────────

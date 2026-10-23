@@ -9,7 +9,7 @@
 	import { adminState } from '$lib/admin/state.svelte';
 	import { isUnlockDay } from '$lib/admin/tlock';
 	import { toast } from '$lib/admin/toast.svelte';
-	import { renderTreeArt, drawTreeArt, clumpsFromTips, broadleafShape, pineShape, juniperShape, sageShape, SAGE_FOLIAGE, cottonwoodFoliage, PINE_FOLIAGE, JUNIPER_FOLIAGE, type TreeArt, type Seg, type Clump } from '$lib/garden/treeArt';
+	import { renderTreeArt, drawTreeArt, clumpsFromTips, broadleafShape, pineShape, juniperShape, sageShape, sageFoliage, NEUTRAL_LIGHT, cottonwoodFoliage, PINE_FOLIAGE, JUNIPER_FOLIAGE, type TreeArt, type Seg, type Clump } from '$lib/garden/treeArt';
 	import { weatherFor, type Weather } from '$lib/garden/weather';
 	import { renderMeadow, renderRocks, makeFlowers, flowerBloom, type Flower, renderNoiseCloud, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
 
@@ -687,6 +687,7 @@
 	// flowers and cloud shadows are drawn over the ground.
 	let groundKey = '';
 	let groundLum = 1;
+	let groundMid: RGB = [139, 149, 90];
 	let groundSmall: HTMLCanvasElement | null = null;
 	function sampleGround(ctx: CanvasRenderingContext2D, altDeg: number): void {
 		const key = `${W}x${H}|${Math.round(altDeg * 2)}|${dayOfYear(new Date())}|${bgPlants.length + fgPlants.length}`;
@@ -706,11 +707,17 @@
 			const i = (Math.max(0, Math.min(sh - 1, Math.floor((y - horizonY) / band * sh))) * sw + Math.max(0, Math.min(sw - 1, Math.floor(x / W * sw)))) * 4;
 			return [d[i], d[i + 1], d[i + 2]];
 		};
+		groundMid = at(W / 2, horizonY + band * 0.5);
 		setPlantGround(bgPlants, at);
 		setPlantGround(fgPlants, at);
 		// Rocks are lit with the same light as the grass; the blades over
 		// their feet take the ground's colour near the bottom of the meadow.
-		rocks = renderRocks(W, band, dpr, tuftLight(altDeg), sunXNorm(new Date(), 39.53) < 0.5 ? -1 : 1, at(W / 2, horizonY + band * 0.8));
+		// Low sun: scale the light to the meadow's measured brightness, as the
+		// trees do (tuftLight alone reads ~0.5 at dusk and lit them blue).
+		const tl = tuftLight(altDeg), tm = (tl[0] + tl[1] + tl[2]) / 3 || 1;
+		const cw = clamp01((2 - altDeg) / 4);
+		const rl = tl.map((v) => v + (v / tm * groundLum - v) * cw) as RGB;
+		rocks = renderRocks(W, band, dpr, rl, sunXNorm(new Date(), 39.53) < 0.5 ? -1 : 1, at(W / 2, horizonY + band * 0.8));
 	}
 	let rocks: HTMLCanvasElement | null = null;
 
@@ -1087,13 +1094,14 @@
 				const sh = sageShape(p.x, groundY(p.yf), p.h, p.seed);
 				segs.push(...sh.segs); clumps.push(...sh.clumps);
 			}
-			const art = segs.length ? renderTreeArt(segs, clumps, SAGE_FOLIAGE, { ...L, sunDx: sxn < 0.5 ? -1 : 1, hazeK: 0.08, dl: altDeg < 8 ? clamp01(groundLit * 1.1) : 1 }, 0x5A6E + k) : null;
+			// The sage's 'sun' is the ground a shade brighter: white swamped a dark dusk ground.
+			const art = segs.length ? renderTreeArt(segs, clumps, sageFoliage(groundMid), { ...NEUTRAL_LIGHT, sunDx: sxn < 0.5 ? -1 : 1, sunCol: groundMid.map((v) => Math.min(255, v * 1.3)) as RGB }, 0x5A6E + k) : null;
 			if (art) {
 				// A soft contact shadow under each shrub, into the trunk layer so
 				// it sits beneath the foliage. The art's canvas is padded, so
 				// shadows near its edge may be clipped; they are small.
 				const g = art.trunk.getContext('2d')!;
-				g.fillStyle = `rgba(30,36,20,${(0.28 * dl).toFixed(2)})`;
+				g.fillStyle = 'rgba(0,0,0,0.22)';
 				for (const p of sagePlants()) {
 					if ((p.yf >= fgYf()) !== (k === 1)) continue;
 					g.beginPath();
