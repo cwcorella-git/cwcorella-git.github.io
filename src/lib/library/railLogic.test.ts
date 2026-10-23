@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { railKind, alphaAnchors, dateAnchors, buildRail, UNDATED_SEEK } from './railLogic.js';
-import { anchorLabelForRow, fractionToIndex } from './railLogic';
+import { anchorLabelForRow, fractionToIndex, estimateLabel } from './railLogic';
 
 describe('railKind', () => {
 	it('maps sorts to rail kinds', () => {
@@ -119,5 +119,20 @@ describe('buildRail under a VG tier preview', () => {
 	// it to both endpoints, so the rail stays under a preview.
 	it('is the same rail with or without a tier filter', () => {
 		expect(buildRail('title', 'asc', null).length).toBeGreaterThan(0);
+	});
+});
+
+describe('estimateLabel', () => {
+	const anchors = alphaAnchors('asc');   // # A … Z
+	it('spreads the rail over the list when nothing is known', () => {
+		expect(estimateLabel(0, 270, [], anchors)).toBe('#');
+		expect(estimateLabel(269, 270, [], anchors)).toBe('Z');
+		expect(estimateLabel(135, 270, [], anchors)).toBe('M');
+	});
+	it('interpolates between known rows, and holds between rows of one letter', () => {
+		const known: [number, string][] = [[100, 'C'], [200, 'G']];
+		expect(estimateLabel(150, 1000, known, anchors)).toBe('E');
+		expect(estimateLabel(100, 1000, known, anchors)).toBe('C');
+		expect(estimateLabel(150, 1000, [[100, 'C'], [200, 'C']], anchors)).toBe('C');
 	});
 });

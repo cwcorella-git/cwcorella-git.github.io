@@ -100,3 +100,32 @@ export function fractionToIndex(fraction: number, total: number): number {
 	const clamped = Math.min(Math.max(fraction, 0), 1);
 	return Math.min(Math.max(Math.round(clamped * (total - 1)), 0), total - 1);
 }
+
+/**
+ * The label under row `index` while that row has not loaded yet. Rows load
+ * after a pause and a fetch, so reading the label from the row alone made the
+ * rail wait until scrolling stopped. Interpolates, in rail order, between the
+ * nearest rows whose labels are known (`samples`, sorted by index); the list's
+ * ends stand in for missing neighbours. An estimate, replaced by the row's own
+ * label as soon as it loads.
+ */
+export function estimateLabel(
+	index: number,
+	total: number,
+	samples: ReadonlyArray<readonly [number, string]>,
+	anchors: readonly RailAnchor[]
+): string | null {
+	const labels = anchors.map((a) => a.label);
+	if (!labels.length || total <= 0) return null;
+	let prev: readonly [number, string] = [0, labels[0]];
+	let next: readonly [number, string] = [total - 1, labels[labels.length - 1]];
+	for (const s of samples) {
+		if (s[0] <= index) prev = s;
+		else { next = s; break; }
+	}
+	if (prev[0] === index || prev[1] === next[1]) return prev[1];
+	const pa = labels.indexOf(prev[1]), pb = labels.indexOf(next[1]);
+	if (pa < 0 || pb < 0) return prev[1];
+	const t = (index - prev[0]) / Math.max(1, next[0] - prev[0]);
+	return labels[Math.round(pa + (pb - pa) * t)];
+}

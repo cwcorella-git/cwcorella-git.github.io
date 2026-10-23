@@ -4,7 +4,7 @@
 	import DocCard from './DocCard.svelte';
 	import JumpRail from './JumpRail.svelte';
 	import type { DocListItem } from '$lib/library/types';
-	import { anchorLabelForRow, type RailAnchor } from '$lib/library/railLogic';
+	import { anchorLabelForRow, estimateLabel, type RailAnchor } from '$lib/library/railLogic';
 
 	interface Props {
 		total: number | null;
@@ -43,12 +43,30 @@
 	// Live "you are here": the top visible row's own field decides its anchor
 	// bucket. `rowAt` reads _version internally, so this re-runs when a window
 	// lands; only overwrite when the row is loaded, so the label holds over gaps.
+	// Before it loads, the label is estimated from rows already seen, so the
+	// highlight moves with the scroll instead of waiting for the fetch.
 	let activeLabel = $state<string | null>(null);
+	let samples: [number, string][] = [];
+	$effect(() => {
+		void queryKey;
+		samples = [];
+	});
 	$effect(() => {
 		if (topIndex === null) return;
 		const row = rowAt(topIndex);
-		if (row) activeLabel = anchorLabelForRow(sort, row);
+		if (row) {
+			const label = anchorLabelForRow(sort, row);
+			if (label !== null) learn(topIndex, label);
+			activeLabel = label;
+		} else if (total) {
+			activeLabel = estimateLabel(topIndex, total, samples, anchors) ?? activeLabel;
+		}
 	});
+	function learn(index: number, label: string) {
+		const at = samples.findIndex((s) => s[0] >= index);
+		if (at >= 0 && samples[at][0] === index) samples[at][1] = label;
+		else samples.splice(at < 0 ? samples.length : at, 0, [index, label]);
+	}
 
 	function reportVisible(offset: number) {
 		if (!vlistRef) return;
