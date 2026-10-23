@@ -638,7 +638,43 @@ On /blockout the operator said they couldn't tell which Media render showed whic
 - The tall pine (3) has bare limbs on one side.
 - Not looked at at night.
 
-## Resume here
+## Resume here (superseded by the one at the end)
 - Nothing is queued. Rows 43–52 are done and pushed.
 - Media verdicts are open for `cwc-trees-key` and `cwc-real-44`…`-52`.
+- Pull before pushing.
+
+## 24. Rebuilt from real photos: "the leaves are just ellipses" (rows 53–56)
+
+The operator said the pine and juniper leaf layouts weren't convincing, the leaves looked like "just ellipses", and asked for real-world references. Reference photos from Wikimedia Commons:
+- **Jeffrey pine:** *Mature Jeffrey Pine*, *Pinus jeffreyi LassenCA2*, *Mono Lake 02*.
+- **Juniper:** *J. occidentalis australis old tree*, *J. occidentalis on Lassen*.
+- **Sagebrush:** *Mountain Big Sagebrush and Western Juniper Zone*.
+- **Cottonwood:** *Frémont's cottonwoods at Cottonwood Springs*, *Populus fremontii 50D 4686*.
+
+They are saved in the session scratchpad, `refs/`, and the side-by-side sheets went to Media (`cwc-ref-53`, `-53b`, `-54`, `-55`).
+
+**What was really wrong:** every crown was many similar small clumps, each drawn as nested dark, mid and light blobs. That gave each clump an outline and a bright core, which reads as an ellipse. Two later attempts failed the same way:
+- **Needle tufts in nested layers** turned each tuft into a broad "leaf".
+- **Drawing every leaf separately** (thousands per lobe) looked right, but cost about 1.9 s for the front tree on a 4×-throttled phone.
+
+**What works:** each crown is a few big lobes with a noisy outline. Each lobe is filled with a baked texture tile (leaf, scale or needle marks), shaded across itself and by where it sits in the crown, with single marks only along its edge. The tile is coloured at the middle tone and the crown-level tone goes on as a wash, so a tree needs about two tiles.
+
+| # | item | state |
+|---|---|---|
+| 53 | Jeffrey pine | **done**: `a971fb5`, then the needle tile in `a647e03`. Narrow crown (half-width at most about 0.19h), 18–24 short limbs with 2–4 twigs each, tufts 0.06–0.09h, clear trunk 28–34%, plated cinnamon bark, foliage `[56,80,42]` |
+| 54 | western juniper | **done**: `a647e03`. A thick kinked trunk with fibrous red-brown strips; 2–3 upright twisting leaders; foliage only on the upper leaders, on an h·0.12 grid; gold-green lit tops (`Foliage.tip`); h 140 |
+| 55 | Fremont cottonwood | **done**: `a647e03`. Lobes on grids of h·0.16 (midground) and 22/26·dpr (front and far); leaf-tile texture; gentler taper (0.86) to soften steps in the trunk. I tried rounded joints, but they made the trunk look like a string of beads |
+| 56 | big sagebrush | **done**: `459c2f1`. `sageShape` and `SAGE_FOLIAGE` (`[106,116,90]`, tip `[170,178,158]`); 13 shrubs (8 on a phone), seeded; baked as 2 jobs (behind and in front of tree 1), with contact shadows in the trunk layer. They are lit by the meadow's light (`tuftLight`), because with the tree light they glowed white at dusk |
+
+**Phone bake** (`treetime.cjs 390`, 4× throttle): front stand-in 49 ms, midground cottonwood 41, pine 41, juniper 26. The largest is still a little over the 45 ms target. `treetime.cjs` does not include the two sagebrush jobs; they are **unmeasured**.
+
+**Not checked:**
+- Night.
+- Spring and summer foliage colours under the new tiles.
+- Bare winter cottonwoods: `amount` scales the tile density, but I didn't render them.
+- Sagebrush at dusk reads a little blue-grey.
+
+## Resume here
+- Nothing is queued. Rows 43–56 are done and pushed.
+- Media verdicts are open: `cwc-ref-53b`, `-54`, `-55`, `-56` and the earlier `cwc-real-*` groups. Read each once, only on /blockout.
 - Pull before pushing.
