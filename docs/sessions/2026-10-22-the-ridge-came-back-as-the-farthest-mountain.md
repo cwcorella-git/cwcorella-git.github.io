@@ -1020,3 +1020,39 @@ So the day panels change from pale frosted glass at about 0.22 to smoked glass. 
 - **Next:** the operator's notes from a phone, on white text, the rails and the glass.
 - **Dev server:** it was restarted with nohup on port 5191 (log at `scratchpad/vite.log`); nothing waits on it.
 - **Renders:** `wt.cjs` is `txt.cjs` plus a 6th argument (`1` for pale), from before pale became unconditional. `pg.cjs` renders the other pages.
+
+## 42. The glass was thick for colours no panel sat on
+
+Rows 91–92. The operator asked for the lighter daytime glass proposed in §41.
+
+### What had been setting the thickness
+After §41, the noon glass was 0.58 on every page, and that wasn't the garden. Two backdrops were counted that no panel actually sits on:
+- the flat `--body-bg`, which only shows before the garden draws;
+- the two sky bands (`mid` and `lower`). In the afternoon `lower` is a pale haze, while the reading panel sits over trees and land.
+
+### What changed
+- **`083f3a3`: the samples decide alone.** `lightFrame` takes `bare`. Sky.svelte passes `seen.colors.length === 0`, so the ground counts only until the garden has been sampled. Once samples exist, they replace the sky bands entirely. If the garden never draws, the old 0.58 holds.
+- **`a4d7cf5`: a 4:1 floor.** This was the operator's pick.
+  - `TEXT_FLOOR = 4` in `contrast.ts`. The `sceneTune` default and its clamp are 4, and the ScenePanel slider starts at 4.
+  - Meta text and accents still aim for 4.5. Where they can't reach it on the thinner glass, they fall back to the body text colour.
+  - `clock.test.ts`'s floor test now asserts 4; it had asserted 4.5. A new test checks that 4:1 gives thinner glass than 4.5 and never goes under 4.
+  - `static/scene.json` is `{}`, so no saved setting holds the old 4.5.
+
+Alphas on the reading list at 390 px, clear weather:
+
+| | 12:30 | 15:30 |
+|---|---|---|
+| after §41 | 0.52 | 0.58 |
+| samples decide (`083f3a3`) | 0.48 | 0.52 |
+| 4:1 floor (`a4d7cf5`) | 0.42 | 0.48 |
+
+### Open
+- 4:1 is below WCAG AA for normal text, and that was a deliberate choice. Small text in bright afternoon sun is where it would show first.
+- **Never seen:**
+  - any of this on a real phone;
+  - cloudy weather with the garden drawn: the headless browser's garden failed to draw on the cloudy runs, so they fell back to 0.58.
+
+## Resume here (updated)
+- **Next:** the operator's phone notes on white text, glass thickness and the rails. The contrast slider in the scene tuner is the live adjustment.
+- **Dev server:** nohup on port 5191; the log is `scratchpad/vite.log`.
+- **Renders:** `pg.cjs` with `PAGE=`; Media strips `v-white*.jpg`, `v-light.jpg` and `v-floor.jpg` are in scratchpad `renders/`.
