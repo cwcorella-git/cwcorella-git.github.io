@@ -53,7 +53,7 @@ export function cottonwoodFoliage(doy: number): Foliage {
 	if (doy < 272) return { mid: SUMMER, amount: 1 };
 	return { mid: mix(SUMMER, GOLD, ramp(272, 292)), amount: 1 - ramp(305, 332) };
 }
-export const PINE_FOLIAGE: Foliage    = { mid: [52, 74, 50], amount: 1, needle: true };
+export const PINE_FOLIAGE: Foliage    = { mid: [56, 80, 42], amount: 1, needle: true };
 export const JUNIPER_FOLIAGE: Foliage = { mid: [60, 78, 52], amount: 1, scale: true };   // dark olive, not blue
 
 // ── shapes ────────────────────────────────────────────────────────────────
@@ -102,50 +102,56 @@ export function broadleafShape(x: number, y: number, h: number, seed: number): {
 	return { segs, clumps: clumpsFromTips(segs, h * 0.09, h * 0.01, 1) };
 }
 
-/** Jeffrey pine, old growth: a clear tapered trunk, then limbs spiralling up
- *  it that droop low and rise near the top, with needle tufts only at their
- *  ends, so sky shows between the tiers. Narrow dome on top, ragged middle. */
+/** Jeffrey pine, old growth (photos: Mature Jeffrey Pine; Pinus jeffreyi
+ *  LassenCA2; Mono Lake, Wikimedia Commons): a straight trunk clear for its
+ *  lower 40%, then a narrow crown, at most about a third as wide as the tree
+ *  is tall. Many short limbs, drooping low and rising high, each splitting at
+ *  the end into a few twigs; the needles are brush tufts on the twig ends. */
 export function pineShape(x: number, y: number, h: number, seed: number): { segs: Seg[]; clumps: Clump[] } {
 	const rng = makePRNG(seed);
 	const segs: Seg[] = [];
 	const clumps: Clump[] = [];
 	const lean = (rng() - 0.5) * 0.04;
-	const at = (t: number) => ({ x: x + Math.sin(lean) * t * h, y: y - t * h });
-	// Trunk in four tapering pieces.
-	for (let i = 0; i < 4; i++) {
-		const a = at(i / 4), b = at((i + 1) / 4);
-		segs.push({ x1: a.x, y1: a.y, x2: b.x, y2: b.y, thick: h * 0.05 * (1 - i * 0.2) });
+	const at = (t: number) => ({ x: x + Math.sin(lean) * t * h + Math.sin(t * 7 + seed) * h * 0.006, y: y - t * h });
+	for (let i = 0; i < 6; i++) {
+		const a = at(i / 6), b = at((i + 1) / 6);
+		segs.push({ x1: a.x, y1: a.y, x2: b.x, y2: b.y, thick: h * 0.05 * (1 - i * 0.14) });
 	}
-	const clear = 0.26 + rng() * 0.05;
-	const limbs = 10 + Math.floor(rng() * 5);
+	const clear = 0.28 + rng() * 0.06;
+	const limbs = 18 + Math.floor(rng() * 7);
+	const flatTop = rng() < 0.5;                               // old trees often flatten at the top
 	let side = rng() < 0.5 ? -1 : 1;
+	const tuft = (tx: number, ty: number, r: number) => clumps.push({ x: tx, y: ty, r });
 	for (let i = 0; i < limbs; i++) {
-		const t = clear + (i + rng() * 0.6) / limbs * (0.97 - clear);
-		side = rng() < 0.75 ? -side : side;                       // mostly alternating, as a spiral seen side-on
+		const t = clear + (i + rng() * 0.8) / limbs * (0.98 - clear);
+		side = rng() < 0.7 ? -side : side;
 		const o = at(t);
-		// Width: ragged and broad through the middle, a narrow dome on top.
-		const u = (t - clear) / (1 - clear);
-		const width = h * (0.06 + 0.24 * Math.pow(Math.sin(Math.PI * Math.min(1, 0.25 + u * 0.95)), 0.7)) * (0.7 + rng() * 0.6);
-		const ang = (-0.35 + u * 0.75) + (rng() - 0.5) * 0.2;      // droop low, rise high (radians from horizontal)
+		const u = (t - clear) / (0.98 - clear);                // 0 bottom of the crown … 1 top
+		// Half-width profile: widest a third of the way up, narrowing to a
+		// rounded (or flat) top; ragged, some limbs much shorter than others.
+		const prof = u < 0.35 ? 0.75 + u * 0.7 : 1 - Math.pow((u - 0.35) / 0.65, flatTop ? 3 : 1.6) * 0.8;
+		const width = h * 0.19 * prof * (0.6 + rng() * 0.55);
+		const ang = (-0.3 + u * 0.75) + (rng() - 0.5) * 0.25;  // radians above horizontal
 		const ex = o.x + side * Math.cos(ang) * width, ey = o.y - Math.sin(ang) * width;
-		const thick = h * (0.016 - u * 0.006);
+		const thick = h * (0.014 - u * 0.006);
 		segs.push({ x1: o.x, y1: o.y, x2: ex, y2: ey, thick });
-		clumps.push({ x: ex, y: ey - h * 0.008, r: h * (0.08 + rng() * 0.05) });
-		clumps.push({ x: o.x + (ex - o.x) * 0.55, y: o.y + (ey - o.y) * 0.55 - h * 0.01, r: h * (0.065 + rng() * 0.03) });
-		clumps.push({ x: o.x + (ex - o.x) * 0.25, y: o.y + (ey - o.y) * 0.25 - h * 0.01, r: h * (0.05 + rng() * 0.02) });   // foliage runs back to the trunk
-		// One or two sub-limbs off the outer half, each with its own tuft.
-		const subs = 1 + (rng() < 0.5 ? 1 : 0);
-		for (let k = 0; k < subs; k++) {
-			const f = 0.45 + rng() * 0.35;
-			const sx = o.x + (ex - o.x) * f, sy = o.y + (ey - o.y) * f;
-			const sl = width * (0.25 + rng() * 0.2), sa = ang + (rng() < 0.5 ? 0.6 : -0.5);
-			const tx = sx + side * Math.cos(sa) * sl, ty = sy - Math.sin(sa) * sl;
-			segs.push({ x1: sx, y1: sy, x2: tx, y2: ty, thick: thick * 0.55 });
-			clumps.push({ x: tx, y: ty, r: h * (0.055 + rng() * 0.035) });
+		const r = h * (0.06 + rng() * 0.03);
+		// Twigs fan out at the end, tips turned up; a tuft on each.
+		const twigs = 2 + Math.floor(rng() * 3);
+		for (let k = 0; k < twigs; k++) {
+			const ta = ang + 0.25 + (k / Math.max(1, twigs - 1) - 0.5) * 1.1 + (rng() - 0.5) * 0.3;
+			const tl = width * (0.18 + rng() * 0.18);
+			const tx = ex + side * Math.cos(ta) * tl, ty = ey - Math.sin(ta) * tl;
+			segs.push({ x1: ex, y1: ey, x2: tx, y2: ty, thick: thick * 0.5 });
+			tuft(tx, ty, r);
 		}
+		tuft(ex, ey, r * 1.1);
+		if (width > h * 0.08) tuft(o.x + (ex - o.x) * 0.55, o.y + (ey - o.y) * 0.55 - r * 0.3, r * 0.9);   // foliage along the inner limb
 	}
 	const top = at(1);
-	clumps.push({ x: top.x, y: top.y + h * 0.03, r: h * 0.08 });
+	tuft(top.x, top.y + h * 0.03, h * 0.07);
+	tuft(top.x + h * 0.04, top.y + h * 0.07, h * 0.06);
+	tuft(top.x - h * 0.04, top.y + h * 0.08, h * 0.06);
 	return { segs, clumps };
 }
 
@@ -243,35 +249,31 @@ function renderClump(r: number, f: Foliage, L: ArtLight, seed: number, tone = 1)
 		return c;
 	}
 	if (f.needle) {
-		// Jeffrey pine: needles in brushy clusters at the twig ends, fanning up
-		// and out. A clump is several such clusters run together along the
-		// limb, so its outline is tufted and irregular, not a saucer.
+		// Jeffrey pine needles are long and crowded at the twig ends. Strokes
+		// start anywhere in the tuft and point up and out at random, so no
+		// tuft has an outline or a core of its own; colour comes from where a
+		// stroke sits (underside dark, sun-side top lit), with some noise.
 		ctx.lineCap = 'round';
-		const n = 6 + Math.floor(rng() * 4);
-		const subs: { x: number; y: number; s: number }[] = [];
-		for (let i = 0; i < n; i++) {
-			const a = rng() * Math.PI * 2, d = Math.sqrt(rng());
-			subs.push({ x: cx + Math.cos(a) * d * r * 0.75, y: cy + Math.sin(a) * d * r * 0.32, s: 0.7 + rng() * 0.5 });
+		ctx.lineWidth = Math.max(0.5, r * 0.022);
+		const cols = [dark, mid, soft];
+		const paths: [number, number, number, number, number, number][][] = [[], [], []];
+		for (let i = 0; i < 260; i++) {
+			const a0 = rng() * Math.PI * 2, d = Math.sqrt(rng()) * r * 0.62;
+			const px = cx + Math.cos(a0) * d, py = cy + Math.sin(a0) * d * 0.75;
+			const out = Math.atan2(py - cy, px - cx);
+			// Up and out: halfway between straight up and away from the centre.
+			const a = -Math.PI / 2 * 0.55 + out * 0.45 + (rng() - 0.5) * 1.1;
+			const l = r * (0.18 + rng() * 0.22);
+			const v = ((cy - py) / r) * 0.9 + ((px - cx) * L.sunDx / r) * 0.5 + (rng() - 0.5) * 0.9;
+			const k = v < -0.25 ? 0 : v > 0.45 && L.dl > 0.05 && litN ? 2 : 1;
+			paths[k].push([px, py, px + Math.cos(a) * l * 0.5, py + Math.sin(a) * l * 0.5 - l * 0.05, px + Math.cos(a) * l, py + Math.sin(a) * l - l * 0.12]);
 		}
-		subs.sort((p, q) => q.y - p.y);                  // lower ones first, upper ones over them
-		const fan = (sx: number, sy: number, k: number, col: RGB, count: number, spread: number) => {
-			ctx.strokeStyle = rgb(col);
-			ctx.lineWidth = Math.max(0.7, r * 0.045);
+		paths.forEach((ps, k) => {
+			ctx.strokeStyle = rgb(cols[k]);
 			ctx.beginPath();
-			for (let i = 0; i < count; i++) {
-				const ra = -Math.PI / 2 + (rng() - 0.5) * spread, l = r * k * (0.16 + rng() * 0.2);
-				const ox = (rng() - 0.5) * r * 0.08 * k;
-				ctx.moveTo(sx + ox, sy);
-				ctx.lineTo(sx + ox + Math.cos(ra) * l, sy + Math.sin(ra) * l * 0.9);
-			}
+			for (const [x0, y0, x1, y1, x2, y2] of ps) { ctx.moveTo(x0, y0); ctx.quadraticCurveTo(x1, y1, x2, y2); }
 			ctx.stroke();
-		};
-		for (const u of subs) {
-			const low = (u.y - cy) / (r * 0.32);              // -1 top … 1 bottom
-			fan(u.x, u.y + r * 0.06, u.s, low > 0 ? dark : mix(dark, mid, 0.5), 22, 3.6);   // the shaded underside droops
-			fan(u.x, u.y, u.s, mid, 18, 2.6);
-			if (L.dl > 0.05 && litN && low < 0.2 && (u.x - cx) * L.sunDx > -r * 0.2) fan(u.x, u.y - r * 0.04, u.s * 0.8, soft, Math.round(6 * litN), 1.8);
-		}
+		});
 		return c;
 	}
 	// Many small blobs rather than a few big ones: big circles read as popcorn.
@@ -321,6 +323,18 @@ export function renderTreeArt(segs: Seg[], clumps: Clump[], f: Foliage, L: ArtLi
 		ctx.closePath();
 		ctx.fill();
 		ctx.beginPath(); ctx.arc(s.x2, s.y2, w1, 0, Math.PI * 2); ctx.fill();
+		// Jeffrey pine bark: dark furrows between cinnamon plates on the trunk.
+		if (f.needle && s.thick > 3 && L.dl > 0.1) {
+			ctx.strokeStyle = rgb(mix(col, [40, 26, 20], 0.45));
+			ctx.lineWidth = Math.max(0.5, s.thick * 0.06);
+			ctx.beginPath();
+			for (let k = -1; k <= 1; k += 2) {
+				const o = k * 0.3 * w0;
+				ctx.moveTo(s.x1 + nx * o, s.y1 + ny * o);
+				ctx.lineTo(s.x2 + nx * o * 0.7, s.y2 + ny * o * 0.7);
+			}
+			ctx.stroke();
+		}
 		// Sunlit edge on limbs thick enough to show one.
 		if (s.thick > 2.5 && L.dl > 0.1) {
 			const side = Math.sign(nx * L.sunDx) || 1;
