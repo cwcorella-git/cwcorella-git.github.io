@@ -15,7 +15,11 @@ export interface ArtLight {
 	dl: number;      // daylight 0–1
 	night: RGB;      // silhouette colour after dark
 	warm?: number;   // 0–1 golden hour: low side light, crown mostly in warm shade
+	haze?: RGB;      // the horizon's colour; far trees fade toward it
+	hazeK?: number;  // 0 near … how far toward it
 }
+
+const hazed = (c: RGB, L: ArtLight): RGB => L.haze && L.hazeK ? mix(c, L.haze, L.hazeK) : c;
 
 export interface TreeArt {
 	trunk: HTMLCanvasElement;
@@ -197,9 +201,10 @@ function renderClump(r: number, f: Foliage, L: ArtLight, seed: number, tone = 1)
 	const own = mix(f.mid, [112, 124, 64], rng() * 0.3);
 	const w = L.warm ?? 0;
 	const toneK = [0.68, 0.92, 1.08][tone];
-	const mid = mix(L.night, shade(mix(own, L.sunCol, 0.08 + 0.25 * w), (1 - 0.3 * w) * toneK), L.dl);
-	const dark = mix(mix(mid, [18, 26, 30], 0.5), [90, 74, 112], 0.3 * w);   // evening shade goes purple-grey, as the clouds do
-	const lit = mix(L.night, mix(own, L.sunCol, 0.45 + 0.25 * w), L.dl);
+	const mid0 = mix(L.night, shade(mix(own, L.sunCol, 0.08 + 0.25 * w), (1 - 0.3 * w) * toneK), L.dl);
+	const dark = hazed(mix(mix(mid0, [18, 26, 30], 0.5), [90, 74, 112], 0.3 * w), L);   // evening shade goes purple-grey, as the clouds do
+	const mid = hazed(mid0, L);
+	const lit = hazed(mix(L.night, mix(own, L.sunCol, 0.45 + 0.25 * w), L.dl), L);
 	const litN = [0, 0.6, 1.6][tone];     // how much of the lit layer this side gets
 	const blobs = (n: number, ox: number, oy: number, spread: number, r0: number, r1: number, col: RGB) => {
 		ctx.fillStyle = rgb(col);
@@ -288,7 +293,7 @@ export function renderTreeArt(segs: Seg[], clumps: Clump[], f: Foliage, L: ArtLi
 		const nx = -dy / len, ny = dx / len;
 		const w0 = s.thick / 2, w1 = (s.thick * 0.7) / 2;
 		const bark = f.needle ? mix(barkFor(s.thick, maxThick), [150, 94, 62], 0.35) : barkFor(s.thick, maxThick);   // Jeffrey pine: cinnamon plates
-		const col = mix(L.night, shade(mix(bark, L.sunCol, 0.15 * (L.warm ?? 0)), 1 - 0.3 * (L.warm ?? 0)), L.dl);
+		const col = hazed(mix(L.night, shade(mix(bark, L.sunCol, 0.15 * (L.warm ?? 0)), 1 - 0.3 * (L.warm ?? 0)), L.dl), L);
 		ctx.fillStyle = rgb(col);
 		ctx.beginPath();
 		ctx.moveTo(s.x1 + nx * w0, s.y1 + ny * w0);

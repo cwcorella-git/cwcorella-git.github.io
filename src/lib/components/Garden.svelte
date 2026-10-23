@@ -1002,17 +1002,18 @@
 			dl,
 			night:  [14, 17, 24] as RGB,
 			warm:   golden,
+			haze:   getSkyColors(altDeg).horizon as RGB,
 		};
 		const sunX = sxn * W;
 		const leaf = cottonwoodFoliage(doy);
-		const bake = (segs: Seg[], cell: number, seed: number) => {
+		const bake = (segs: Seg[], cell: number, seed: number, hazeK = 0) => {
 			const xs = segs.length ? segs[0].x1 : 0;
 			const clumps = clumpsFromTips(segs, cell, 1.8, 1);
-			return renderTreeArt(segs, clumps, leaf, { ...L, sunDx: sunX < xs ? -1 : 1 }, seed);
+			return renderTreeArt(segs, clumps, leaf, { ...L, sunDx: sunX < xs ? -1 : 1, hazeK }, seed);
 		};
 		const jobs: (() => void)[] = [
 			() => { next.fg = fgTreeSegs.length ? bake(fgSegs(), 12 * dpr * depthK(fgYf()), 101) : null; },
-			() => { next.bg = bgTreeSegs.length ? bake(segsFromTree(bgTreeSegs), 15 * dpr, 211) : null; },
+			() => { next.bg = bgTreeSegs.length ? bake(segsFromTree(bgTreeSegs), 15 * dpr, 211, 0.35) : null; },
 		];
 		MIDGROUND.forEach((m, i) => jobs.push(() => {
 			const gf = treeGrowthFactor(Math.max(0, gardenAgeUnits + m.bornAgo));
@@ -1022,7 +1023,9 @@
 			            : m.kind === 'juniper' ? juniperShape(x, gy, h, seed)
 			            : broadleafShape(x, gy, h, seed);
 			const f = m.kind === 'pine' ? PINE_FOLIAGE : m.kind === 'juniper' ? JUNIPER_FOLIAGE : leaf;
-			next.mid[i] = renderTreeArt(shape.segs, shape.clumps, f, { ...L, sunDx: sunX < x ? -1 : 1 }, seed + i);
+			// Haze by distance: the trees on the horizon fade most toward its colour.
+			const hazeK = 0.3 * Math.max(0, 1 - m.yf / 0.15);
+			next.mid[i] = renderTreeArt(shape.segs, shape.clumps, f, { ...L, sunDx: sunX < x ? -1 : 1, hazeK }, seed + i);
 		}));
 		return jobs;
 	}
