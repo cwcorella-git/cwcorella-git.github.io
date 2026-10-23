@@ -745,8 +745,23 @@ They are saved in the session scratchpad, `refs/`, and the side-by-side sheets w
 2. **A multiply layer (colours as ratios of the ground):** consistent at every hour, but see-through, with the stems showing as dark sticks, and multiply can never be as light as the photo's sagebrush.
 3. **Neutral light with a white "sun":** the renderer's lit mix toward sunCol swamped a dark dusk ground and made pale ghosts.
 
-## Resume here
+## Resume here (superseded by the one at the end)
 - Nothing is queued. Rows 43–61 are done and pushed.
 - Open, proposed: snow on plants.
+- Media verdicts are open. Read each once, only on /blockout.
+- Pull before pushing.
+
+## 30. Snow days (row 62)
+
+The operator was offered "snow on plants" and chose **"Add snow days"**. Snow on plants alone didn't make sense: the meadow never had snow, because the snow line is a height in metres that only the mountains reach.
+
+| # | item | state |
+|---|---|---|
+| 62 | snow days | **done**: `5f943d1`. **Weather (`weather.ts`):** `snowChance(month)` (Jan 0.10, Feb 0.08, Mar 0.05, Apr 0.015, Nov 0.02, Dec 0.07), `snowFell(d)` seeded by date, and `snowCover(d)` = 1, 0.6, 0.2 over the day it falls and the two after. A snowfall day is overcast. Tests: snow only in the cold months, 4–16 days a winter, the melt curve. **Meadow:** `renderSnow` in `detail.ts` is patchy fbm drifts that open up as it melts, with fine gaps and a little sky blue far off. It is drawn after `sampleGround`, so the tall grass keeps its straw colour and pokes through. **Distant rise:** `TerrainLight.valleySnow` adds snow only to terrain rows above `nrowTop` (meadow pixels, plus lightly on low slopes). **Rocks:** a snow cap. **Conifers, juniper and sagebrush:** snow lumps on the upper part of each lobe, reaching lower the deeper the snow. **Limbs** that lie closer to level than upright get snow along their top edge. **Snow colour:** the rock light, two-thirds desaturated, because the full sky tint read cyan. Checked 2026-12-13, -14 and -15 at 12:30 |
+
+**Not checked:** snow at dusk and at night, and on a phone. The speckle on the distant rise when partly melted comes from the terrain's grain noise.
+
+## Resume here
+- Nothing is queued. Rows 43–62 are done and pushed.
 - Media verdicts are open. Read each once, only on /blockout.
 - Pull before pushing.
