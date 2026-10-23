@@ -54,7 +54,7 @@ export function cottonwoodFoliage(doy: number): Foliage {
 	return { mid: mix(SUMMER, GOLD, ramp(272, 292)), amount: 1 - ramp(305, 332) };
 }
 export const PINE_FOLIAGE: Foliage    = { mid: [52, 74, 50], amount: 1, needle: true };
-export const JUNIPER_FOLIAGE: Foliage = { mid: [46, 78, 54], amount: 1, scale: true };
+export const JUNIPER_FOLIAGE: Foliage = { mid: [60, 78, 52], amount: 1, scale: true };   // dark olive, not blue
 
 // ── shapes ────────────────────────────────────────────────────────────────
 /** Group branch tips into clumps on a grid of `cell` px. */
@@ -177,7 +177,8 @@ export function juniperShape(x: number, y: number, h: number, seed: number): { s
 		}
 	}
 	// Foliage along everything above the trunk, on a fine grid: a dense, lumpy mass.
-	const clumps = clumpsFromTips(segs.slice(1).flatMap((s) => [s, { ...s, x2: (s.x1 + s.x2) / 2, y2: (s.y1 + s.y2) / 2 }]), h * 0.1, Infinity, 1);
+	const clumps = clumpsFromTips(segs.slice(1).flatMap((s) => [s, { ...s, x2: (s.x1 + s.x2) / 2, y2: (s.y1 + s.y2) / 2 }]), h * 0.1, Infinity, 1)
+		.map((c) => ({ ...c, r: c.r * 1.35 }));            // overlapping, so the clumps run together into one mass
 	return { segs, clumps };
 }
 
@@ -200,9 +201,9 @@ function renderClump(r: number, f: Foliage, L: ArtLight, seed: number, tone = 1)
 	// Each clump drifts a little in hue, so a crown is never one flat colour.
 	const own = mix(f.mid, [112, 124, 64], rng() * 0.3);
 	const w = L.warm ?? 0;
-	const toneK = [0.68, 0.92, 1.08][tone];
+	const toneK = (f.needle || f.scale ? [0.82, 0.94, 1.04] : [0.68, 0.92, 1.08])[tone];
 	const mid0 = mix(L.night, shade(mix(own, L.sunCol, 0.08 + 0.25 * w), (1 - 0.3 * w) * toneK), L.dl);
-	const dark = hazed(mix(mix(mid0, [18, 26, 30], 0.5), [90, 74, 112], 0.3 * w), L);   // evening shade goes purple-grey, as the clouds do
+	const dark = hazed(mix(mix(mid0, [18, 26, 30], 0.5), [90, 74, 112], (f.needle || f.scale ? 0.08 : 0.3) * w), L);   // evening shade goes purple-grey, as the clouds do
 	const mid = hazed(mid0, L);
 	const lit = hazed(mix(L.night, mix(own, L.sunCol, 0.45 + 0.25 * w), L.dl), L);
 	const litN = [0, 0.6, 1.6][tone];     // how much of the lit layer this side gets
@@ -215,45 +216,62 @@ function renderClump(r: number, f: Foliage, L: ArtLight, seed: number, tone = 1)
 			ctx.fill();
 		}
 	};
+	// Conifers: a quieter split between shaded and sunlit clumps, and the lit
+	// colour only as a sprinkle on the upper sun-side edge, never a pale lid.
+	const soft = mix(mid, lit, 0.45);
 	if (f.scale) {
-		// Scale-leaf foliage: dense short stipple, dark blue-green, a few dusty berries.
-		const dots = (n: number, ox: number, oy: number, spread: number, col: RGB, sz: number) => {
+		// Western juniper: one dense, fine-textured mass with a ragged edge,
+		// dark olive, the texture coming from many small overlapping scales.
+		const ph = rng() * 6.28, ph2 = rng() * 6.28;
+		const edge = (a: number) => r * (0.72 + 0.16 * Math.sin(3 * a + ph) + 0.1 * Math.sin(5 * a + ph2));
+		const speck = (n: number, col: RGB, oy: number, reach: number, s0: number, s1: number, bias = 0) => {
 			ctx.fillStyle = rgb(col);
 			for (let i = 0; i < n; i++) {
-				const a = rng() * Math.PI * 2, d = Math.sqrt(rng()) * spread;
-				ctx.fillRect(cx + ox + Math.cos(a) * d * 1.2, cy + oy + Math.sin(a) * d * 0.7, sz, sz);
+				const a = rng() * Math.PI * 2, d = Math.sqrt(rng()) * edge(a) * reach;
+				const x = cx + Math.cos(a) * d * 1.15, y = cy + oy + Math.sin(a) * d * 0.85;
+				if (bias && (x - cx) * L.sunDx + (cy - y) < 0) continue;
+				ctx.beginPath();
+				ctx.arc(x, y, r * (s0 + rng() * (s1 - s0)), 0, Math.PI * 2);
+				ctx.fill();
 			}
 		};
-		const px = Math.max(1, r * 0.09);
-		dots(260, 0, r * 0.1, r * 0.95, dark, px);
-		dots(200, 0, -r * 0.05, r * 0.7, mid, px);
-		if (L.dl > 0.05) {
-			dots(Math.round(70 * litN), L.sunDx * r * 0.3, -r * 0.3, r * 0.4 + tone * r * 0.15, lit, px);
-			dots(2, L.sunDx * r * 0.25, -r * 0.1, r * 0.5, mix(L.night, [128, 140, 160], L.dl), px);   // berries
-		}
+		speck(150, dark, r * 0.06, 1, 0.05, 0.11);
+		speck(130, mid, -r * 0.04, 0.85, 0.04, 0.09);
+		if (L.dl > 0.05 && litN) speck(Math.round(60 * litN), soft, -r * 0.1, 0.8, 0.025, 0.05, 1);
+		speck(40, dark, r * 0.1, 0.9, 0.02, 0.04);           // fine dark texture back over the mass
+		if (L.dl > 0.05) speck(3, mix(L.night, [138, 150, 170], L.dl), 0, 0.7, 0.02, 0.03);   // dusty berries
 		return c;
 	}
 	if (f.needle) {
-		// Tufts of needles: short strokes radiating from the clump, darker under.
-		const tuft = (n: number, oy: number, col: RGB, len0: number, len1: number) => {
+		// Jeffrey pine: needles in brushy clusters at the twig ends, fanning up
+		// and out. A clump is several such clusters run together along the
+		// limb, so its outline is tufted and irregular, not a saucer.
+		ctx.lineCap = 'round';
+		const n = 6 + Math.floor(rng() * 4);
+		const subs: { x: number; y: number; s: number }[] = [];
+		for (let i = 0; i < n; i++) {
+			const a = rng() * Math.PI * 2, d = Math.sqrt(rng());
+			subs.push({ x: cx + Math.cos(a) * d * r * 0.75, y: cy + Math.sin(a) * d * r * 0.32, s: 0.7 + rng() * 0.5 });
+		}
+		subs.sort((p, q) => q.y - p.y);                  // lower ones first, upper ones over them
+		const fan = (sx: number, sy: number, k: number, col: RGB, count: number, spread: number) => {
 			ctx.strokeStyle = rgb(col);
-			ctx.lineWidth = Math.max(0.8, r * 0.07);
-			ctx.lineCap = 'round';
+			ctx.lineWidth = Math.max(0.7, r * 0.045);
 			ctx.beginPath();
-			for (let i = 0; i < n; i++) {
-				const a = rng() * Math.PI * 2, d = Math.sqrt(rng()) * r * 0.55;
-				// Jeffrey pine foliage hangs in flat-topped pads along the limb,
-				// needles splaying up and out: wide, shallow, a dark underside.
-				const px = cx + Math.cos(a) * d * 1.35, py = cy + oy + Math.sin(a) * d * 0.5;
-				const ra = -Math.PI / 2 + (rng() - 0.5) * 3.2, l = r * (len0 + rng() * (len1 - len0));
-				ctx.moveTo(px, py);
-				ctx.lineTo(px + Math.cos(ra) * l * 0.8, py + Math.sin(ra) * l * 0.55);
+			for (let i = 0; i < count; i++) {
+				const ra = -Math.PI / 2 + (rng() - 0.5) * spread, l = r * k * (0.16 + rng() * 0.2);
+				const ox = (rng() - 0.5) * r * 0.08 * k;
+				ctx.moveTo(sx + ox, sy);
+				ctx.lineTo(sx + ox + Math.cos(ra) * l, sy + Math.sin(ra) * l * 0.9);
 			}
 			ctx.stroke();
 		};
-		tuft(150, r * 0.14, dark, 0.3, 0.55);
-		tuft(120, 0, mid, 0.25, 0.5);
-		if (L.dl > 0.05 && litN) tuft(Math.round(22 * litN), -r * 0.12, lit, 0.15, 0.32);
+		for (const u of subs) {
+			const low = (u.y - cy) / (r * 0.32);              // -1 top … 1 bottom
+			fan(u.x, u.y + r * 0.06, u.s, low > 0 ? dark : mix(dark, mid, 0.5), 22, 3.6);   // the shaded underside droops
+			fan(u.x, u.y, u.s, mid, 18, 2.6);
+			if (L.dl > 0.05 && litN && low < 0.2 && (u.x - cx) * L.sunDx > -r * 0.2) fan(u.x, u.y - r * 0.04, u.s * 0.8, soft, Math.round(6 * litN), 1.8);
+		}
 		return c;
 	}
 	// Many small blobs rather than a few big ones: big circles read as popcorn.

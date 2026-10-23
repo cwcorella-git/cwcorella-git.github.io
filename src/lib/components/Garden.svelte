@@ -1338,9 +1338,9 @@
 		drawFlowers(ctx, altDeg);
 		drawCloudShadows(ctx, altDeg, sxn);
 		const windPx = (noise1D(time / 6) - 0.5) * 6 * dpr;
+		drawHorizonBlend(ctx, altDeg);                   // under the trees: they carry their own haze by distance
 		drawBgTree(ctx, altDeg, sxn, windPx);            // space-colonization cottonwood — far right background
 		drawMidgroundTrees(ctx, altDeg, sxn, windPx);
-		drawHorizonBlend(ctx, altDeg);
 		drawPlants(ctx, bgPlants, horizonY, H, tuftLight(altDeg), plantGreen);   // far grass — behind tree
 		drawCirrus(ctx, altDeg);
 		drawClouds(ctx, altDeg, sxn);
