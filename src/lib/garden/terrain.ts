@@ -103,6 +103,7 @@ export interface TerrainLight {
 	dl: number;                // daylight 0–1
 	fog: RGB; beta: number;    // haze colour and density per 10 km
 	snowLine: number | null;   // metres; null when there is no snow
+	valleySnow?: number;       // 0–1 snow lying on the valley floor (weather.ts snowCover)
 	doy?: number;              // day of year, for the meadow's season
 }
 
@@ -179,6 +180,14 @@ export function relightTerrain(t: Terrain, L: TerrainLight, out?: HTMLCanvasElem
 			alb = mix(alb, FOREST, woods);
 			alb = mix(alb, ROCK, Math.max(sm(f1, f1 + 250, e + g * 120), sm(0.3, 0.55, slope) * 0.85));
 			if (L.snowLine !== null) alb = mix(alb, SNOW, sm(L.snowLine, L.snowLine + 250, e + g * 150) * (1 - sm(0.4, 0.65, slope)));
+		}
+		// A snow day: snow on the valley floor in the distance (the meadow
+		// below the horizon is covered by Garden's own snow layer, so only the
+		// rows above it), patchy as it melts, sparse on the steeper ground.
+		const vs = L.valleySnow ?? 0;
+		if (vs > 0 && i < (t.meta.nrowTop ?? 0) * ncol) {
+			const lie = sm(1 - vs - 0.1, 1 - vs + 0.15, g) * (t.meadow[i] ? 0.95 : 0.7 * (1 - sm(0.3, 0.55, slope)));
+			alb = mix(alb, SNOW, lie);
 		}
 
 		const li = lightOn(L, diff, 0.18 + 0.32 * nz * nz + (t.meadow[i] ? MEADOW_AMB : 0));

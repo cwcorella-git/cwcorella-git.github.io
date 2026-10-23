@@ -143,7 +143,7 @@ export function renderMeadow(W: number, bandH: number, scale: number): HTMLCanva
 // than the grass, and the rocks read as mushroom caps. Each is an angular
 // outline, flat where it meets the ground, with a lit facet toward the sun,
 // a shaded side, a few lichen flecks, and grass blades over its foot.
-export function renderRocks(W: number, bandH: number, scale: number, light: RGB, sunDx: number, grass: RGB): HTMLCanvasElement {
+export function renderRocks(W: number, bandH: number, scale: number, light: RGB, sunDx: number, grass: RGB, snow = 0): HTMLCanvasElement {
 	const c = makeCanvas(W, bandH);
 	const ctx = c.getContext('2d')!;
 	const rng = makePRNG(0x50C4);
@@ -180,6 +180,17 @@ export function renderRocks(W: number, bandH: number, scale: number, light: RGB,
 			ctx.fillRect(x + (rng() - 0.5) * rw * 1.2, y - rng() * rh * 0.8, scale * (1 + rng()), scale * (0.6 + rng() * 0.6));
 		}
 		ctx.restore();
+		// Snow lying on the top, following the outline.
+		if (snow > 0) {
+			ctx.save(); path(); ctx.clip();
+			ctx.fillStyle = lit([236, 240, 248]);
+			ctx.beginPath();
+			ctx.moveTo(pts[0][0], pts[0][1] + rh * 0.2 * snow);
+			for (const [px, py] of pts) ctx.lineTo(px, py - 2);
+			for (let k = 6; k >= 0; k--) ctx.lineTo(pts[k][0], pts[k][1] + rh * (0.15 + 0.35 * snow) * (0.7 + 0.3 * Math.sin(k * 2.1)));
+			ctx.closePath(); ctx.fill();
+			ctx.restore();
+		}
 		// Grass blades over the foot, the meadow's colour: half-buried.
 		ctx.strokeStyle = rgb(grass);
 		ctx.lineCap = 'round';
@@ -189,6 +200,35 @@ export function renderRocks(W: number, bandH: number, scale: number, light: RGB,
 			ctx.beginPath(); ctx.moveTo(bx, y + rh * 0.2); ctx.lineTo(bx + (rng() - 0.5) * h * 0.6, y + rh * 0.2 - h); ctx.stroke();
 		}
 	}
+	return c;
+}
+
+// ── snow ──────────────────────────────────────────────────────────────────
+// Snow lying on the meadow: white under the same light as the rocks, in
+// drifts that open up as it melts (cover 1 → 0.2), dry grass poking through
+// in fine gaps, and a little blue in the far field, as snow takes the sky.
+export function renderSnow(W: number, bandH: number, cover: number, light: RGB, sky: RGB): HTMLCanvasElement {
+	const pw = Math.ceil(W / 3), ph = Math.ceil(bandH / 3);
+	const p = makeCanvas(pw, ph);
+	const pctx = p.getContext('2d')!;
+	const img = pctx.createImageData(pw, ph);
+	for (let y = 0; y < ph; y++) {
+		const t = y / ph, sy = 1 / (0.12 + t);
+		const far = 1 - t;
+		const col = [236, 239, 245].map((v, k) => Math.min(255, (v * (1 - 0.18 * far) + sky[k] * 0.18 * far) * light[k]));
+		for (let x = 0; x < pw; x++) {
+			const n = fbm2((x / pw) * 6 * sy * 0.35 + 9.3, t * 8 + 1.7);
+			const fine = fbm2(x / pw * 90, t * 140 * (0.4 + t));
+			const a = smooth(1 - cover - 0.08, 1 - cover + 0.12, n * 0.85 + 0.15) * (0.75 + 0.25 * smooth(0.25, 0.6, fine));
+			const i = (y * pw + x) * 4;
+			img.data[i] = col[0]; img.data[i + 1] = col[1]; img.data[i + 2] = col[2]; img.data[i + 3] = a * 245;
+		}
+	}
+	pctx.putImageData(img, 0, 0);
+	const c = makeCanvas(W, bandH);
+	const ctx = c.getContext('2d')!;
+	ctx.imageSmoothingEnabled = true;
+	ctx.drawImage(p, 0, 0, W, bandH);
 	return c;
 }
 

@@ -16,6 +16,8 @@ export interface ArtLight {
 	night: RGB;      // silhouette colour after dark
 	warm?: number;   // 0–1 golden hour: low side light, crown mostly in warm shade
 	haze?: RGB;      // the horizon's colour; far trees fade toward it
+	snow?: number;   // 0–1 snow lying on the foliage and limbs
+	snowCol?: RGB;   // snow as lit at the ground (Garden lights it like the rocks)
 	hazeK?: number;  // 0 near … how far toward it
 }
 
@@ -418,6 +420,23 @@ function renderClump(r: number, f: Foliage, L: ArtLight, seed: number, tone = 1)
 				ctx.fill();
 			}
 		});
+		// Snow on evergreen foliage: lying on the upper part of the lobe, in
+		// lumps, kept on the foliage (source-atop). Thicker cover reaches lower.
+		if ((f.needle || f.scale) && L.snow && L.snowCol) {
+			ctx.save();
+			ctx.globalCompositeOperation = 'source-atop';
+			const reach = 0.15 + 0.4 * L.snow;
+			for (let i = 0, n = Math.round(r * r * 0.25 / (ms * ms) * L.snow); i < n; i++) {
+				const a = -Math.PI / 2 + (rng() - 0.5) * 2.6, d = r * edge(a) * (0.55 + rng() * 0.5);
+				const x = cx + Math.cos(a) * d * 1.12, y = cy + Math.sin(a) * d * 0.82;
+				if ((cy - y) / r < 0.55 - reach * 1.4) continue;
+				ctx.fillStyle = rgb(rng() < 0.3 ? mix(L.snowCol, [120, 130, 160], 0.25) : L.snowCol);   // a little blue shade in the lumps
+				ctx.beginPath();
+				ctx.ellipse(x, y, ms * (1.2 + rng() * 1.4), ms * (0.7 + rng() * 0.6), 0, 0, Math.PI * 2);
+				ctx.fill();
+			}
+			ctx.restore();
+		}
 	}
 	if (f.scale) {
 		if (L.dl > 0.05) {
@@ -493,6 +512,16 @@ export function renderTreeArt(segs: Seg[], clumps: Clump[], f: Foliage, L: ArtLi
 				ctx.moveTo(s.x1 + nx * o, s.y1 + ny * o);
 				ctx.lineTo(s.x2 + nx * o * 0.7, s.y2 + ny * o * 0.7);
 			}
+			ctx.stroke();
+		}
+		// Snow along the top of limbs that lie closer to level than upright.
+		if (L.snow && L.snowCol && s.thick > 1.5 && Math.abs(dx) > Math.abs(dy) * 0.4) {
+			const up = ny < 0 ? 1 : -1;                    // the normal side that points up the screen
+			ctx.strokeStyle = rgb(L.snowCol);
+			ctx.lineWidth = Math.max(0.8, s.thick * 0.35 * L.snow);
+			ctx.beginPath();
+			ctx.moveTo(s.x1 + nx * w0 * 0.75 * up, s.y1 + ny * w0 * 0.75 * up);
+			ctx.lineTo(s.x2 + nx * w1 * 0.75 * up, s.y2 + ny * w1 * 0.75 * up);
 			ctx.stroke();
 		}
 		// Sunlit edge on limbs thick enough to show one.

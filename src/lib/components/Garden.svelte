@@ -11,7 +11,7 @@
 	import { toast } from '$lib/admin/toast.svelte';
 	import { renderTreeArt, drawTreeArt, clumpsFromTips, broadleafShape, pineShape, juniperShape, sageShape, sageFoliage, NEUTRAL_LIGHT, cottonwoodFoliage, PINE_FOLIAGE, JUNIPER_FOLIAGE, type TreeArt, type Seg, type Clump } from '$lib/garden/treeArt';
 	import { weatherFor, type Weather } from '$lib/garden/weather';
-	import { renderMeadow, renderRocks, makeFlowers, flowerBloom, type Flower, renderNoiseCloud, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
+	import { renderMeadow, renderRocks, renderSnow, makeFlowers, flowerBloom, type Flower, renderNoiseCloud, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
 
 	// ── constants ─────────────────────────────────────────────────────────────
 	const HORIZON_FRAC = 0.68;   // horizon at 68% down canvas
@@ -634,7 +634,7 @@
 		const cols = (span / total) * m.ncol;
 		const c0 = (m.ncol - cols) / 2;
 		const doy = dayOfYear(new Date());
-		const key = `${Math.round(altDeg * 2)}|${Math.round(az)}|${doy}|${Math.round(c0)}|${weather.kind}`;
+		const key = `${Math.round(altDeg * 2)}|${Math.round(az)}|${doy}|${Math.round(c0)}|${weather.kind}|${weather.snow}`;
 		if (terrainLit.key !== key) {
 			const L: TerrainLight = {
 				az, alt: altDeg,
@@ -645,6 +645,7 @@
 				fog:    horizon,
 				beta:   0.18 + 0.35 * dl,
 				snowLine: snowLineFor(m, month),
+				valleySnow: weather.snow,
 				doy,
 			};
 			plantLight = meadowLight(L);
@@ -717,9 +718,16 @@
 		const tl = tuftLight(altDeg), tm = (tl[0] + tl[1] + tl[2]) / 3 || 1;
 		const cw = clamp01((2 - altDeg) / 4);
 		const rl = tl.map((v) => v + (v / tm * groundLum - v) * cw) as RGB;
-		rocks = renderRocks(W, band, dpr, rl, sunXNorm(new Date(), 39.53) < 0.5 ? -1 : 1, at(W / 2, horizonY + band * 0.8));
+		rocks = renderRocks(W, band, dpr, rl, sunXNorm(new Date(), 39.53) < 0.5 ? -1 : 1, at(W / 2, horizonY + band * 0.8), weather.snow);
+		// Snow is white: light it mostly by the light's brightness, with only a
+		// third of its colour (the full tint, sky-blue by day, read cyan).
+		const rm = (rl[0] + rl[1] + rl[2]) / 3;
+		snowLight = rl.map((v) => rm + (v - rm) * 0.35) as RGB;
+		snowLayer = weather.snow > 0 ? renderSnow(W, band, weather.snow, snowLight, getSkyColors(altDeg).horizon as RGB) : null;
 	}
 	let rocks: HTMLCanvasElement | null = null;
+	let snowLayer: HTMLCanvasElement | null = null;
+	let snowLight: RGB = [1, 1, 1];
 
 	// ── draw: meadow ──────────────────────────────────────────────────────────
 	function drawMeadow(ctx: CanvasRenderingContext2D): void {
@@ -1061,6 +1069,8 @@
 			night:  [14, 17, 24] as RGB,
 			warm:   golden,
 			haze:   getSkyColors(altDeg).horizon as RGB,
+			snow:   weather.snow,
+			snowCol: snowLight.map((v) => Math.min(255, 238 * v)) as RGB,
 		};
 		const sunX = sxn * W;
 		const leaf = cottonwoodFoliage(doy);
@@ -1095,7 +1105,7 @@
 				segs.push(...sh.segs); clumps.push(...sh.clumps);
 			}
 			// The sage's 'sun' is the ground a shade brighter: white swamped a dark dusk ground.
-			const art = segs.length ? renderTreeArt(segs, clumps, sageFoliage(groundMid), { ...NEUTRAL_LIGHT, sunDx: sxn < 0.5 ? -1 : 1, sunCol: groundMid.map((v) => Math.min(255, v * 1.3)) as RGB }, 0x5A6E + k) : null;
+			const art = segs.length ? renderTreeArt(segs, clumps, sageFoliage(groundMid), { ...NEUTRAL_LIGHT, sunDx: sxn < 0.5 ? -1 : 1, sunCol: groundMid.map((v) => Math.min(255, v * 1.3)) as RGB, snow: L.snow, snowCol: L.snowCol }, 0x5A6E + k) : null;
 			if (art) {
 				// A soft contact shadow under each shrub, into the trunk layer so
 				// it sits beneath the foliage. The art's canvas is padded, so
@@ -1420,8 +1430,9 @@
 		drawTerrain(ctx, altDeg, sxn);
 		drawMeadow(ctx);
 		sampleGround(ctx, altDeg);
+		if (snowLayer) ctx.drawImage(snowLayer, 0, horizonY);
 		if (rocks) ctx.drawImage(rocks, 0, horizonY);
-		drawFlowers(ctx, altDeg);
+		if (!weather.snow) drawFlowers(ctx, altDeg);
 		drawCloudShadows(ctx, altDeg, sxn);
 		const windPx = (noise1D(time / 6) - 0.5) * 6 * dpr;
 		drawHorizonBlend(ctx, altDeg);                   // under the trees: they carry their own haze by distance
