@@ -686,6 +686,7 @@
 	// back once per half-degree of sun, from a small downscaled copy, before
 	// flowers and cloud shadows are drawn over the ground.
 	let groundKey = '';
+	let groundLum = 1;
 	let groundSmall: HTMLCanvasElement | null = null;
 	function sampleGround(ctx: CanvasRenderingContext2D, altDeg: number): void {
 		const key = `${W}x${H}|${Math.round(altDeg * 2)}|${dayOfYear(new Date())}|${bgPlants.length + fgPlants.length}`;
@@ -697,6 +698,10 @@
 		const g = groundSmall.getContext('2d', { willReadFrequently: true })!;
 		g.drawImage(ctx.canvas, 0, horizonY, W, band, 0, 0, sw, sh);
 		const d = g.getImageData(0, 0, sw, sh).data;
+		// The meadow's brightness against midday (luma ≈ 140 at 12:30 in October).
+		let sum = 0;
+		for (let i = 0; i < d.length; i += 4) sum += 0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2];
+		groundLum = clamp01(sum / (d.length / 4) / 140);
 		const at = (x: number, y: number): [number, number, number] => {
 			const i = (Math.max(0, Math.min(sh - 1, Math.floor((y - horizonY) / band * sh))) * sw + Math.max(0, Math.min(sw - 1, Math.floor(x / W * sw)))) * 4;
 			return [d[i], d[i + 1], d[i + 2]];
@@ -1031,7 +1036,16 @@
 	}
 
 	function treeJobs(altDeg: number, sxn: number, doy: number, next: typeof treeCache): (() => void)[] {
-		const dl     = clamp01((altDeg + 6) / 12);
+		// Trees take no more light than the meadow they stand on, as drawn
+		// (sampleGround), a little more since they catch the sky. The sun-
+		// altitude ramp alone left the crowns glowing gold at twilight over
+		// near-black ground; tuftLight still reads ~0.5 there.
+		const groundLit = groundLum;
+		// The cap fades in from 2° above the horizon to 2° below: sunlit crowns
+		// over shadowed ground are right at golden hour, and a dull midday
+		// ground must not dim the trees.
+		const capW = clamp01((2 - altDeg) / 4), ramp = clamp01((altDeg + 6) / 12);
+		const dl     = ramp + (Math.min(ramp, clamp01(groundLum * 1.2)) - ramp) * capW;
 		const golden = altDeg > -4 ? clamp01(1 - Math.abs(altDeg - 3) / 9) : 0;
 		const L = {
 			sunDx:  0,
@@ -1066,7 +1080,6 @@
 		}));
 		// Sagebrush: one bake per group, all shrubs in it as one art. It sits
 		// on the meadow, so it takes the meadow's light, not the trees'.
-		const tl = tuftLight(altDeg), groundLit = clamp01((tl[0] + tl[1] + tl[2]) / 3);
 		for (const k of [0, 1]) jobs.push(() => {
 			const segs: Seg[] = [], clumps: Clump[] = [];
 			for (const p of sagePlants()) {
@@ -1074,7 +1087,7 @@
 				const sh = sageShape(p.x, groundY(p.yf), p.h, p.seed);
 				segs.push(...sh.segs); clumps.push(...sh.clumps);
 			}
-			const art = segs.length ? renderTreeArt(segs, clumps, SAGE_FOLIAGE, { ...L, sunDx: sxn < 0.5 ? -1 : 1, hazeK: 0.08, dl: L.dl * groundLit }, 0x5A6E + k) : null;
+			const art = segs.length ? renderTreeArt(segs, clumps, SAGE_FOLIAGE, { ...L, sunDx: sxn < 0.5 ? -1 : 1, hazeK: 0.08, dl: altDeg < 8 ? clamp01(groundLit * 1.1) : 1 }, 0x5A6E + k) : null;
 			if (art) {
 				// A soft contact shadow under each shrub, into the trunk layer so
 				// it sits beneath the foliage. The art's canvas is padded, so
