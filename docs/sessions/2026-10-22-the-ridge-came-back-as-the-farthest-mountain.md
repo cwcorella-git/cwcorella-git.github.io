@@ -983,3 +983,40 @@ Rows 86–89. The operator asked for the reading list's giant A/B/C headings to 
   - `pg.cjs` (`PAGE=` env var): the same for another page;
   - `rail.cjs`: the reading rail mid-scroll, plus a jump test;
   - `states2.cjs`: the rail in all four states.
+
+## 41. White text by day costs dark glass, and the bare ground had never been counted
+
+Row 90. The operator: "i dunno if i like the black text during the day. we have enough contrast. do you think it could be white?"
+
+### What white text costs
+For pale text to reach 4.5:1 on a bright sky, the glass behind it has to be dark and fairly thick. These are the alphas of the night glass (`[8,12,28]`) under the night text (`[205,218,240]`):
+
+| behind the panel | alpha needed |
+|---|---|
+| noon blue sky | 0.38 |
+| pale haze | 0.52 |
+| a white cloud | 0.58 |
+| land | 0 |
+
+So the day panels change from pale frosted glass at about 0.22 to smoked glass. A before/after strip (clear noon, cloudy noon, sunset) went to Media, and the operator picked "White, always".
+
+### What changed
+- **`1ffc81e`:** `lightFrame` takes `pale`. When it's set, only the two night-text pairings are tried. Sky.svelte always passes `pale: true`, and there is no admin switch, by the operator's choice.
+  - Sunset was already pale text before this change, so nothing changed at dusk.
+- **`66462af`:** two gaps that only white text exposed.
+  - Before the garden draws, or if it never does, panels sit on the flat `--body-bg` (`#c0cede`). That colour had never been one of the backdrops, and white text measured 3.92:1 on it. With `pale`, the ground is now added to the backdrops. As a result, noon glass is 0.58, where it was 0.52.
+  - `--glass-nav-bg` was a fixed formula, not solved, and washed out over the bare ground. It is now never thinner than the solved panel alpha.
+  - A test in `contrast.test.ts` checks pale text at noon over sky, cloud and the ground.
+
+### Open
+- **Seen:** rendered at noon on the home page (desktop, and before the garden drew), the reading list (phone and desktop), and journals logged out.
+- **Not seen:**
+  - links, the library and the admin menus: they need admin, and the links page rendered the home page instead;
+  - anything on a real phone.
+  - Accent links and buttons were tuned against black text, so they are the likeliest place for something off.
+- **Proposed:** count the bare ground only until the garden's first frame, so noon glass can drop back to about 0.52.
+
+## Resume here (updated)
+- **Next:** the operator's notes from a phone, on white text, the rails and the glass.
+- **Dev server:** it was restarted with nohup on port 5191 (log at `scratchpad/vite.log`); nothing waits on it.
+- **Renders:** `wt.cjs` is `txt.cjs` plus a 6th argument (`1` for pale), from before pale became unconditional. `pg.cjs` renders the other pages.
