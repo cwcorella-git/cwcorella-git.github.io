@@ -674,7 +674,20 @@ They are saved in the session scratchpad, `refs/`, and the side-by-side sheets w
 - Bare winter cottonwoods: `amount` scales the tile density, but I didn't render them.
 - Sagebrush at dusk reads a little blue-grey.
 
-## Resume here
+## Resume here (superseded by the one at the end)
 - Nothing is queued. Rows 43–56 are done and pushed.
 - Media verdicts are open: `cwc-ref-53b`, `-54`, `-55`, `-56` and the earlier `cwc-real-*` groups. Read each once, only on /blockout.
+- Pull before pushing.
+
+## 25. Seasons under the new textures (row 57)
+
+| # | item | state |
+|---|---|---|
+| 57 | spring, summer, leaf fall, winter | **done**: `c7fc80a`. Renders for 04-20, 07-01, 11-15 and 01-15 at 12:30. Spring and summer read well as they were. **Winter:** the bare cottonwoods were a few skeletal limbs; each lobe now draws a grey twig network (4 levels of branching), fading in as the leaves fall (`bare = (1 − amount)·1.3`). **Leaf fall:** at amount ≈ 0.5 (mid-November) the crown still looked full. The tile density now follows amount², and the number of sky holes rises with 1 − amount; renders for 11-08, 11-15 and 11-22 show the crown thinning |
+
+**Not checked:** night, and the juniper and sagebrush under snow (no snow is drawn on plants).
+
+## Resume here
+- Nothing is queued. Rows 43–57 are done and pushed.
+- Media verdicts are open (`cwc-ref-*`, `cwc-real-*`). Read each once, only on /blockout.
 - Pull before pushing.
