@@ -22,6 +22,7 @@ export const SCENE_DEFAULTS = {
 	starBright: 1,
 	milkyWayAmt: 1,
 	moonSize: 1,
+	moonLight: 1,      // × how much the moon lights the land
 	// land and effects
 	windAmt: 1,
 	grainAmt: 1,

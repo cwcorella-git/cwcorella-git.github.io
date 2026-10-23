@@ -600,21 +600,24 @@
 		const m = t.meta;
 		const month = sceneNow().getMonth();
 		const mid = (m.az0 + m.az1) / 2, half = (m.az1 - m.az0) / 2;
-		const az = mid + (sxn - 0.5) * 2 * half * 1.3;
+		// By moonlight the slopes are lit from the moon, faintly and cool, so the
+		// range keeps its relief instead of going to one flat tone.
+		const ml = landMoon(altDeg), moon = ml > 0.05 ? moonState(altDeg, sceneNow()) : null;
+		const az = mid + ((moon ? moon.x / W : sxn) - 0.5) * 2 * half * 1.3;
 		const ph = horizonY * 0.36;                                       // panorama height on screen
 		const frame = m.ang1 - m.ang0, total = m.az1 - m.az0;
 		const span = Math.min(total, (4 * W * frame) / ph);              // ≤ 4× vertical exaggeration
 		const cols = (span / total) * m.ncol;
 		const c0 = (m.ncol - cols) / 2;
 		const doy = dayOfYear(sceneNow());
-		const key = `${Math.round(altDeg * 2)}|${Math.round(az)}|${doy}|${Math.round(c0)}|${weather.kind}|${weather.snow}`;
+		const key = `${Math.round(altDeg * 2)}|${Math.round(az)}|${doy}|${Math.round(c0)}|${weather.kind}|${weather.snow}|${Math.round(ml * 20)}`;
 		if (terrainLit.key !== key) {
 			const L: TerrainLight = {
-				az, alt: altDeg,
-				sunCol: dimSun(lerpRGB([255, 246, 228], [255, 170, 96], golden)),
+				az, alt: moon ? moon.alt : altDeg,
+				sunCol: moon ? [150, 166, 205] : dimSun(lerpRGB([255, 246, 228], [255, 170, 96], golden)),
 				sky:    lerpRGB(lerpRGB(zenith, horizon, 0.5), [150, 152, 158], weather.cover * 0.4),
-				night:  [14, 18, 35],
-				dl,
+				night:  moonlit([14, 18, 35], [28, 33, 52], ml),
+				dl:     moon ? Math.max(dl, 0.3 * ml) : dl,
 				fog:    horizon,
 				beta:   0.18 + 0.35 * dl,
 				snowLine: snowLineFor(m, month),
@@ -634,6 +637,14 @@
 		ctx.drawImage(terrainLit.canvas!, c0, 0, cols, top, 0, horizonY - ph, W, ph);
 		if (top < m.nrow) ctx.drawImage(terrainLit.canvas!, c0, top, cols, m.nrow - top, 0, horizonY, W, H - horizonY);
 	}
+
+	/** How much the moon lights the land, 0–1, after dark (×the tuner's moonlight). */
+	function landMoon(altDeg: number): number {
+		const night = clamp01((-altDeg - 4) / 8);
+		return night > 0 ? Math.min(1, moonState(altDeg, sceneNow()).light * 1.5 * sceneTune.moonLight) * night : 0;
+	}
+	/** A night silhouette colour lifted toward a cool moonlit tone. */
+	const moonlit = (base: RGB, lit: RGB, m: number): RGB => lerpRGB(base, lit, m);
 
 	function tuftLight(altDeg: number): RGB {
 		if (terrain && plantLight) return plantLight;
@@ -1008,7 +1019,8 @@
 	function treeArts(altDeg: number, sxn: number): typeof treeCache {
 		const doy = dayOfYear(sceneNow());
 		const geom = `${W}x${H}|${gardenAgeUnits}|${fgTreeSegs.length}|${bgTreeSegs.length}`;
-		const key = `${geom}|${Math.round(altDeg)}|${Math.round(sxn * 40)}|${doy}`;
+		const ml = landMoon(altDeg);
+		const key = `${geom}|${Math.round(altDeg)}|${Math.round(sxn * 40)}|${doy}|${Math.round(ml * 10)}`;
 		if (treeCache.key === key) return treeCache;
 		if (treePending?.key !== key) {
 			const next: typeof treeCache = { key, fg: null, bg: null, mid: [], sage: [] };
@@ -1040,17 +1052,20 @@
 		const capW = clamp01((2 - altDeg) / 4), ramp = clamp01((altDeg + 6) / 12);
 		const dl     = ramp + (Math.min(ramp, clamp01(groundLum * 1.2)) - ramp) * capW;
 		const golden = altDeg > -4 ? clamp01(1 - Math.abs(altDeg - 3) / 9) : 0;
+		// By moonlight the crowns get a little cool, directional light from the
+		// moon's side instead of going to one flat silhouette (2026-10-23).
+		const ml = landMoon(altDeg), moonX = ml > 0 ? moonState(altDeg, sceneNow()).x : 0;
 		const L = {
 			sunDx:  0,
-			sunCol: dimSun(lerpRGB([255, 246, 228], [255, 170, 96], golden)),
-			dl,
-			night:  [14, 17, 24] as RGB,
+			sunCol: lerpRGB(dimSun(lerpRGB([255, 246, 228], [255, 170, 96], golden)), [150, 166, 205], ml),
+			dl:     Math.max(dl, 0.1 * ml),
+			night:  moonlit([14, 17, 24], [30, 36, 54], ml),
 			warm:   golden,
 			haze:   getSkyColors(altDeg).horizon as RGB,
 			snow:   weather.snow,
 			snowCol: snowLight.map((v) => Math.min(255, 238 * v)) as RGB,
 		};
-		const sunX = sxn * W;
+		const sunX = ml > 0.05 ? moonX : sxn * W;
 		const leaf = cottonwoodFoliage(doy);
 		const bake = (segs: Seg[], cell: number, seed: number, hazeK = 0) => {
 			const xs = segs.length ? segs[0].x1 : 0;

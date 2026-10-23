@@ -26,7 +26,7 @@
 			r('cloudDetail', 'detail', 0.5, 2.5, 0.1), r('cloudEdge', 'edge lumps', 0, 2, 0.1),
 		] },
 		{ name: 'night', rows: [t('stars', 'stars'), t('milkyWay', 'milky way'), t('moon', 'moon'),
-			r('starBright', 'star bright', 0.3, 2.5, 0.05), r('milkyWayAmt', 'milky way', 0, 2.5, 0.05), r('moonSize', 'moon size', 0.5, 3, 0.1)] },
+			r('starBright', 'star bright', 0.3, 2.5, 0.05), r('milkyWayAmt', 'milky way', 0, 2.5, 0.05), r('moonSize', 'moon size', 0.5, 3, 0.1), r('moonLight', 'moonlight', 0, 3, 0.1)] },
 		{ name: 'land', rows: [
 			t('mountains', 'mountains'), t('contours', 'contours'), t('meadow', 'meadow'), t('flowers', 'flowers'), t('rocks', 'rocks'), t('snow', 'snow'),
 			t('trees', 'trees'), t('sage', 'sagebrush'), t('treeShadows', 'tree shadows'), t('grass', 'grass'), r('windAmt', 'wind', 0, 3, 0.1),
