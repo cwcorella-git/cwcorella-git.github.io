@@ -722,7 +722,10 @@
 		// Snow is white: light it mostly by the light's brightness, with only a
 		// third of its colour (the full tint, sky-blue by day, read cyan).
 		const rm = (rl[0] + rl[1] + rl[2]) / 3;
-		snowLight = rl.map((v) => rm + (v - rm) * 0.35) as RGB;
+		// After sunset snow keeps a pale blue-grey: it holds what sky and moon
+		// light there is, where bare ground goes dark.
+		const night = clamp01((1 - altDeg) / 6);
+		snowLight = rl.map((v, k) => Math.max(rm + (v - rm) * 0.35, [0.2, 0.23, 0.32][k] * night)) as RGB;
 		snowLayer = weather.snow > 0 ? renderSnow(W, band, weather.snow, snowLight, getSkyColors(altDeg).horizon as RGB) : null;
 	}
 	let rocks: HTMLCanvasElement | null = null;
