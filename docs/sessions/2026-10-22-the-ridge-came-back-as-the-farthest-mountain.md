@@ -547,5 +547,22 @@ Nothing is queued. If the operator leaves notes, read `ops_pick cwc-crowns` / `c
 - Media `cwc-trees`, `cwc-crowns` and `cwc-trees2` have no verdict (`cwc-trees` and `cwc-crowns` each read twice).
 - The end-to-end hitch measurement needs a better rig: a real phone, or a trace without `fastForward`.
 
-## Resume here
+## Resume here (superseded by the one at the end)
 Nothing queued; read the Media groups once if the operator leaves notes. Pull before pushing.
+
+## 19. The operator kept the growth design
+
+When asked whether a first visitor's foreground cottonwood should start out smaller than the 150-year-old midground one, the operator answered "Keep growth as is". The tree starts young and grows with visits. That is a decision, not a bug, so row 42 is not to be reopened on that account.
+
+## Resume here
+- **Queue:** nothing is queued. Every row up to 42 is done and pushed; the last code commit is `186e04b`.
+- **Media groups:** `cwc-trees`, `cwc-crowns` and `cwc-trees2` have had no verdict.
+  - `cwc-trees` and `cwc-crowns` have each been read twice.
+  - `cwc-trees2` has never been read.
+  - Read each one once, on the operator's /blockout, and never poll.
+- **Harnesses** in `/tmp/claude-1000/-home-user-Projects-cwcorella-git-github-io/a292417d-d3e3-4aba-ad17-fa902c0e6aba/scratchpad/renders/`:
+  - `live.cjs`: render a page;
+  - `treetime.cjs`: time the bakes under throttle;
+  - `hitch.cjs`: long tasks. It is noisy and not trusted.
+- **Background:** the dev server (`npx vite dev --port 5191`) may still be running from this session. Restart it if it isn't.
+- **Before pushing:** pull first, because `static/glass.json` is committed from the browser.
