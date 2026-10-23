@@ -11,7 +11,7 @@
 	import { toast } from '$lib/admin/toast.svelte';
 	import { renderTreeArt, drawTreeArt, clumpsFromTips, broadleafShape, pineShape, juniperShape, sageShape, SAGE_FOLIAGE, cottonwoodFoliage, PINE_FOLIAGE, JUNIPER_FOLIAGE, type TreeArt, type Seg, type Clump } from '$lib/garden/treeArt';
 	import { weatherFor, type Weather } from '$lib/garden/weather';
-	import { renderMeadow, makeFlowers, flowerBloom, type Flower, renderNoiseCloud, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
+	import { renderMeadow, renderRocks, makeFlowers, flowerBloom, type Flower, renderNoiseCloud, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
 
 	// ── constants ─────────────────────────────────────────────────────────────
 	const HORIZON_FRAC = 0.68;   // horizon at 68% down canvas
@@ -703,7 +703,11 @@
 		};
 		setPlantGround(bgPlants, at);
 		setPlantGround(fgPlants, at);
+		// Rocks are lit with the same light as the grass; the blades over
+		// their feet take the ground's colour near the bottom of the meadow.
+		rocks = renderRocks(W, band, dpr, tuftLight(altDeg), sunXNorm(new Date(), 39.53) < 0.5 ? -1 : 1, at(W / 2, horizonY + band * 0.8));
 	}
+	let rocks: HTMLCanvasElement | null = null;
 
 	// ── draw: meadow ──────────────────────────────────────────────────────────
 	function drawMeadow(ctx: CanvasRenderingContext2D): void {
@@ -1395,6 +1399,7 @@
 		drawTerrain(ctx, altDeg, sxn);
 		drawMeadow(ctx);
 		sampleGround(ctx, altDeg);
+		if (rocks) ctx.drawImage(rocks, 0, horizonY);
 		drawFlowers(ctx, altDeg);
 		drawCloudShadows(ctx, altDeg, sxn);
 		const windPx = (noise1D(time / 6) - 0.5) * 6 * dpr;

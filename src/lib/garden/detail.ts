@@ -128,33 +128,67 @@ export function renderMeadow(W: number, bandH: number, scale: number): HTMLCanva
 	sctx.putImageData(simg, 0, 0);
 	ctx.drawImage(soil, 0, 0, W, bandH);
 
-	// A few rocks in the near field: grey, flat-bottomed, the top lighter
-	// than the shaded base, each with a short contact shadow.
-	for (let i = 0; i < 4; i++) {
-		const t = 0.62 + rng() * 0.33;
-		const x = rng() * W, y = t * bandH;
-		const rw = (12 + rng() * 20) * (0.4 + t) * scale, rh = rw * (0.45 + rng() * 0.2);
-		ctx.fillStyle = 'rgb(150,148,140)';
-		ctx.beginPath(); ctx.ellipse(x + rw * 0.25, y + rh * 0.15, rw * 1.2, rh * 0.35, 0, 0, Math.PI * 2); ctx.fill();
-		ctx.fillStyle = 'rgb(168,166,160)';
-		ctx.beginPath();
-		ctx.moveTo(x - rw, y);
-		for (let k = 0; k <= 8; k++) {
-			const a = Math.PI + (k / 8) * Math.PI;
-			const j = 0.8 + rng() * 0.3;
-			ctx.lineTo(x + Math.cos(a) * rw * j, y + Math.sin(a) * rh * j);
-		}
-		ctx.closePath(); ctx.fill();
-		ctx.fillStyle = 'rgb(222,220,212)';
-		ctx.beginPath(); ctx.ellipse(x - rw * 0.15, y - rh * 0.55, rw * 0.55, rh * 0.3, -0.1, 0, Math.PI * 2); ctx.fill();
-	}
-
 	// The nearest ground falls off a little, as a lens's lower edge does.
 	const fall = ctx.createLinearGradient(0, bandH * 0.7, 0, bandH);
 	fall.addColorStop(0, 'rgba(255,255,255,0)');
 	fall.addColorStop(1, 'rgba(150,150,140,0.55)');
 	ctx.fillStyle = fall;
 	ctx.fillRect(0, bandH * 0.7, W, bandH * 0.3);
+	return c;
+}
+
+// ── rocks ─────────────────────────────────────────────────────────────────
+// A few half-buried rocks in the near meadow. Their own layer, drawn
+// normally: in the meadow's multiply layer a lit top could never be lighter
+// than the grass, and the rocks read as mushroom caps. Each is an angular
+// outline, flat where it meets the ground, with a lit facet toward the sun,
+// a shaded side, a few lichen flecks, and grass blades over its foot.
+export function renderRocks(W: number, bandH: number, scale: number, light: RGB, sunDx: number, grass: RGB): HTMLCanvasElement {
+	const c = makeCanvas(W, bandH);
+	const ctx = c.getContext('2d')!;
+	const rng = makePRNG(0x50C4);
+	const lit = (col: RGB) => rgb([col[0] * light[0], col[1] * light[1], col[2] * light[2]].map((v) => Math.min(255, v)) as RGB);
+	for (let i = 0; i < 4; i++) {
+		const t = 0.62 + rng() * 0.33;
+		const x = rng() * W, y = t * bandH;
+		const rw = (10 + rng() * 16) * (0.4 + t) * scale, rh = rw * (0.5 + rng() * 0.25);
+		// Outline: 7 points over the top half, flattened bottom, irregular.
+		const pts: [number, number][] = [];
+		for (let k = 0; k <= 6; k++) {
+			const a = Math.PI + (k / 6) * Math.PI, j = 0.75 + rng() * 0.35;
+			pts.push([x + Math.cos(a) * rw * j, y + Math.sin(a) * rh * j * (k === 0 || k === 6 ? 0.25 : 1)]);
+		}
+		const path = () => { ctx.beginPath(); ctx.moveTo(pts[0][0], y + rh * 0.12); for (const [px, py] of pts) ctx.lineTo(px, py); ctx.lineTo(pts[6][0], y + rh * 0.12); ctx.closePath(); };
+		// Contact shadow: thin and dark, hugging the foot, not a wide disc.
+		ctx.fillStyle = 'rgba(20,24,14,0.35)';
+		ctx.beginPath(); ctx.ellipse(x + sunDx * -rw * 0.15, y + rh * 0.1, rw * 1.05, rh * 0.18, 0, 0, Math.PI * 2); ctx.fill();
+		const base: RGB = [118 + rng() * 14, 114 + rng() * 12, 106 + rng() * 10];
+		ctx.fillStyle = lit(base.map((v) => v * 0.72) as RGB);
+		path(); ctx.fill();
+		// Lit facet: the polygon's points on the sun side and top, pulled in.
+		ctx.save(); path(); ctx.clip();
+		ctx.fillStyle = lit(base.map((v) => v * 1.18) as RGB);
+		ctx.beginPath();
+		const top = pts.reduce((m, p) => (p[1] < m[1] ? p : m));
+		ctx.moveTo(top[0] - sunDx * rw * 0.2, top[1] - 2);
+		for (const [px, py] of pts) if ((px - x) * sunDx >= -rw * 0.15) ctx.lineTo(px + (x - px) * 0.08, py + 1);
+		ctx.lineTo(x + sunDx * rw * 0.1, y - rh * 0.25);
+		ctx.closePath(); ctx.fill();
+		// Lichen flecks.
+		for (let k = 0; k < 6; k++) {
+			ctx.fillStyle = lit(rng() < 0.5 ? [150, 146, 104] : [96, 98, 84]);
+			ctx.fillRect(x + (rng() - 0.5) * rw * 1.2, y - rng() * rh * 0.8, scale * (1 + rng()), scale * (0.6 + rng() * 0.6));
+		}
+		ctx.restore();
+		// Grass blades over the foot, the meadow's colour: half-buried.
+		ctx.strokeStyle = rgb(grass);
+		ctx.lineCap = 'round';
+		for (let k = 0; k < 14; k++) {
+			const bx = x + (rng() - 0.5) * rw * 2.2, h = (2 + rng() * 5) * scale * (0.4 + t);
+			ctx.lineWidth = Math.max(0.6, scale * 0.8);
+			ctx.beginPath(); ctx.moveTo(bx, y + rh * 0.2); ctx.lineTo(bx + (rng() - 0.5) * h * 0.6, y + rh * 0.2 - h); ctx.stroke();
+		}
+	}
 	return c;
 }
 
