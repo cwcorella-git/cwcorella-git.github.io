@@ -110,6 +110,45 @@ export function renderMeadow(W: number, bandH: number, scale: number): HTMLCanva
 	}
 	ctx.globalAlpha = 1;
 
+	// Bare ground where the grass thins, only in the near field: soft
+	// dun-coloured patches, broken up by noise, with blades over their edges.
+	const soil = makeCanvas(pw, ph);
+	const sctx = soil.getContext('2d')!;
+	const simg = sctx.createImageData(pw, ph);
+	for (let y = 0; y < ph; y++) {
+		const t = y / ph;
+		if (t < 0.55) continue;
+		for (let x = 0; x < pw; x++) {
+			const n = fbm2(x / pw * 5 + 11.3, t * 6 + 2.9) + 0.25 * fbm2(x / pw * 40, t * 40);
+			const a = smooth(0.68, 0.82, n) * smooth(0.55, 0.8, t) * 0.7;
+			const i = (y * pw + x) * 4;
+			simg.data[i] = 214; simg.data[i + 1] = 188; simg.data[i + 2] = 150; simg.data[i + 3] = a * 255;
+		}
+	}
+	sctx.putImageData(simg, 0, 0);
+	ctx.drawImage(soil, 0, 0, W, bandH);
+
+	// A few rocks in the near field: grey, flat-bottomed, the top lighter
+	// than the shaded base, each with a short contact shadow.
+	for (let i = 0; i < 4; i++) {
+		const t = 0.62 + rng() * 0.33;
+		const x = rng() * W, y = t * bandH;
+		const rw = (12 + rng() * 20) * (0.4 + t) * scale, rh = rw * (0.45 + rng() * 0.2);
+		ctx.fillStyle = 'rgb(150,148,140)';
+		ctx.beginPath(); ctx.ellipse(x + rw * 0.25, y + rh * 0.15, rw * 1.2, rh * 0.35, 0, 0, Math.PI * 2); ctx.fill();
+		ctx.fillStyle = 'rgb(168,166,160)';
+		ctx.beginPath();
+		ctx.moveTo(x - rw, y);
+		for (let k = 0; k <= 8; k++) {
+			const a = Math.PI + (k / 8) * Math.PI;
+			const j = 0.8 + rng() * 0.3;
+			ctx.lineTo(x + Math.cos(a) * rw * j, y + Math.sin(a) * rh * j);
+		}
+		ctx.closePath(); ctx.fill();
+		ctx.fillStyle = 'rgb(222,220,212)';
+		ctx.beginPath(); ctx.ellipse(x - rw * 0.15, y - rh * 0.55, rw * 0.55, rh * 0.3, -0.1, 0, Math.PI * 2); ctx.fill();
+	}
+
 	// The nearest ground falls off a little, as a lens's lower edge does.
 	const fall = ctx.createLinearGradient(0, bandH * 0.7, 0, bandH);
 	fall.addColorStop(0, 'rgba(255,255,255,0)');
