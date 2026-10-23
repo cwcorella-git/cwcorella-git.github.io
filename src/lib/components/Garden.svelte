@@ -184,6 +184,7 @@
 
 
 	let starField: StarField | null = null;
+	let starLayer: HTMLCanvasElement | null = null;   // stars, with the clouds and the moon's glare cut out
 	let clouds: CloudDef[]          = [];
 	let cirrus: CirrusDef[]         = [];
 	let bgPlants: PlantInstance[]   = [];  // drawn before midground trees (far, near horizon)
@@ -264,6 +265,8 @@
 
 	function buildScene(cw: number, ch: number, hy: number): void {
 		starField = makeStars(cw, hy, dpr);
+		starLayer = document.createElement('canvas');
+		starLayer.width = Math.max(1, Math.round(cw)); starLayer.height = Math.max(1, Math.round(hy));
 
 		buildClouds();
 
@@ -467,27 +470,55 @@
 	}
 
 	// ── draw: stars & Milky Way ────────────────────────────────────────────────
-	function drawStars(ctx: CanvasRenderingContext2D, altDeg: number, time: number, now: Date): void {
+	function drawStars(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number, time: number, now: Date): void {
 		// Fade in from alt -8° (0) to -14° (1)
 		const starAlpha = Math.max(0, Math.min(1, (-altDeg - 8) / 6));
 		if (starAlpha <= 0) return;
 
-		if (starField) drawStarField(ctx, starField, starAlpha, time, siderealDeg(now));
+		if (!starField || !starLayer) return;
+		const lc = starLayer.getContext('2d')!;
+		lc.clearRect(0, 0, starLayer.width, starLayer.height);
+		const moon = moonState(altDeg, sxn);
+		drawStarField(lc, starField, starAlpha, time, siderealDeg(now), moon.light);
+
+		lc.globalCompositeOperation = 'destination-out';
+		// Glare: the sky near a bright moon loses its faint stars.
+		if (moon.light > 0.05) {
+			const gr = 0.45 * horizonY, g = lc.createRadialGradient(moon.x, moon.y, 0, moon.x, moon.y, gr);
+			g.addColorStop(0, `rgba(0,0,0,${(0.9 * moon.light).toFixed(3)})`);
+			g.addColorStop(1, 'rgba(0,0,0,0)');
+			lc.fillStyle = g;
+			lc.fillRect(moon.x - gr, moon.y - gr, gr * 2, gr * 2);
+		}
+		// Clouds hide what is behind them.
+		const minutes = Date.now() / 60000;
+		for (const cloud of clouds) {
+			const at = cloudRect(cloud, minutes);
+			if (!at) continue;
+			lc.globalAlpha = Math.min(1, (0.3 + cloud.alpha) * 1.4) * at.life;
+			lc.drawImage(at.img, at.x, at.y, at.w, at.h);
+		}
+		lc.globalAlpha = 1;
+		lc.globalCompositeOperation = 'source-over';
+		ctx.drawImage(starLayer, 0, 0);
+	}
+
+	/** Where the moon is and how much it lights the sky (0 at new moon or when down, ~1 for a high full moon). */
+	function moonState(altDeg: number, sxn: number): { x: number; y: number; alpha: number; phase: number; light: number } {
+		// Moon fades in below sun alt -6°
+		const alpha = Math.max(0, Math.min(1, (-altDeg - 6) / 8));
+		// Simplified: moon roughly opposite sun, altitude = -altDeg * 0.65
+		const alt = Math.min(72, Math.max(2, -altDeg * 0.65));
+		const sinMoon = Math.sin(alt * Math.PI / 180);
+		const phase = moonPhase(); // 0=new, 0.5=full, 1=new
+		const lit = Math.abs(phase - 0.5) * 2;   // 0=full, 1=new
+		return { x: (1 - sxn) * W, y: horizonY - sinMoon * horizonY * 0.88, alpha, phase, light: alpha * (1 - lit) ** 1.5 * Math.sqrt(sinMoon) };
 	}
 
 	// ── draw: moon ────────────────────────────────────────────────────────────
 	function drawMoon(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
-		// Moon fades in below sun alt -6°
-		const moonAlpha = Math.max(0, Math.min(1, (-altDeg - 6) / 8));
+		const { x: moonX, y: moonY, alpha: moonAlpha, phase } = moonState(altDeg, sxn);
 		if (moonAlpha <= 0) return;
-
-		// Simplified: moon roughly opposite sun, altitude = -altDeg * 0.65
-		const moonX      = (1 - sxn) * W;
-		const moonAltDeg = Math.min(72, Math.max(2, -altDeg * 0.65));
-		const sinMoon    = Math.sin(moonAltDeg * Math.PI / 180);
-		const moonY      = horizonY - sinMoon * horizonY * 0.88;
-
-		const phase = moonPhase(); // 0=new, 0.5=full, 1=new
 		const R = 11;
 
 		// Glow
@@ -1204,9 +1235,18 @@
 	// ── draw: clouds ───────────────────────────────────────────────────────────
 	// Noise-density clouds lit from the sun's side (detail.ts, 2026-10-22).
 	// Perspective is baked in via aspectRatio: near-horizon slivers, overhead domes.
+	/** Where a baked cloud is drawn now, or null if it has no bake or has faded out. */
+	function cloudRect(cloud: CloudDef, minutes: number): { img: HTMLCanvasElement; x: number; y: number; w: number; h: number; life: number } | null {
+		const { a: life, k } = cloudLife(cloud, minutes);
+		if (!cloud.cache || life <= 0) return null;
+		const baseY = cloud.cache.baseY * k, w = cloud.cache.w * k, h = cloud.cache.h * k;
+		let skyY = cloud.yFrac * horizonY * 0.84;     // base sits at this y in main canvas
+		skyY = Math.max(skyY, NAV_CLEAR * dpr + baseY * cloud.squash);   // keep the top out from behind the nav bar
+		return { img: cloud.cache.canvas, x: driftX(cloud, minutes) - w / 2, y: skyY - baseY * cloud.squash, w, h: h * cloud.squash, life };
+	}
+
 	function drawClouds(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
-		const cloudAlpha = Math.max(0, Math.min(1, (altDeg + 14) / 6));
-		if (cloudAlpha <= 0) return;
+		const cloudAlpha = 1;   // clouds stay at night, dark, and hide the stars behind them
 
 		const minutesSinceEpoch = Date.now() / 60000;
 		const { top, shadow } = getCloudColors(altDeg);
@@ -1218,7 +1258,6 @@
 		let budget = 1;
 		ctx.save();
 		for (const cloud of clouds) {
-			const { a: life, k } = cloudLife(cloud, minutesSinceEpoch);
 			if ((!cloud.cache || cloud.cacheColorKey !== colorKey) && budget > 0) {
 				budget--;
 				// Bake at most ~200 px across and scale up when drawn: clouds are soft,
@@ -1229,15 +1268,10 @@
 				cloud.cache = { ...r, w: r.w / q, h: r.h / q, baseY: r.baseY / q };
 				cloud.cacheColorKey = colorKey;
 			}
-			if (!cloud.cache) continue;
-			if (life <= 0) continue;
-			const { canvas: img } = cloud.cache;
-			const baseY = cloud.cache.baseY * k, w = cloud.cache.w * k, h = cloud.cache.h * k;
-			const rawX = driftX(cloud, minutesSinceEpoch);
-			let skyY = cloud.yFrac * horizonY * 0.84;     // base sits at this y in main canvas
-			skyY = Math.max(skyY, NAV_CLEAR * dpr + baseY * cloud.squash);   // keep the top out from behind the nav bar
-			ctx.globalAlpha = Math.min(1, 0.3 + cloud.alpha) * cloudAlpha * life;   // cores read opaque; edges stay soft in the bake
-			ctx.drawImage(img, rawX - w / 2, skyY - baseY * cloud.squash, w, h * cloud.squash);
+			const at = cloudRect(cloud, minutesSinceEpoch);
+			if (!at) continue;
+			ctx.globalAlpha = Math.min(1, 0.3 + cloud.alpha) * cloudAlpha * at.life;   // cores read opaque; edges stay soft in the bake
+			ctx.drawImage(at.img, at.x, at.y, at.w, at.h);
 		}
 		ctx.restore();
 	}
@@ -1349,7 +1383,7 @@
 			ctx.fillStyle = css(lerpRGB(shadow, [196, 198, 204], clamp01((altDeg + 2) / 14)), 0.9 * weather.cover);
 			ctx.fillRect(0, 0, W, horizonY);
 		}
-		drawStars(ctx, altDeg, time, now);
+		drawStars(ctx, altDeg, sxn, time, now);
 		drawMoon(ctx, altDeg, sxn);
 		drawCircumsolarGlow(ctx, altDeg, sxn);
 		drawSun(ctx, altDeg, sxn);
