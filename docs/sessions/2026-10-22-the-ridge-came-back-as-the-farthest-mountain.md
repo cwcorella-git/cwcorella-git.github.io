@@ -799,6 +799,32 @@ The operator was offered "snow on plants" and chose **"Add snow days"**. Snow on
 |---|---|---|
 | 65 | peak snow went dark after sunset | **done**: `3101b1c`. The snow-line snow (`peakSnow`) gets the same night floor as the valley snow, ×0.8. **First attempt:** the range flattened into one pale slab. The floor is now scaled by `0.35 + 0.65·nz²`, so snow facing the sky is brightest and the relief stays. Checked on 2026-12-20 at 16:55 and 19:30, and on 2026-10-23 at 19:30 |
 
-## Resume here
+## Resume here (superseded by the one at the end)
 - Nothing is queued. Rows 43–65 are done and pushed.
+- Pull before pushing.
+
+## 34. The night sky, from the real sky (rows 66–72, 2026-10-23)
+
+**What was wrong:** 700 stars with a uniform spread of magnitudes, 67% of them gold or orange (the `SPECTRAL` weights followed star counts, not what the eye sees), and the Milky Way was 200 circles at 10% alpha that read as grey rings. Clouds faded to nothing below −14°, so the night sky never had any. The moon was always drawn opposite the sun with a phase from a fixed epoch, so a new moon showed as a crescent at midnight.
+
+**"The slow night" was frame pacing, not a regression.** On a phone slowed 4×, night frames took 139 ms against 16 ms by day before any of this work. The CPU profile was mostly idle, and hiding the canvas or the glass blur changed nothing. `draw()` redraws every 2nd frame at night against every 15th by day, so the same full-screen draw was paid 7.5× as often.
+
+| # | item | state |
+|---|---|---|
+| 66 | realistic starfield | **done**: `d455970`. New `src/lib/garden/stars.ts`. Magnitudes follow the sky's counts (2.8× more per fainter magnitude). Tints are mostly white, and colour shows only on bright stars. The Milky Way is a noisy band with a dark rift. Stars fade with extinction near the horizon and twinkle more the lower they are |
+| 67 | the sky turns | **done**: `021cea4`. The garden faces north (sunrise is on the right), so the stars circle a pole at 39.5° altitude, counter-clockwise, at local sidereal time (`siderealDeg`). The Milky Way glow is the real galactic plane (galactic north pole RA 192.86°, dec 27.13°), baked once as a square around the pole and rotated. The faint stars are repainted when the edge has moved 0.5 px. `stars.test.ts` has 5 tests |
+| 68 | clouds hide stars | **done**: `649201b`. Clouds stay at night (`cloudAlpha = 1`) in their deep-night colours. Stars go to `starLayer`, and each cloud's bake is cut out of it (`destination-out`). Cloud placement is shared through `cloudRect` |
+| 69 | moonlight | **done**: `649201b`. `moonState().light` dims the band and faint layer by 0.8·light and the bright stars by 0.35·light, plus a radial glare around the moon |
+| 70 | pace the night | **done**: `4c24029`. Night skip 2 → 4. On a phone slowed 4×, the median frame interval went from 152 ms to 16 ms. Per draw it is still about 180 ms in headless Chrome, whose canvas runs in software, so that number says nothing about a real phone's GPU |
+| 71 | the real moon | **done**: `4dcc5b0`. New `src/lib/garden/moon.ts` gives the real position, a few terms from Meeus ch. 47, good to about a degree. x follows the moon's own rise→set arc (like `sunXNorm`), it is hidden below the horizon, and the phase comes from elongation. The lit limb is to the west while waxing and the terminator is an ellipse. The dark side is drawn and hides stars. `moon.test.ts` has 4 tests. Checked: full moon 2026-10-26 22:30; new moon 2026-11-10 22:30 (down, band full); crescent 2026-11-13 17:40 (just above the ridge, low left) |
+| 72 | star cost | **done**: `8fe4204`. When there is no cloud and no glare, the stars go straight to the canvas without the layer. The renders match (mean difference 0.01, from twinkle) |
+
+**Never verified:** the per-draw cost on a real phone. The 180 ms is headless software canvas. A 2.5-day crescent on 2026-11-12 at 18:00 sits 8.8° up, which maps behind the ridge, so young crescents are often hidden. The moon is R = 11 physical px, so on a phone (dpr 2) it is small. The moon's screen position and the starfield's north-facing rotation use different projections: the stars circle a pole, while the moon moves along a panorama arc like the sun.
+
+**Seen, not fixed:** now that clouds stay at night, some cloud bakes show flat, boxy edges (a small one on 2026-10-26 at 22:30, at the top centre), which day light used to hide.
+
+## Resume here
+- Nothing is queued. Rows 43–72 are done and pushed.
+- Media groups `cwc-stars-66` and `cwc-stars-69` have no verdict yet; read them once with `ops_pick`, do not poll.
+- **Proposed:** fix the boxy night cloud edges (see §34).
 - Pull before pushing.
