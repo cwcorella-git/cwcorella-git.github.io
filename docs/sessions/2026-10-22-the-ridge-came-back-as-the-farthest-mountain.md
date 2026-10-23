@@ -554,7 +554,7 @@ Nothing queued; read the Media groups once if the operator leaves notes. Pull be
 
 When asked whether a first visitor's foreground cottonwood should start out smaller than the 150-year-old midground one, the operator answered "Keep growth as is". The tree starts young and grows with visits. That is a decision, not a bug, so row 42 is not to be reopened on that account.
 
-## Resume here
+## Resume here (superseded by the one at the end, 2026-10-23)
 - **Queue:** nothing is queued. Every row up to 42 is done and pushed; the last code commit is `186e04b`.
 - **Media groups:** `cwc-trees`, `cwc-crowns` and `cwc-trees2` have had no verdict.
   - `cwc-trees` and `cwc-crowns` have each been read twice.
@@ -566,3 +566,33 @@ When asked whether a first visitor's foreground cottonwood should start out smal
   - `hitch.cjs`: long tasks. It is noisy and not trusted.
 - **Background:** the dev server (`npx vite dev --port 5191`) may still be running from this session. Restart it if it isn't.
 - **Before pushing:** pull first, because `static/glass.json` is committed from the browser.
+
+## 20. Realism pass (2026-10-23): the operator couldn't tell the renders apart
+
+On /blockout the operator said they couldn't tell which Media render showed which tree, and asked for a realism pass on all the trees. They picked "Do all of these, enter plan mode" for bushes, grass and ground.
+
+**Correction:** I offered "Bushes", but the scene has no bush. The only small plant is the juniper (tree 6), so that row went into row 44.
+
+| # | item | state |
+|---|---|---|
+| 43 | a labelled key of which tree is which | **done**: Media `cwc-trees-key`. 1 front cottonwood, 2 old cottonwood, 3 pine, 4 young pine, 5 far cottonwood, 6 juniper |
+| 44 | trees look more real | **done**: `1c16e62`. Each clump is lit by where it sits in the whole crown: sun side, between, or shade/underside, with the shaded clumps drawn first. Clump edges are more broken up and have more holes. Pines grow flat needle pads that run back to the trunk, have a shorter clear trunk and cinnamon-coloured bark. The juniper is now h 110 (it was 70) |
+| 45 | trees at depth | **done**: `796a142`. Each midground tree has a `yf` (how far down the meadow it stands) and is scaled by `1.233/(1.233-yf)`. The front cottonwood is moved to `FG_YF = 0.3` and scaled about its base at bake time (`fgSegs()`), so the cached segments are unchanged. The lean pivot, cast shadow, contact shadow and hit tests all use `fgBaseY()` |
+| 46 | grass | **done**: `7589fe6`. Each tuft is 6–14 tapered blades of 3 pieces, drawn as filled quads with a darker base and lighter tip. There are 150 tufts (90 on a phone). The 18 seed heads use darker straw colours and grow in 4 patches |
+| 47 | ground | **done**: `f58cd5b`. Bare-soil patches in the near field and 4 rocks, baked into the meadow's multiply layer |
+
+**Phone bake time** (390 px, 4× throttle, `treetime.cjs`): the biggest single job is the foreground stand-in at 41 ms, which meets the 45 ms target.
+
+**Not done, and never verified:**
+- Wildflowers from the plan were skipped. The meadow is a multiply layer, so it can't add bright colour; flowers would need a separate pass that draws on top.
+- Haze on the far trees was skipped; they still use the shared 0.92 alpha.
+- The seed heads are still hard to see in the render.
+- The rocks only darken the ground (multiply), so their lit tops are just "less dark".
+- **Phone layout:** at 390 px the front tree now overlaps the midground ones. I saw this in the phone render and did not rearrange anything.
+
+**Media awaiting a verdict:** `cwc-real-44` (before and after), `cwc-real-45`, `cwc-real-47`. Read each once, only when the operator taps /blockout.
+
+## Resume here
+- Nothing is queued. Rows 43–47 are done and pushed (last commit `f58cd5b`).
+- The next step depends on the operator's Media verdicts. The proposed follow-ups are wildflowers as a separate pass, haze on the far trees, and the phone overlap.
+- Pull before pushing (`static/glass.json` is committed from the browser).
