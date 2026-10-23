@@ -330,8 +330,9 @@
 		bgPlants = [];
 		fgPlants = [];
 
-		// Grass — 85 total, weighted toward the foreground but with a healthy far population
-		for (let i = 0; i < 85; i++) {
+		// Grass — denser toward the foreground, fewer on a phone's narrow meadow
+		const tufts = cw / dpr < 700 ? 90 : 150;
+		for (let i = 0; i < tufts; i++) {
 			const yFrac  = Math.pow(prng(), 1.4);
 			const x      = prng() * cw;
 			const y      = hy + yFrac * groundBand;
@@ -346,10 +347,12 @@
 			(yFrac < bgCut ? bgPlants : fgPlants).push(plant);
 		}
 
-		// Seed heads — 24, mostly in the near field, kept off the very horizon
-		for (let i = 0; i < 24; i++) {
-			const yFrac  = Math.pow(prng(), 0.7) * 0.78 + 0.06;
-			const x      = prng() * cw;
+		// Seed heads — 18 in four patches, mostly in the near field, kept off the very horizon
+		const patches = Array.from({ length: 4 }, () => ({ x: prng() * cw, y: Math.pow(prng(), 0.7) * 0.7 + 0.1 }));
+		for (let i = 0; i < 18; i++) {
+			const p      = patches[i % 4];
+			const yFrac  = Math.max(0.06, Math.min(0.92, p.y + (prng() - 0.5) * 0.12));
+			const x      = p.x + (prng() - 0.5) * cw * 0.08;
 			const y      = hy + yFrac * groundBand;
 			const bornAt = prng() * 6000;
 			const scale  = growthFactor(Math.max(0, gardenAgeUnits - bornAt));

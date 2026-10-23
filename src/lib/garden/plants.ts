@@ -34,44 +34,40 @@ function makePRNG(seed: number): () => number {
 
 // ── palettes ──────────────────────────────────────────────────────────────
 const GRASS_PALETTE = ['#6b7c3a', '#7a8c45', '#5a6e2e', '#8a9c50', '#4e6228'];
-const SEED_PALETTE  = ['#a8a666', '#c8b47a', '#d6c28c'];   // stem, panicle, spikelet tips (the season greens them)
+const SEED_PALETTE  = ['#7e7a44', '#9a8650', '#ae975e'];   // stem, panicle, spikelet tips: straw a shade darker than the meadow, so they show
+
+/** A hex colour lightened (k > 1) or darkened (k < 1). */
+function tone(hex: string, k: number): string {
+	const c = [1, 3, 5].map((i) => Math.max(0, Math.min(255, Math.round(parseInt(hex.slice(i, i + 2), 16) * k))));
+	return '#' + c.map((v) => v.toString(16).padStart(2, '0')).join('');
+}
 
 // ── grass tufts ───────────────────────────────────────────────────────────
 export function makeGrassTuft(
 	x: number, y: number, maxHeight: number, seed: number
 ): PlantInstance {
 	const rng         = makePRNG(seed);
-	const strandCount = 3 + Math.floor(rng() * 4); // 3–6 strands
+	const strandCount = 6 + Math.floor(rng() * 9); // 6–14 blades
 	const strands: PlantSegment[] = [];
 
+	// Each blade: three pieces, bending further the higher it goes, tapering
+	// to a point, dark at the base and light at the tip.
 	for (let i = 0; i < strandCount; i++) {
-		const lean  = (rng() - 0.5) * 50;           // lean ±25°
-		const h1    = maxHeight * (0.40 + rng() * 0.35);
-		const h2    = maxHeight * (0.28 + rng() * 0.35);
+		const lean  = (rng() - 0.5) * 56;           // lean ±28°
+		const bend  = lean * (0.35 + rng() * 0.3) + (rng() - 0.5) * 14;
+		const len   = maxHeight * (0.45 + rng() * 0.55) / 3;
 		const color = GRASS_PALETTE[Math.floor(rng() * GRASS_PALETTE.length)];
-		const thick = 1.2 + rng() * 1.2;
-
-		const tip: PlantSegment = {
-			restAngle: lean * 0.55 + (rng() - 0.5) * 18,
-			angle:     lean * 0.55,
-			angVel:    0,
-			len:       h2,
-			thick:     thick * 0.48,
-			color,
-			children: [],
-			wx0: 0, wy0: 0, wx: 0, wy: 0,
-		};
-
-		strands.push({
-			restAngle: lean,
-			angle:     lean,
-			angVel:    0,
-			len:       h1,
-			thick,
-			color,
-			children: [tip],
-			wx0: 0, wy0: 0, wx: 0, wy: 0,
+		const thick = 1.3 + rng() * 1.3;
+		const piece = (k: number, rest: number, col: string): PlantSegment => ({
+			restAngle: rest, angle: rest, angVel: 0,
+			len: len * (1 - k * 0.12), thick: thick * (1 - k * 0.3), color: col,
+			children: [], wx0: 0, wy0: 0, wx: 0, wy: 0,
 		});
+		const a = piece(0, lean, tone(color, 0.82));
+		const b = piece(1, bend, color);
+		const c = piece(2, bend * 1.3, tone(color, 1.22));
+		a.children.push(b); b.children.push(c);
+		strands.push(a);
 	}
 
 	// Zero-length anchor collects all strands
@@ -195,13 +191,17 @@ function drawSeg(
 
 	seg.wx0 = x; seg.wy0 = y; seg.wx = ex; seg.wy = ey;
 
+	// A tapered quad: full width at the base, the next piece's width at the
+	// tip, a point where nothing follows. Strokes read as sticks.
+	const w0 = seg.thick / 2, w1 = seg.children.length ? w0 * 0.7 : 0.15;
+	const nx = -Math.sin(radDir), ny = Math.cos(radDir);
 	ctx.beginPath();
-	ctx.moveTo(x, y);
-	ctx.lineTo(ex, ey);
-	ctx.strokeStyle = litColor(seg.color, light, green);
-	ctx.lineWidth   = seg.thick;
-	ctx.lineCap     = 'round';
-	ctx.stroke();
+	ctx.moveTo(x + nx * w0, y + ny * w0);
+	ctx.lineTo(ex + nx * w1, ey + ny * w1);
+	ctx.lineTo(ex - nx * w1, ey - ny * w1);
+	ctx.lineTo(x - nx * w0, y - ny * w0);
+	ctx.fillStyle = litColor(seg.color, light, green);
+	ctx.fill();
 
 	for (const child of seg.children) drawSeg(ctx, ex, ey, dir, child, light, green);
 }
