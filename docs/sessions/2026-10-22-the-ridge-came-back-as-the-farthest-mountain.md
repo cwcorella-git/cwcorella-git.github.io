@@ -823,8 +823,25 @@ The operator was offered "snow on plants" and chose **"Add snow days"**. Snow on
 
 **Seen, not fixed:** now that clouds stay at night, some cloud bakes show flat, boxy edges (a small one on 2026-10-26 at 22:30, at the top centre), which day light used to hide.
 
-## Resume here
+## Resume here (superseded by the one at the end)
 - Nothing is queued. Rows 43–72 are done and pushed.
 - Media groups `cwc-stars-66` and `cwc-stars-69` have no verdict yet; read them once with `ops_pick`, do not poll.
 - **Proposed:** fix the boxy night cloud edges (see §34).
+- Pull before pushing.
+
+## 35. Night clouds: boxy bases, then moonlight (rows 73–74)
+
+**Boxy clouds weren't a clipped bake.** Of 320 test bakes (four aspects, day and night light), none reached the edge of its canvas. The shape caused it: puff centres sat 0.45–0.8 r above the flat base, so a puff's widest point met the base and its side fell straight down. Daylight shading hid that; the flat night colour shows it.
+
+| # | item | state |
+|---|---|---|
+| 73 | boxy cloud bases | **done**: `970138d`. Puff centres are now 0.68–0.98 r above the base, so the base is narrower than the body and the sides curve in under it. Checked the night of 2026-10-26, dusk on 10-22 and noon; noon clouds look about the same |
+| 74 | shade night clouds | **done**: `038751c`. At night (sun below −8°, blending in to −14°) the cloud colours come from the moon. Lit (`moonState().light`·1.6): tops `[132,140,162]`, shadow `[40,46,68]`, lit from the moon's side at its altitude. Moonless: `[54,56,68]` / `[24,26,38]`, with the bake's under-lighting (bases lit from below by the town). `moonState` now also returns `alt`. Checked: full moon 2026-10-25 at 22:30, and no moon 2026-11-04 at 22:30 |
+
+**Seen, not fixed:** faint far clouds (low alpha) only partly cut the stars, so on moonless nights the Milky Way shows through them faintly. The moon is still 11 physical px, about 5 css px on a phone.
+
+## Resume here
+- Nothing is queued. Rows 43–74 are done and pushed (last code commit `038751c`).
+- **Proposed:** far clouds hiding the stars fully; a bigger moon on phones (§35).
+- Media groups `cwc-stars-66` and `cwc-stars-69` have no verdict yet; read them once with `ops_pick`, do not poll.
 - Pull before pushing.
