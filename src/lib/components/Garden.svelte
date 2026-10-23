@@ -13,7 +13,7 @@
 	import { weatherFor, weatherForced, type Weather } from '$lib/garden/weather';
 	import { sceneTune } from '$lib/admin/sceneTune.svelte';
 	import { clock, sceneNow, sceneMs } from '$lib/garden/clock.svelte';
-	import { renderMeadow, renderRocks, renderSnow, makeFlowers, flowerBloom, type Flower, renderNoiseCloud, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
+	import { renderMeadow, renderRocks, renderSnow, makeFlowers, flowerBloom, type Flower, bakeNoiseCloud, type CloudBake, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
 	import { moonPosition } from '$lib/garden/moon';
 	import { makeStars, drawStarField, siderealDeg, type StarField } from '$lib/garden/stars';
 
@@ -164,6 +164,7 @@
 		speed:         number;   // px / minute
 		cache:         { canvas: HTMLCanvasElement; baseY: number; w: number; h: number } | null;
 		cacheColorKey: string;
+		job?:          { gen: Generator<void, CloudBake, void>; key: string; q: number } | null;   // a bake in progress
 		grey?:         boolean;  // an overcast deck: baked in the shadow colour
 		life?:         { seed: number; phase: number; period: number; cycle: number };   // cumulus form and fade
 	}
@@ -1278,27 +1279,48 @@
 		}
 		const colorKey = quantizeColorKey(top, shadow) + sunSide + ':' + Math.round(lightAlt) + ':' + sceneTune.cloudDetail + ':' + sceneTune.cloudEdge;
 
-		// One bake per frame (~70 ms on a slow phone): stale clouds keep their
-		// old colours a moment longer, new ones appear a frame apart.
-		let budget = 1;
+		// Bakes run in slices, a few milliseconds a frame, and the old bake stays
+		// on screen until the new one is done (2026-10-23). One whole bake a frame
+		// cost ~70 ms on a slow phone at 200 px, which is why clouds were baked
+		// small and stretched, and read soft and plain.
+		for (const cloud of clouds) {
+			const key = colorKey + ':' + cloud.prngseed;   // a cumulus re-forms with a new seed each cycle
+			if ((cloud.cache && cloud.cacheColorKey === key) || cloud.job?.key === key) continue;
+			// Baked at most ~320 px across (× the tuner's detail) and scaled up when drawn.
+			const q = Math.min(0.8 * sceneTune.cloudDetail, (320 * sceneTune.cloudDetail) / cloud.size);
+			cloud.job = { key, q, gen: bakeNoiseCloud(cloud.size * q, cloud.aspectRatio, cloud.prngseed, cloud.grey ? lerpRGB(top, shadow, 0.55) : top, shadow, sunSide, 1, cloud.haze, lightAlt, sceneTune.cloudEdge) };
+		}
+		pumpBakes();
+		if (import.meta.env.DEV) (window as unknown as { __clouds: CloudDef[] }).__clouds = clouds;   // for render probes
 		ctx.save();
 		for (const cloud of clouds) {
-			if ((!cloud.cache || cloud.cacheColorKey !== colorKey) && budget > 0) {
-				budget--;
-				// Bake at most ~200 px across and scale up when drawn: clouds are soft,
-				// and full size cost 140 ms per cumulus, 870 ms per overcast sheet on a
-				// 4×-throttled phone (2026-10-22).
-				const q = Math.min(0.55 * sceneTune.cloudDetail, (200 * sceneTune.cloudDetail) / cloud.size);
-				const r = renderNoiseCloud(cloud.size * q, cloud.aspectRatio, cloud.prngseed, cloud.grey ? lerpRGB(top, shadow, 0.55) : top, shadow, sunSide, 1, cloud.haze, lightAlt);
-				cloud.cache = { ...r, w: r.w / q, h: r.h / q, baseY: r.baseY / q };
-				cloud.cacheColorKey = colorKey;
-			}
 			const at = cloudRect(cloud, minutesSinceEpoch);
 			if (!at) continue;
-			ctx.globalAlpha = Math.min(1, (0.3 + cloud.alpha) * sceneTune.cloudOpacity) * cloudAlpha * at.life;   // cores read opaque; edges stay soft in the bake
+			// Cumulus cores read solid; sheets keep their thinness.
+			const base = cloud.life ? 0.45 + cloud.alpha * 1.1 : 0.3 + cloud.alpha;
+			ctx.globalAlpha = Math.min(1, base * sceneTune.cloudOpacity) * cloudAlpha * at.life;   // cores read opaque; edges stay soft in the bake
 			ctx.drawImage(at.img, at.x, at.y, at.w, at.h);
 		}
 		ctx.restore();
+	}
+
+	/** Advance the cloud bakes in progress for a few ms. Called on every animation
+	 *  frame, drawn or not, so the sky fills in quickly even at 4 fps by day. */
+	function pumpBakes(): void {
+		const start = performance.now(), BUDGET = 6;
+		for (const cloud of clouds) {
+			const job = cloud.job;
+			if (!job) continue;
+			while (performance.now() - start < BUDGET) {
+				const r = job.gen.next();
+				if (!r.done) continue;
+				cloud.cache = { ...r.value, w: r.value.w / job.q, h: r.value.h / job.q, baseY: r.value.baseY / job.q };
+				cloud.cacheColorKey = job.key;
+				cloud.job = null;
+				break;
+			}
+			if (performance.now() - start >= BUDGET) return;
+		}
 	}
 
 	// ── cursor tracking ────────────────────────────────────────────────────────
@@ -1376,6 +1398,7 @@
 		// Boost to every frame when cursor is active so interaction feels responsive.
 		const skip = cursorActive ? 1 : Math.max(1, Math.round(60 / (isNight ? T.nightFps : T.dayFps)));
 		if (frameCount % skip !== 0) {
+			pumpBakes();
 			animFrame = requestAnimationFrame(draw);
 			return;
 		}

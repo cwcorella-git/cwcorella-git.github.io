@@ -272,45 +272,93 @@ export function makeFlowers(W: number, bandH: number, scale: number, seed = 0xF1
 // sun's side): thick cloud between a point and the sun leaves it in shadow,
 // so bases come out dark and turrets lit. Two terms on top of that: "powder"
 // darkens the thin outer skin on the shadow side, and thin cloud facing the
-// sun glows (the silver lining). Rendered at full size, so it stays crisp.
+// sun glows (the silver lining).
 // `haze` (0 near, 1 at the horizon) flattens and fades the far ones.
+//
+// Each cloud has a seeded form (2026-10-23): a heap, a tower that builds
+// upward, a flat wide one, or a broken one in separate clusters; the plain
+// heaps all looked alike. `edge` scales a third, finer layer of lumps that
+// acts only at the outline, so the edges cauliflower while the body stays
+// smooth. Cores are opaque; only the outline and far haze let the sky through.
+export type CloudForm = 'heap' | 'tower' | 'flat' | 'broken';
+export interface CloudBake { canvas: HTMLCanvasElement; baseY: number; w: number; h: number }
+
+export function cloudForm(seed: number): CloudForm {
+	const u = makePRNG(seed ^ 0x5EED)();
+	return u < 0.2 ? 'tower' : u < 0.42 ? 'flat' : u < 0.56 ? 'broken' : 'heap';
+}
+
 export function renderNoiseCloud(
 	size: number, aspect: number, seed: number,
-	top: RGB, shadow: RGB, sunSide: number, alpha: number, haze = 0, sunAlt = 30,
-): { canvas: HTMLCanvasElement; baseY: number; w: number; h: number } {
-	const CW = Math.ceil(size * 2.4), CH = Math.ceil(size * (aspect * 2.2 + 0.35));
-	const baseY = CH - Math.ceil(size * 0.12);
-	const c = makeCanvas(CW, CH);
-	const ctx = c.getContext('2d')!;
-	const img = ctx.createImageData(CW, CH);
+	top: RGB, shadow: RGB, sunSide: number, alpha: number, haze = 0, sunAlt = 30, edge = 1,
+): CloudBake {
+	const job = bakeNoiseCloud(size, aspect, seed, top, shadow, sunSide, alpha, haze, sunAlt, edge);
+	for (;;) { const r = job.next(); if (r.done) return r.value; }
+}
+
+/** The same bake, yielding every few rows so a caller can spread it over frames. */
+export function* bakeNoiseCloud(
+	size: number, aspect: number, seed: number,
+	top: RGB, shadow: RGB, sunSide: number, alpha: number, haze = 0, sunAlt = 30, edge = 1,
+): Generator<void, CloudBake, void> {
+	const form = cloudForm(seed);
+	const tall = form === 'tower' ? 1.6 : form === 'flat' ? 0.6 : 1;
 	const ox = (seed % 997) * 1.37, oy = (seed % 541) * 0.91;
 	const rng = makePRNG(seed);
 
 	// Puffs across the base, tallest near the middle.
-	const span = 0.5 + rng() * 0.12;
-	const n = 5 + Math.floor(rng() * 4);
+	const span = (form === 'flat' ? 0.66 : form === 'tower' ? 0.4 : 0.5) + rng() * 0.12;
+	const n = 6 + Math.floor(rng() * 6);
 	const puffs: [number, number, number][] = [];
+	// A broken cloud leaves gaps between its clusters.
+	const g1 = 2 + Math.floor(rng() * (n / 2 - 2));
+	const gapAt = form === 'broken' ? [g1, g1 + 1, g1 + 3 + Math.floor(rng() * 2)] : [];
 	for (let i = 0; i < n; i++) {
+		if (gapAt.includes(i)) continue;
 		const x = -span + (2 * span * (i + 0.2 + rng() * 0.6)) / n;
 		const mid = Math.sqrt(Math.max(0, 1 - (x / (span * 1.1)) ** 2));
-		const r = (0.08 + aspect * 0.6) * (0.4 + 0.6 * mid) * (0.75 + rng() * 0.45);
-		const rr = Math.max(r, (1.5 * span) / n);           // neighbours always overlap
+		const r = (0.08 + aspect * tall * 0.6) * (0.4 + 0.6 * mid) * (0.75 + rng() * 0.45) * (form === 'flat' ? 0.75 : 1);
+		// Neighbours always overlap, except across a broken cloud's gaps.
+		const rr = form === 'broken' ? Math.max(r, (1.05 * span) / n) * 0.9 : Math.max(r, (1.5 * span) / n);
 		// Centres well above the base, so the flat base is narrower than the body
 		// and the sides curve in under it; at 0.45 r the sides fell straight to the
 		// base and small clouds read as boxes at night (2026-10-23).
 		puffs.push([x, rr * (0.68 + rng() * 0.3), rr]);
 	}
-	// Turrets in two tiers: some riding on the big puffs, a few more on those.
-	const t1 = 3 + Math.floor(rng() * 3);
-	for (let i = 0; i < t1; i++) {
-		const [px, py, pr] = puffs[1 + Math.floor(rng() * (n - 2))];
-		puffs.push([px + (rng() - 0.5) * pr, py + pr * 0.6, pr * (0.4 + rng() * 0.25)]);
+	const nb = puffs.length;
+	// Small puffs low on the flanks, so the sides step down instead of ending in one curve.
+	for (const side of [-1, 1]) {
+		const [px, py, pr] = side < 0 ? puffs[0] : puffs[nb - 1];
+		puffs.push([px + side * pr * (0.55 + rng() * 0.25), py * 0.7, pr * (0.5 + rng() * 0.2)]);
 	}
-	const t2 = 2 + Math.floor(rng() * 2);
-	for (let i = 0; i < t2; i++) {
-		const [px, py, pr] = puffs[n + Math.floor(rng() * t1)];
-		puffs.push([px + (rng() - 0.5) * pr * 0.8, py + pr * 0.55, pr * (0.45 + rng() * 0.2)]);
+	// Turrets in tiers: some riding on the big puffs, more on those. Towers build higher.
+	// A tower is a broad, lumpy column: each tier as wide as the one below, so it
+	// reads as cloud building upward and not as a post on a heap.
+	const tower = form === 'tower';
+	const tiers = tower ? 3 : form === 'flat' ? 1 : 2;
+	let from = 0, count = nb;
+	for (let k = 0; k < tiers; k++) {
+		const m = tower ? [4, 3, 2][k] + Math.floor(rng() * 2) : (k === 0 ? 3 : 2) + Math.floor(rng() * 3);
+		const start = puffs.length;
+		for (let i = 0; i < m; i++) {
+			const pick = k === 0 ? Math.floor(count * 0.25) + Math.floor(rng() * Math.max(1, count * 0.5)) : Math.floor(rng() * count);
+			const [px, py, pr] = puffs[from + pick];
+			const shrink = tower ? 0.62 + rng() * 0.18 : 0.4 + rng() * 0.25;
+			puffs.push([px + (rng() - 0.5) * pr * (tower ? 1.1 : 0.9), py + pr * (tower ? 0.62 : 0.58), pr * shrink]);
+		}
+		from = start; count = puffs.length - start;
+		if (!count) break;
 	}
+
+	// The canvas fits the puffs, with room for the erosion noise, so no form is
+	// clipped (towers were, at a fixed height: 2026-10-23).
+	let topY = 0, halfX = 0;
+	for (const [px, py, pr] of puffs) { topY = Math.max(topY, py + pr); halfX = Math.max(halfX, Math.abs(px) + pr); }
+	const CW = Math.ceil(size * 2 * (halfX + 0.18)), CH = Math.ceil(size * (topY + 0.2 + 0.12));
+	const baseY = CH - Math.ceil(size * 0.12);
+	const c = makeCanvas(CW, CH);
+	const ctx = c.getContext('2d')!;
+	const img = ctx.createImageData(CW, CH);
 
 	const density = (x: number, y: number): number => {
 		let d = -1;
@@ -319,9 +367,11 @@ export function renderNoiseCloud(
 			if (q > d) d = q;
 		}
 		if (d < -0.35) return d;
-		// Erosion: coarse lumps, then fine billows at the edge only.
+		// Erosion: coarse lumps, then billows and finer cauliflower at the edge only.
 		d += (fbm2(x * 6 + ox, y * 6 + oy, 3) - 0.5) * 0.45;
-		d += (fbm2(x * 22 + oy, y * 22 + ox, 3) - 0.5) * 0.22 * (1 - smooth(0, 0.4, d)) * (x * sunSide > 0 ? 1.3 : 1);
+		const rim = 1 - smooth(0, 0.4, d);
+		d += (fbm2(x * 22 + oy, y * 22 + ox, 3) - 0.5) * 0.22 * rim * (x * sunSide > 0 ? 1.3 : 1);
+		if (edge > 0) d += (fbm2(x * 55 + ox * 1.7, y * 55 + oy * 1.3, 2) - 0.5) * 0.12 * edge * (1 - smooth(0, 0.18, d));
 		if (y < 0) d += y * 14;                          // flat base
 		return d;
 	};
@@ -332,9 +382,11 @@ export function renderNoiseCloud(
 	const lx = sunSide * Math.cos(e), ly = Math.sin(e);
 	const under = 1 - smooth(-1, 4, sunAlt);
 	const STEPS = [0.02, 0.045, 0.08, 0.13, 0.2, 0.3];
-	const rim = mixRGB(top, [255, 255, 255], 0.6);
+	const rimCol = mixRGB(top, [255, 255, 255], 0.6);
 	// Far clouds sit in the air between: flatter light, toward the haze.
 	const far = mixRGB(top, shadow, 0.3);
+	const baseDark = mixRGB(shadow, [0, 0, 0], 0.12);
+	const ROWS = 24;   // rows per slice
 
 	// Density on a half-resolution grid, read back smoothly. The light march
 	// reads the grid too instead of re-evaluating the noise; phones need both.
@@ -343,6 +395,7 @@ export function renderNoiseCloud(
 	for (let gy = 0; gy < GH; gy++) {
 		const y = (baseY - gy * 2) / size;
 		for (let gx = 0; gx < GW; gx++) G[gy * GW + gx] = density((gx * 2 - CW / 2) / size, y);
+		if (gy % ROWS === ROWS - 1) yield;
 	}
 	const at = (px: number, py: number): number => {
 		const fx = px / 2, fy = py / 2;
@@ -364,37 +417,54 @@ export function renderNoiseCloud(
 			const up = smooth(0, Math.max(0.05, aspect * 1.2), y);
 			const lift = up + (1 - 2 * up) * under;   // a low sun lifts the base instead of the top
 			let col = mixRGB(shadow, top, Math.min(1, 0.15 + T * (0.6 + 0.4 * powder) + lift * 0.35));
-			// The flat underside stays grey even where light gets through.
+			// The flat underside stays grey even where light gets through, darkest
+			// in a narrow band along the base.
 			col = mixRGB(col, shadow, 0.35 * (1 - under) * (1 - smooth(0, 0.18 * aspect, y)));
+			col = mixRGB(col, baseDark, 0.3 * (1 - under) * (1 - smooth(0, 0.05, y)) * smooth(0.05, 0.3, d));
 			// Silver lining: thin edge, lit side.
 			const thin = 1 - smooth(0, 0.12, d);
-			col = mixRGB(col, rim, thin * T * 0.6);
+			col = mixRGB(col, rimCol, thin * T * 0.6);
 			col = mixRGB(col, far, haze * 0.55);
-			const a = smooth(0, 0.1, d) * alpha * (1 - 0.4 * haze);
+			const a = smooth(0, 0.07, d) * alpha * (1 - 0.3 * haze);
 			const i = (py * CW + px) * 4;
 			img.data[i] = col[0]; img.data[i + 1] = col[1]; img.data[i + 2] = col[2]; img.data[i + 3] = a * 255;
 		}
+		if (py % ROWS === ROWS - 1) yield;
 	}
 	ctx.putImageData(img, 0, 0);
 	return { canvas: c, baseY, w: CW, h: CH };
 }
 
-/** Cirrus: noise stretched along the wind and thresholded into fibres. */
+/** Cirrus: noise stretched along the wind and thresholded into fibres. The
+ *  band curves, as jet-stream streaks do, and some fibres trail tails down and
+ *  back (fall streaks: ice falling out into slower air below). 2026-10-23. */
 export function renderNoiseCirrus(width: number, seed: number, colour: RGB, alpha: number): HTMLCanvasElement {
-	const CW = Math.ceil(width), CH = Math.ceil(Math.max(24, width * 0.16));
+	const CW = Math.ceil(width), CH = Math.ceil(Math.max(32, width * 0.3));
 	const c = makeCanvas(CW, CH);
 	const ctx = c.getContext('2d')!;
 	const img = ctx.createImageData(CW, CH);
 	const ox = (seed % 991) * 1.13;
+	const rng = makePRNG(seed ^ 0xC1);
+	const bend = (rng() - 0.5) * 0.3;                     // the band's curve, either way
+	const tails = Array.from({ length: 2 + Math.floor(rng() * 4) }, () => ({ u: 0.15 + rng() * 0.7, len: 0.25 + rng() * 0.3, w: 0.012 + rng() * 0.012 }));
+	const slant = rng() < 0.5 ? -1 : 1;
 	for (let py = 0; py < CH; py++) {
 		const v = py / CH;
 		for (let px = 0; px < CW; px++) {
 			const u = px / CW;
 			// Fibres bend a little: the stretched coordinate is warped by slow noise.
-			const warp = (noise2D(u * 3 + ox, 1.7) - 0.5) * 0.35;
-			const n = fbm2(u * 2.2 + ox, (v + warp) * 14, 4);
-			const env = Math.pow(Math.sin(Math.PI * u), 0.8) * Math.exp(-(((v - 0.5 - warp * 0.4) / 0.24) ** 2));
-			const a = smooth(0.5, 0.72, n) * env * alpha;
+			const warp = (noise2D(u * 3 + ox, 1.7) - 0.5) * 0.18;
+			const mid = 0.32 + bend * (4 * (u - 0.5) ** 2 - 0.33) + warp * 0.4;
+			const n = fbm2(u * 2.2 + ox, (v - mid) * 26, 4);
+			let env = Math.pow(Math.sin(Math.PI * u), 0.8) * Math.exp(-(((v - mid) / 0.11) ** 2));
+			// Fall streaks: from the band, down and trailing back.
+			for (const t of tails) {
+				const dv = v - mid;
+				if (dv <= 0 || dv > t.len) continue;
+				const du = u - (t.u + slant * dv * 0.6 * (dv / t.len));
+				env = Math.max(env, Math.exp(-((du / (t.w * (1 + dv * 3))) ** 2)) * (1 - dv / t.len) ** 1.5 * 0.8);
+			}
+			const a = smooth(0.48, 0.7, n) * env * alpha;
 			if (a <= 0.003) continue;
 			const i = (py * CW + px) * 4;
 			img.data[i] = colour[0]; img.data[i + 1] = colour[1]; img.data[i + 2] = colour[2]; img.data[i + 3] = a * 255;
