@@ -714,8 +714,22 @@ They are saved in the session scratchpad, `refs/`, and the side-by-side sheets w
 |---|---|---|
 | 59 | rocks | **done**: `905b445`. **Cause:** the rocks were drawn in the meadow's multiply layer as a dome with a wide dark ellipse under it and a pale oval on top. Multiply can only darken, so the "lit top" was never lighter than the grass, and the shape read as a mushroom. **Fix:** `renderRocks()` in `detail.ts` gets its own normal-blended layer. Each rock is a 7-point angular outline, flat where it meets the ground, with a lit facet toward the sun, a darker body, lichen flecks, a thin contact shadow, and grass blades in the meadow's colour over its foot. It is re-baked with the grass colour sample (once per half-degree) and lit by `tuftLight`. Checked on a phone, at 2× and at 17:30 |
 
-## Resume here
+## Resume here (superseded by the one at the end)
 - Nothing is queued. Rows 43–59 are done and pushed.
 - Open, proposed: night; snow on plants.
+- Media verdicts are open. Read each once, only on /blockout.
+- Pull before pushing.
+
+## 28. Night and twilight (row 60)
+
+| # | item | state |
+|---|---|---|
+| 60 | the garden after dark | **done**: `7c737cd`. Renders at 17:30, 17:50, 18:05, 18:20, 19:30 and 23:00. Full night (19:30, 23:00) already read correctly: silhouettes under stars. **Twilight was wrong:** at 18:20 (sun about −3°) the cottonwoods glowed gold over near-black ground, because the tree light `dl = (alt+6)/12` was still 0.25. `tuftLight` couldn't fix it, since it reads about 0.5 there (sky ambient). Measured ground luma against midday was 0.35 at 17:50, 0.20 at 18:05 and 0.14 at 18:20. `sampleGround` now also records `groundLum` (mean luma ÷ 140). Tree `dl` is capped at `groundLum·1.2`, with the cap fading in from +2° to −2°, so golden hour (17:30) keeps its sunlit crowns and a dull midday ground never dims the trees. Sagebrush uses `groundLum·1.1` below 8° |
+
+**Seen, not fixed:** at 18:05 the sagebrush shows as pale patches, probably the 0.08 haze toward a bright twilight horizon.
+
+## Resume here
+- Nothing is queued. Rows 43–60 are done and pushed.
+- Open, proposed: sagebrush at twilight; snow on plants.
 - Media verdicts are open. Read each once, only on /blockout.
 - Pull before pushing.
