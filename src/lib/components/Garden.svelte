@@ -12,7 +12,7 @@
 	import { renderTreeArt, drawTreeArt, clumpsFromTips, broadleafShape, pineShape, juniperShape, sageShape, sageFoliage, NEUTRAL_LIGHT, cottonwoodFoliage, PINE_FOLIAGE, JUNIPER_FOLIAGE, type TreeArt, type Seg, type Clump } from '$lib/garden/treeArt';
 	import { weatherFor, type Weather } from '$lib/garden/weather';
 	import { renderMeadow, renderRocks, renderSnow, makeFlowers, flowerBloom, type Flower, renderNoiseCloud, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
-	import { makeStars, drawStarField, type StarField } from '$lib/garden/stars';
+	import { makeStars, drawStarField, siderealDeg, type StarField } from '$lib/garden/stars';
 
 	// ── constants ─────────────────────────────────────────────────────────────
 	const HORIZON_FRAC = 0.68;   // horizon at 68% down canvas
@@ -467,12 +467,12 @@
 	}
 
 	// ── draw: stars & Milky Way ────────────────────────────────────────────────
-	function drawStars(ctx: CanvasRenderingContext2D, altDeg: number, time: number): void {
+	function drawStars(ctx: CanvasRenderingContext2D, altDeg: number, time: number, now: Date): void {
 		// Fade in from alt -8° (0) to -14° (1)
 		const starAlpha = Math.max(0, Math.min(1, (-altDeg - 8) / 6));
 		if (starAlpha <= 0) return;
 
-		if (starField) drawStarField(ctx, starField, horizonY, starAlpha, time);
+		if (starField) drawStarField(ctx, starField, starAlpha, time, siderealDeg(now));
 	}
 
 	// ── draw: moon ────────────────────────────────────────────────────────────
@@ -1349,7 +1349,7 @@
 			ctx.fillStyle = css(lerpRGB(shadow, [196, 198, 204], clamp01((altDeg + 2) / 14)), 0.9 * weather.cover);
 			ctx.fillRect(0, 0, W, horizonY);
 		}
-		drawStars(ctx, altDeg, time);
+		drawStars(ctx, altDeg, time, now);
 		drawMoon(ctx, altDeg, sxn);
 		drawCircumsolarGlow(ctx, altDeg, sxn);
 		drawSun(ctx, altDeg, sxn);
