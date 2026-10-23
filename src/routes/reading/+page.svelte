@@ -245,61 +245,61 @@
 			</div>
 		</div>
 
-		<ul class="list" bind:this={listEl}>
-			{#each filtered as book (book.id)}
-				<li class:done={book.read}>
-					<div class="row-wrap">
-						<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-						<div
-							class="row"
-							role="button"
-							tabindex="0"
-							onclick={() => handleRowClick(book)}
-							oncontextmenu={(e) => openMenu(e, book)}
-							onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleRowClick(book); }}
-						>
-							<span class="title">{book.title}</span>
-							<span class="meta">{bookMeta(book.author, book.year)}</span>
+		<div class="list-and-rail">
+			<ul class="list" bind:this={listEl}>
+				{#each filtered as book (book.id)}
+					<li class:done={book.read}>
+						<div class="row-wrap">
+							<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+							<div
+								class="row"
+								role="button"
+								tabindex="0"
+								onclick={() => handleRowClick(book)}
+								oncontextmenu={(e) => openMenu(e, book)}
+								onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleRowClick(book); }}
+							>
+								<span class="title">{book.title}</span>
+								<span class="meta">{bookMeta(book.author, book.year)}</span>
 						</div>
-						{#if adminState.active}
-							{#if confirmingId === book.id}
-								<span class="delete-confirm">
-									<button class="del-btn confirm-yes" onclick={() => deleteBook(book)} disabled={deleteSaving}>
-										{deleteSaving ? '…' : '✓'}
-									</button>
-									<button class="del-btn confirm-no" onclick={() => confirmingId = null}>×</button>
-								</span>
-							{:else}
-								<button class="row-action-btn" onclick={() => bookFormState.openEdit(book)} aria-label="Edit">edit</button>
-								<button class="del-btn" onclick={() => confirmingId = book.id} aria-label="Delete">×</button>
+							{#if adminState.active}
+								{#if confirmingId === book.id}
+									<span class="delete-confirm">
+										<button class="del-btn confirm-yes" onclick={() => deleteBook(book)} disabled={deleteSaving}>
+											{deleteSaving ? '…' : '✓'}
+										</button>
+										<button class="del-btn confirm-no" onclick={() => confirmingId = null}>×</button>
+									</span>
+								{:else}
+									<button class="row-action-btn" onclick={() => bookFormState.openEdit(book)} aria-label="Edit">edit</button>
+									<button class="del-btn" onclick={() => confirmingId = book.id} aria-label="Delete">×</button>
+								{/if}
+								<button
+									class="read-toggle"
+									class:is-read={book.read}
+									onclick={() => toggleRead(book)}
+									aria-label={book.read ? 'Mark as unread' : 'Mark as read'}
+								>{book.read ? 'unmark' : 'mark read'}</button>
 							{/if}
-							<button
-								class="read-toggle"
-								class:is-read={book.read}
-								onclick={() => toggleRead(book)}
-								aria-label={book.read ? 'Mark as unread' : 'Mark as read'}
-							>{book.read ? 'unmark' : 'mark read'}</button>
-						{/if}
 					</div>
-				</li>
-			{/each}
-		</ul>
-
+					</li>
+				{/each}
+			</ul>
+			<!-- Sticky inside the card: in line with the list, not a separate element. -->
+			<div class="rail-dock">
+				<JumpRail
+					{anchors}
+					total={filtered.length}
+					{activeLabel}
+					{position}
+					vertical
+					onSeek={(l) => { const i = l === null ? 0 : firstOf.get(l); if (i !== undefined) scrollToRow(i, true); }}
+					onScrubTo={(i) => scrollToRow(i)}
+				/>
+			</div>
+		</div>
 
 		<p class="count">{filtered.length} {filtered.length === 1 ? 'title' : 'titles'}</p>
-	</div>
-
-	<!-- Outside .inner: its backdrop-filter would pin a fixed child to the panel. -->
-	<div class="rail-dock" data-glass>
-		<JumpRail
-			{anchors}
-			total={filtered.length}
-			{activeLabel}
-			{position}
-			vertical
-			onSeek={(l) => { const i = l === null ? 0 : firstOf.get(l); if (i !== undefined) scrollToRow(i, true); }}
-			onScrubTo={(i) => scrollToRow(i)}
-		/>
 	</div>
 </div>
 
@@ -462,20 +462,17 @@
 		color: var(--clr-meta);
 	}
 
-	/* The letter rail, docked to the right edge of the window. */
-	.rail-dock {
-		position: fixed;
-		right: max(0.5rem, calc((100vw - 760px) / 2 - 2.5rem));
-		top: 15vh;
-		z-index: 2;
-		padding: 0.5rem 0.2rem;
-		border-radius: 999px;
-		background: var(--glass-bg);
-		backdrop-filter: var(--glass-blur);
-		-webkit-backdrop-filter: var(--glass-blur);
+	/* The letter rail rides beside the list inside the card, held in view as it scrolls. */
+	.list-and-rail {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.5rem;
 	}
-	@media (max-width: 860px) {
-		.rail-dock { right: 0.15rem; }
+	.list-and-rail .list { flex: 1; min-width: 0; }
+	.rail-dock {
+		position: sticky;
+		top: 15vh;
+		flex-shrink: 0;
 	}
 
 	.row-action-btn {
@@ -586,7 +583,7 @@
 	@media (max-width: 480px) {
 		.page { padding-top: 4.5rem; }
 		.search-area { margin-bottom: 1.5rem; }
-		.inner { padding: 1.5rem 2.1rem 4rem 1.25rem; }   /* right: clear of the letter rail */
+		.inner { padding: 1.5rem 1.25rem 4rem; }
 		.read-toggle {
 			padding: 0.5rem 0.4rem;
 			min-height: 44px;

@@ -145,11 +145,6 @@
 		opacity: 1;
 		font-weight: 700;
 	}
-	.rail-btn.active::before {
-		content: '▸';
-		position: absolute;
-		margin-left: -0.7rem;
-	}
 	/* The live position marker: a short bar on the rail's inner edge. */
 	.here {
 		position: absolute;
