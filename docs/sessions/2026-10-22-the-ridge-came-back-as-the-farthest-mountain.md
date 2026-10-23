@@ -786,7 +786,19 @@ The operator was offered "snow on plants" and chose **"Add snow days"**. Snow on
 |---|---|---|
 | 64 | the distant rise's snow went dark after sunset | **done**: `58966d3`. `relightTerrain` gives valley-snow pixels the same cool night floor as the near snow (`[0.2, 0.23, 0.32]·238`, scaled by how much snow lies there and fading in from +1° to −5°). **First attempt:** the floor speckled the whole mountain range at night, because the valley-snow pass covered every row above the horizon. It is now limited to below the forest line (`1 − sm(f0−150, f0+100, e)`). Checked at 12:30, 16:55 and 19:30 on 2026-12-14 |
 
-## Resume here
+## Resume here (superseded by the one at the end)
 - Nothing is queued. Rows 43–64 are done and pushed.
 - Media verdicts are open. Read each once, only on /blockout.
+- Pull before pushing.
+
+## 33. Media picks read, and mountain snow at night (row 65)
+
+**Media picks**, read once at the operator's request: of the garden groups, only `cwc-real-44` has a pick, "after" (crown light and pine pads), which was already shipped and later superseded by the rebuild from photos. None of the other `cwc-real-*` or `cwc-ref-*` groups have a pick. Most are single images, which may not register as a choice.
+
+| # | item | state |
+|---|---|---|
+| 65 | peak snow went dark after sunset | **done**: `3101b1c`. The snow-line snow (`peakSnow`) gets the same night floor as the valley snow, ×0.8. **First attempt:** the range flattened into one pale slab. The floor is now scaled by `0.35 + 0.65·nz²`, so snow facing the sky is brightest and the relief stays. Checked on 2026-12-20 at 16:55 and 19:30, and on 2026-10-23 at 19:30 |
+
+## Resume here
+- Nothing is queued. Rows 43–65 are done and pushed.
 - Pull before pushing.
