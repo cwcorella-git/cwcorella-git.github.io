@@ -750,11 +750,12 @@
 			const raw = document.createElement('canvas');
 			raw.width = W; raw.height = H;
 			const rctx = raw.getContext('2d')!;
-			// (x, y) → (x + m·(hy − y), hy + fy·(hy − y))
-			rctx.setTransform(1, 0, -m, -fy, m * horizonY, horizonY * (1 + fy));
-			rctx.translate(bx, horizonY);
+			// (x, y) → (x + m·(by − y), by + fy·(by − y)), by the tree's base
+			const by = fgBaseY();
+			rctx.setTransform(1, 0, -m, -fy, m * by, by * (1 + fy));
+			rctx.translate(bx, fgBaseY());
 			rctx.rotate(treeLeanAngle);
-			rctx.translate(-bx, -horizonY);
+			rctx.translate(-bx, -fgBaseY());
 			// Cast from the same trunk and leaf clumps the tree is drawn with, so the
 			// shadow has the crown's gaps and lumps, then flattened to black.
 			const art = treeArts(altDeg, sxn).fg;
@@ -905,12 +906,20 @@
 	// cottonwoods, which follow the seasons; the midground has a cottonwood,
 	// two Jeffrey pines and a juniper. Each tree is baked by treeArt.ts into a
 	// trunk plus leaf-clump sprites and re-baked when the sun moves a degree.
-	const MIDGROUND: { xf: number; bornAgo: number; kind: 'cottonwood' | 'pine' | 'juniper'; h: number }[] = [
-		{ xf: 0.49, bornAgo: 54750, kind: 'cottonwood', h: 130 },  // +150yr
-		{ xf: 0.61, bornAgo: 10950, kind: 'pine',       h: 150 },  // +30yr
-		{ xf: 0.74, bornAgo: 0,     kind: 'pine',       h: 120 },  // same age as the site
-		{ xf: 0.93, bornAgo: -5475, kind: 'juniper',    h: 130 },  // −15yr
+	// yf: how far down the meadow each stands (0 on the horizon). Nearer
+	// trees stand lower and larger, by the same 1/d curve as the grass.
+	const MIDGROUND: { xf: number; yf: number; bornAgo: number; kind: 'cottonwood' | 'pine' | 'juniper'; h: number }[] = [
+		{ xf: 0.74, yf: 0.0,  bornAgo: 0,     kind: 'pine',       h: 120 },  // same age as the site
+		{ xf: 0.49, yf: 0.03, bornAgo: 54750, kind: 'cottonwood', h: 130 },  // +150yr
+		{ xf: 0.61, yf: 0.07, bornAgo: 10950, kind: 'pine',       h: 150 },  // +30yr
+		{ xf: 0.93, yf: 0.12, bornAgo: -5475, kind: 'juniper',    h: 110 },  // −15yr
 	];
+	const depthK = (yf: number) => 1.233 / (1.233 - yf);
+	const groundY = (yf: number) => horizonY + yf * (H - horizonY);
+	// The foreground cottonwood stands a third of the way down the meadow, so
+	// it is in front of the others and not one more tree on the horizon.
+	const FG_YF = 0.3;
+	const fgBaseY = () => groundY(FG_YF);
 	let treeCache: { key: string; fg: TreeArt | null; bg: TreeArt | null; mid: TreeArt[] } = { key: '', fg: null, bg: null, mid: [] };
 
 	// tree.ts sizes its trees in fixed px. Generate in CSS px (segments are
@@ -922,6 +931,14 @@
 
 	function segsFromTree(t: TreeSegment[]): Seg[] {
 		return t.map((s) => ({ x1: s.x1f * W, y1: s.y1f * H, x2: s.x2f * W, y2: s.y2f * H, thick: s.thick }));
+	}
+	// tree.ts grows the foreground tree on the horizon; scale it about its
+	// base and set it down at its own depth. Applied at bake, so the cached
+	// segments stay as tree.ts made them.
+	function fgSegs(): Seg[] {
+		const k = depthK(FG_YF), bx = W * 0.28, by = fgBaseY();
+		const px = (x: number) => bx + (x - bx) * k, py = (y: number) => by - (horizonY - y) * k;
+		return segsFromTree(fgTreeSegs).map((s) => ({ x1: px(s.x1), y1: py(s.y1), x2: px(s.x2), y2: py(s.y2), thick: s.thick * k }));
 	}
 
 	// A light change (each degree of sun) re-bakes one tree per frame and swaps
@@ -970,16 +987,16 @@
 			return renderTreeArt(segs, clumps, leaf, { ...L, sunDx: sunX < xs ? -1 : 1 }, seed);
 		};
 		const jobs: (() => void)[] = [
-			() => { next.fg = fgTreeSegs.length ? bake(segsFromTree(fgTreeSegs), 12 * dpr, 101) : null; },
+			() => { next.fg = fgTreeSegs.length ? bake(fgSegs(), 12 * dpr * depthK(FG_YF), 101) : null; },
 			() => { next.bg = bgTreeSegs.length ? bake(segsFromTree(bgTreeSegs), 15 * dpr, 211) : null; },
 		];
 		MIDGROUND.forEach((m, i) => jobs.push(() => {
 			const gf = treeGrowthFactor(Math.max(0, gardenAgeUnits + m.bornAgo));
-			const x = m.xf * W, h = Math.max(12, m.h * gf * dpr);
+			const x = m.xf * W, h = Math.max(12, m.h * gf * dpr * depthK(m.yf)), gy = groundY(m.yf);
 			const seed = Math.floor(m.xf * 0x7FFFFFFF);
-			const shape = m.kind === 'pine' ? pineShape(x, horizonY, h, seed)
-			            : m.kind === 'juniper' ? juniperShape(x, horizonY, h, seed)
-			            : broadleafShape(x, horizonY, h, seed);
+			const shape = m.kind === 'pine' ? pineShape(x, gy, h, seed)
+			            : m.kind === 'juniper' ? juniperShape(x, gy, h, seed)
+			            : broadleafShape(x, gy, h, seed);
 			const f = m.kind === 'pine' ? PINE_FOLIAGE : m.kind === 'juniper' ? JUNIPER_FOLIAGE : leaf;
 			next.mid[i] = renderTreeArt(shape.segs, shape.clumps, f, { ...L, sunDx: sunX < x ? -1 : 1 }, seed + i);
 		}));
@@ -1016,8 +1033,8 @@
 		if (sunFactor < 0.04) return;
 
 		const bx = W * 0.28;
-		const by = horizonY;
-		const rx = Math.max(40, 70 * (W / 1200));
+		const by = fgBaseY();
+		const rx = Math.max(40, 70 * (W / 1200)) * depthK(FG_YF);
 		const ry = rx * 0.20;
 
 		const g = ctx.createRadialGradient(bx, by, 0, bx, by, rx);
@@ -1191,7 +1208,7 @@
 		if (canvas && adminState.active && !isUnlockDay()) {
 			const px = e.clientX * dpr;
 			const py = e.clientY * dpr;
-			const near = Math.abs(px - W * 0.28) < 200 && py > horizonY - treeGrowthFactor(gardenAgeUnits) * 220 && py < horizonY + 20;
+			const near = Math.abs(px - W * 0.28) < 200 * dpr && py > fgBaseY() - treeGrowthFactor(gardenAgeUnits) * 300 * dpr && py < fgBaseY() + 20;
 			canvas.style.cursor = near ? 'cell' : '';
 		} else if (canvas) {
 			canvas.style.cursor = '';
@@ -1206,8 +1223,8 @@
 		const px = e.clientX * dpr;
 		const py = e.clientY * dpr;
 		// Hit-test: rough bounding area of the foreground tree
-		const trunkH = Math.min(horizonY * 0.44, 195 * dpr) * treeGrowthFactor(gardenAgeUnits);
-		if (Math.abs(px - W * 0.28) > 200 * dpr || py > horizonY + 20 || py < horizonY - trunkH - 180) return;
+		const trunkH = Math.min(horizonY * 0.44, 195 * dpr) * treeGrowthFactor(gardenAgeUnits) * depthK(FG_YF);
+		if (Math.abs(px - W * 0.28) > 260 * dpr || py > fgBaseY() + 20 || py < fgBaseY() - trunkH - 240 * dpr) return;
 		addAgeUnits(365);
 		gardenAgeUnits += 365;
 		const tgf = treeGrowthFactor(gardenAgeUnits);
@@ -1306,9 +1323,9 @@
 			// Seeded trunk lean — rotate the whole tree around its base
 			const bx = W * 0.28;
 			ctx.save();
-			ctx.translate(bx, horizonY);
+			ctx.translate(bx, fgBaseY());
 			ctx.rotate(treeLeanAngle);
-			ctx.translate(-bx, -horizonY);
+			ctx.translate(-bx, -fgBaseY());
 			drawTreeArt(ctx, fgArt, windPx);
 			ctx.restore();
 		}
