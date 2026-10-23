@@ -215,9 +215,12 @@
 		clouds = [];
 		// A thin, wide, high layer first, so the cumulus pass in front of it.
 		// Overcast: wider, lower and denser, lying across the sky.
-		for (let i = 0; i < weather.sheets; i++) {
+		// An overcast deck needs enough sheets to span the drift loop (screen plus a
+		// margin each side), or it covers only part of the sky.
+		const sheetsN = over ? Math.max(weather.sheets, Math.ceil(weather.sheets * 1.8)) : weather.sheets;
+		for (let i = 0; i < sheetsN; i++) {
 			clouds.push({
-				xFrac: over ? i / weather.sheets + crng() * 0.1 : crng(),
+				xFrac: over ? i / sheetsN + crng() * 0.06 : crng(),
 				yFrac: over ? 0.02 + crng() * 0.12 : 0.03 + crng() * 0.08,
 				size: (over ? 620 + crng() * 300 : 260 + crng() * 160) * sceneTune.cloudSize, aspectRatio: over ? 0.2 : 0.12,
 				alpha: over ? 0.5 + crng() * 0.15 : 0.12 + crng() * 0.1, haze: over ? 0.5 : 0.4, grey: over,
@@ -1309,6 +1312,8 @@
 
 		const minutesSinceEpoch = sceneMs() / 60000;
 		let { top, shadow } = getCloudColors(altDeg);
+		// Under an overcast deck there is no direct sun: the cumulus below it are grey.
+		if (weather.cover > 0.3) top = lerpRGB(top, lerpRGB(top, shadow, 0.55), weather.cover / 0.6);
 		let sunSide = sxn < 0.5 ? -1 : 1, lightAlt = altDeg;
 		// At night the moon lights the tops from its side; with no moon the clouds
 		// are dark shapes, their bases faintly lit from below by the town.

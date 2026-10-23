@@ -291,8 +291,10 @@ const NO_ENV: CloudEnv = { sky: [150, 180, 215], zenith: [90, 140, 210], ground:
  *  `g` (0 nothing, 1 full): the threshold falls as the cloud grows, so a cloud
  *  forms from its densest cores outward and dissolves from the edges in. */
 export function cloudAlphaLUT(g: number): Uint8Array {
-	const t = (1 - g) * 1.05, lut = new Uint8Array(256);
-	for (let i = 0; i < 256; i++) lut[i] = Math.round(255 * smooth(t, t + 0.12, i / 255));
+	// Young clouds have a wide, soft ramp, so the first tufts come in as wisps
+	// rather than hard dots; a grown one has the narrow ramp of a clean edge.
+	const t = (1 - g) * 1.05, w = 0.12 + 0.3 * (1 - g), k = smooth(0, 0.35, g), lut = new Uint8Array(256);
+	for (let i = 0; i < 256; i++) lut[i] = Math.round(255 * smooth(t, t + w, i / 255) * (0.35 + 0.65 * k));
 	return lut;
 }
 
@@ -363,7 +365,18 @@ export function* bakeNoiseCloud(
 			const pick = k === 0 ? Math.floor(count * 0.25) + Math.floor(rng() * Math.max(1, count * 0.5)) : Math.floor(rng() * count);
 			const [px, py, pr] = puffs[from + pick];
 			const shrink = tower ? 0.62 + rng() * 0.18 : 0.4 + rng() * 0.25;
-			puffs.push([px + (rng() - 0.5) * pr * (tower ? 1.1 : 0.9), py + pr * (tower ? 0.62 : 0.58), pr * shrink]);
+			// A tower narrows as it rises: each tier is pulled in toward the axis.
+			const nx = px + (rng() - 0.5) * pr * (tower ? 1.1 : 0.9);
+			puffs.push([tower ? nx * (0.72 - 0.08 * k) : nx, py + pr * (tower ? 0.62 : 0.58), pr * shrink]);
+		}
+		// Bulges on a tower's flanks, a little below the tier, so its sides
+		// step in and out instead of rising straight.
+		if (tower && puffs.length > start) {
+			const tier = puffs.slice(start);
+			for (const side of [-1, 1]) {
+				const [ex, ey, er] = tier.reduce((a, b) => (side * b[0] > side * a[0] ? b : a));
+				puffs.push([ex + side * er * (0.5 + rng() * 0.2), ey - er * (0.3 + rng() * 0.2), er * (0.45 + rng() * 0.15)]);
+			}
 		}
 		from = start; count = puffs.length - start;
 		if (!count) break;
