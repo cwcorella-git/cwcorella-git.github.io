@@ -36,7 +36,7 @@ export const SCENE_DEFAULTS = {
 	glassNight: 0.42,
 	textScale: 1,      // × root font size
 	textWeight: 400,   // body weight
-	textHalo: 0,       // soft shadow behind text, 0–1
+	textHalo: 0.35,    // soft shadow behind text, 0–1
 };
 
 export type SceneTune = typeof SCENE_DEFAULTS;
