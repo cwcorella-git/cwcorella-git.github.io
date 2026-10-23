@@ -687,7 +687,23 @@ They are saved in the session scratchpad, `refs/`, and the side-by-side sheets w
 
 **Not checked:** night, and the juniper and sagebrush under snow (no snow is drawn on plants).
 
-## Resume here
+## Resume here (superseded by the one at the end)
 - Nothing is queued. Rows 43–57 are done and pushed.
 - Media verdicts are open (`cwc-ref-*`, `cwc-real-*`). Read each once, only on /blockout.
+- Pull before pushing.
+
+## 26. "The taller grass doesn't blend" (row 58)
+
+| # | item | state |
+|---|---|---|
+| 58 | tall grass stands out from the meadow | **done**: `c36920a`. **Cause:** the spring-physics tufts and seed heads used their own palette (`GRASS_PALETTE`, seasoned by `litColor`), while the meadow under them is the relit terrain multiplied by the meadow layer, a warmer olive-straw. Each tuft read as a pasted-on green fan. **Fix:** `sampleGround()` in `Garden.svelte` copies the drawn ground (after `drawMeadow`, before flowers and cloud shadows) into a 64×32 canvas once per half-degree of sun, and `setPlantGround()` stores the colour at each plant's foot. `drawSeg` colours each piece as ground × (palette / REF)^0.8, so the palette only sets darker base / lighter tip. Checked at 12:30, 17:30, July and on a phone |
+
+**Seen while checking, not fixed:** on a phone the rocks read as mushroom caps, because of the pale top ellipse in `renderMeadow`.
+
+**Cost:** one `getImageData` of 64×32 per half-degree. That forces a GPU read-back, which I haven't measured on a phone.
+
+## Resume here
+- Nothing is queued. Rows 43–58 are done and pushed.
+- Open, proposed: the rock tops; night; snow on plants.
+- Media verdicts are open. Read each once, only on /blockout.
 - Pull before pushing.
