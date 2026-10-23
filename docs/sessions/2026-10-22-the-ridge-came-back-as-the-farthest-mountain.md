@@ -609,7 +609,18 @@ On /blockout the operator said they couldn't tell which Media render showed whic
 
 **Media awaiting a verdict:** `cwc-real-48`, `cwc-real-49`, `cwc-real-50`, plus the three from §20.
 
-## Resume here
+## Resume here (superseded by the one at the end)
 - Nothing is queued. Rows 43–50 are done and pushed.
 - Next steps come from the operator's Media verdicts. The far-tree haze from §20 is still unbuilt.
+- Pull before pushing.
+
+## 22. Haze on the far trees (row 51)
+
+| # | item | state |
+|---|---|---|
+| 51 | far trees fade toward the horizon | **done**: `02f3c1c`. `ArtLight` gained `haze` (from `getSkyColors(altDeg).horizon`) and `hazeK`. Every foliage and bark colour is mixed toward the haze. Midground trees use `hazeK = 0.3·(1 − yf/0.15)`; the far cottonwood uses 0.35. Checked by eye at 12:30 and 17:30. The old cottonwood (tree 2, yf 0.03) fades noticeably too |
+
+## Resume here
+- Nothing is queued. Rows 43–51 are done and pushed.
+- Seven Media groups have no verdict: `cwc-trees-key`, and `cwc-real-44`, `-45`, `-47`, `-48`, `-49`, `-50`. Read each once, only when the operator taps /blockout.
 - Pull before pushing.
