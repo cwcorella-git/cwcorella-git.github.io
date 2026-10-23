@@ -702,8 +702,20 @@ They are saved in the session scratchpad, `refs/`, and the side-by-side sheets w
 
 **Cost:** one `getImageData` of 64×32 per half-degree. That forces a GPU read-back, which I haven't measured on a phone.
 
-## Resume here
+## Resume here (superseded by the one at the end)
 - Nothing is queued. Rows 43–58 are done and pushed.
 - Open, proposed: the rock tops; night; snow on plants.
+- Media verdicts are open. Read each once, only on /blockout.
+- Pull before pushing.
+
+## 27. Rocks were mushroom caps (row 59)
+
+| # | item | state |
+|---|---|---|
+| 59 | rocks | **done**: `905b445`. **Cause:** the rocks were drawn in the meadow's multiply layer as a dome with a wide dark ellipse under it and a pale oval on top. Multiply can only darken, so the "lit top" was never lighter than the grass, and the shape read as a mushroom. **Fix:** `renderRocks()` in `detail.ts` gets its own normal-blended layer. Each rock is a 7-point angular outline, flat where it meets the ground, with a lit facet toward the sun, a darker body, lichen flecks, a thin contact shadow, and grass blades in the meadow's colour over its foot. It is re-baked with the grass colour sample (once per half-degree) and lit by `tuftLight`. Checked on a phone, at 2× and at 17:30 |
+
+## Resume here
+- Nothing is queued. Rows 43–59 are done and pushed.
+- Open, proposed: night; snow on plants.
 - Media verdicts are open. Read each once, only on /blockout.
 - Pull before pushing.
