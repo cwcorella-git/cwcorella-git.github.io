@@ -66,6 +66,15 @@ The laptop clone was fast-forwarded from `20d6729` to GitHub `main` (`34fc293`) 
 - Validation: `git diff --check` passes. `npm run check` reports 18 errors in markdown modules because installed `node_modules` lacks `unified`, `rehype-sanitize`, `mdast`, and `hast`; no reported errors point to changed Svelte components. `npm test`: 27 files / 345 tests pass, one existing test times out, and two suites cannot load due missing `unified`. No visual browser pass was possible with those dependencies absent.
 - Commit `add3387` (`style: unify popup glass surfaces`) was pushed from the laptop and fast-forwarded to the workstation. Laptop, GitHub `main`, and workstation `HEAD` all verified at `add3387`; both working trees clean. The workstation's displayed ahead count remains stale and is not evidence of divergence.
 
+## Follow-up correction (user reported admin + nav still unblurred)
+
+The first implementation did not fix the key visual bug. Admin settings, nav, and theme popovers remained descendants of the fixed `nav`, which itself had `backdrop-filter` and therefore created a backdrop root. A descendant backdrop filter cannot sample the page content behind that root; the scene tuner is rendered outside the nav, explaining why its blur worked. The earlier statement that only the blur strength explained the difference was incomplete.
+
+- Moved the nav's glass treatment to a `nav::before` sibling layer; the nav element itself no longer establishes a filtered backdrop root. This should let popovers inside it blur the page behind the header while preserving the nav glass.
+- Replaced the range controls' native appearance with a common 4px track and 14px circular thumb, palette-aware border/fill, and hover/focus styling. Applies to both SettingsPanel glass sliders and ScenePanel tuners.
+- Validation for this follow-up: `git diff --check` passes. Re-running `npm run check` still fails only in the same three markdown files with missing installed dependencies (`unified`, remark/rehype packages, `mdast`, `hast`); no diagnostics point to the popup or layout changes. Browser verification remains unavailable in this checkout until dependencies are installed.
+- Follow-up commit/push/pull status to be recorded after syncing.
+
 ## Preliminary diagnosis and direction
 
 The blur declarations are already present on Theme/Nav/Admin and the library menus; the obvious missing blur declaration is the YearPicker. The larger issue is inconsistent panel variables and opacity: light-glass library menus use adaptive light glass while theme/admin menus use dark glass, and the latter background opacity is often high enough to make blur subtle. This is not yet proof that CSS filter application is broken; stacking context, ancestor transforms/opacity, browser support, and the actual live theme must be checked in a browser before changing the shared treatment.

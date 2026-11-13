@@ -229,11 +229,21 @@
 		flex-wrap: nowrap;
 		gap: 0.6rem;
 		align-items: center;
+		background: transparent;
+		isolation: isolate;
+	}
+	/* Keep nav glass as a sibling layer: backdrop-filter on nav itself creates a
+	   backdrop root that prevents dropdown descendants from blurring the page. */
+	nav::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		z-index: -1;
 		background: var(--glass-nav-bg);
 		backdrop-filter: var(--glass-blur-nav);
 		-webkit-backdrop-filter: var(--glass-blur-nav);
 		border-bottom: 1px solid var(--glass-border);
-		will-change: transform;
+		pointer-events: none;
 	}
 	/* nav-items holds all links + toolbar; fades independently */
 	.nav-items {
