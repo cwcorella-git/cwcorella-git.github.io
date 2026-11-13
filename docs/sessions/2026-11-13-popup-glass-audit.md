@@ -1,88 +1,54 @@
-# Session — Popup and glass styling audit (2026-11-13)
+# Session — Popup glass and dropdown fixes (2026-11-13)
 
-User asked to unify dropdown/popup styling, investigate inconsistent background blur, and document findings while investigating.
+User reported inconsistent dropdown styling and missing background blur in the admin header, library search, and related popups. The user asked that the audit be documented as work proceeded.
 
-## Findings so far
+## Canonical diagnosis
 
-### Initial findings from the stale pre-sync checkout
+The key blur bug was **not a missing `backdrop-filter` declaration**. Admin settings, theme, and nav panels already declared a blur. They are rendered inside the fixed `<nav>`, and `<nav>` itself had `backdrop-filter`. That made the nav a **backdrop root**: descendant popovers could not sample/blur the page content behind that root. The scene tuner is rendered as a sibling outside `<nav>`, so its blur worked. This explains the user-observed difference.
 
-- The local theme dropdown (`ThemePanel.svelte`) and nav/admin panels applied blur, but the local `AdminToolbar.svelte` did not contain the scene control described by the user.
-- That checkout had an older palette system and older blur-variable values; those observations should not be used to change the current site. The source was fast-forwarded to the live GitHub `main` before any implementation work.
-- Each popup component repeated its own background, border, blur, positioning, and padding rather than using a shared compact-popup treatment.
+There was also a blur-strength split: the theme/nav panels used `--glass-blur` (`cardBlur`); scene/admin settings used `--glass-blur-heavy` (`menuBlur`). Fixing only the strength did not solve the root cause.
 
-### Popup/panel inventory from source search
+## Named fixes shipped
 
-Compact or anchored popup surfaces:
+1. **Backdrop-root escape — `efaba85`**
+   - In `src/routes/+layout.svelte`, moved the nav's background, blur, and bottom border from `<nav>` itself to `nav::before`.
+   - The pseudo-element is a sibling of the nav contents, not their backdrop-filter ancestor. `<nav>` stays fixed and layered above the page, while its popover descendants can sample the page backdrop.
+   - Removed the nav-level filter (the element no longer creates the backdrop root that blocked its own dropdowns).
 
-- `src/lib/components/ThemePanel.svelte` — palette menu; blur present; dark glass variables.
-- `src/lib/components/NavPanel.svelte` — admin navigation settings; blur present; dark glass variables.
-- `src/lib/components/SettingsPanel.svelte` — admin settings; blur present; dark glass variables. The synced source also includes glass tuning sliders.
-- `src/lib/components/YearPicker.svelte` — year picker dropdown; uses `--glass-bg-dark`, **no backdrop filter**.
-- `src/lib/components/library/FacetPanel.svelte` — library facet menus; blur present, but uses light `--glass-bg` / `--glass-border` rather than dark panel variables.
-- `src/lib/components/library/TagChipInput.svelte` — tag suggestion menu; same light glass variables and blur.
-- `src/routes/reading/+page.svelte` — contextual menu; has fixed-position menu styling and should be included in a follow-up visual review.
-- `src/lib/components/BookView.svelte` — annotation popup plus other anchored panels; mixed styles, further classification needed before unifying.
+2. **Shared popup glass — `add3387`**
+   - Added `src/lib/styles/popups.css`, imported from the root layout.
+   - `.popup-glass` centralizes dark popup background, border, and admin-tunable `--glass-blur-heavy`.
+   - `.popup-glass--adaptive` keeps the adaptive heavy-glass colors for the library menus.
+   - Applied to theme, nav, admin settings, scene tuner, YearPicker, library facet/tag menus, reading context menu, and BookView annotation-editor/notes popovers. Each component retains its own placement, dimensions, and content.
+   - Full-screen dialogs and drawers were intentionally not folded into this compact-popup treatment.
 
-Follow-up source inspection confirms:
+3. **Range slider skin — `efaba85`**
+   - Replaced the browser-native track/thumb with a shared palette-aware 4px track and 14px round thumb, plus hover and keyboard-focus treatment.
+   - Applied through `.popup-range` to the scene tuner and admin glass sliders. This changes appearance only; slider values and event behavior are unchanged.
 
-- The reading context menu uses `--glass-bg-dark` / `--glass-border-dark` but has **no blur**.
-- BookView's hover annotation tooltip has heavy blur; its annotation editor popup and notes popup use dark glass without blur.
-- The YearPicker dropdown also has no blur. It is the only component explicitly named a dropdown among these missing-blur surfaces, but “scene” remains unlocated.
+## Failed first pass and correction
 
-Larger overlays/sheets (not automatically the same component class as small dropdowns): `AdminDrawer.svelte`, `BookForm.svelte`, `BookView.svelte`, `DocReader.svelte`, `DocInfoPanel.svelte`, journal reader/editor/confirmation overlays, links editor/confirmation overlays, and the logout confirmation in `routes/+layout.svelte`. Several use heavy blur; some panels/modal backgrounds need per-surface review.
+The first pass (`add3387`) centralized popup declarations and made theme/nav request the stronger blur, but it **did not fix the underlying blur failure**. Admin settings already used that strong blur; the nav ancestor backdrop root still blocked both it and the nav/theme dropdowns. The user correctly reported that admin and nav still did not get the fix. The pseudo-element change in `efaba85` is the actual root-cause fix.
 
-### Search terminology / unresolved “scene” item
+The first slider pass only shared width/accent-color/focus and was not a visible re-style. The custom track/thumb treatment above replaces it.
 
-- Searches across `src` found no `scene` or `Scene` identifier and no `type="range"`/slider in the Svelte source. The palette selector itself is definitely `ThemePanel.svelte`.
-- User clarified “scene” is a button/dropdown in the live admin header beside sync, theme, nav, and admin. The checked-out `AdminToolbar.svelte` has no scene button, so it is not the live implementation currently represented by this local source.
-- Local clone is significantly stale: checked-out `main` is `20d6729` dated 2026-09-30; read-only `git ls-remote` reports GitHub `main` at `34fc293be5b46269b40b6282ce9632d7b5e0a8c3`. Do not implement based on the stale toolbar; first inspect the newer source without overwriting local work.
-- The local clone has no slider markup in source; this, plus the absent scene button, points to the live header implementation existing in newer commits (or a separate route/project), rather than the slider being an oddly styled control in this snapshot.
-- Library search-related popups found are the facet menu and tag suggestion menu; ordinary sort `<select>` is in `library/LibraryControls.svelte`.
+## Relevant inventory
 
-### Re-check after syncing the stale laptop clone
+- Already glass/popovers: `ThemePanel.svelte`, `NavPanel.svelte`, `SettingsPanel.svelte`, `ScenePanel.svelte`, library `FacetPanel.svelte` and `TagChipInput.svelte`.
+- Missing blur before the shared class: `YearPicker.svelte`, reading context menu, BookView annotation editor popup, and BookView notes panel. The BookView hover annotation tooltip already had heavy blur.
+- Adaptive library menus retain `--glass-bg-heavy` / `--glass-border`; dark-context popovers use `--glass-bg-dark` / `--glass-border-dark`.
+- The ordinary library sort control is a native `<select>`, not a floating popup.
 
-The laptop clone was fast-forwarded from `20d6729` to GitHub `main` (`34fc293`) with `git fetch` + `git merge --ff-only`. No local tracked edits were overwritten; the only local work was this untracked audit note. The workstation clone was already at `34fc293` (its `origin/main` tracking ref was stale, hence its misleading `[ahead 156]` status). The actual scene menu is now located:
+## Validation and limits
 
-- `src/lib/components/AdminToolbar.svelte` renders the admin-only scene button and imports `scenePanel`; `src/lib/components/ScenePanel.svelte` is the fixed scene tuner.
-- ScenePanel has range controls and does apply `backdrop-filter: var(--glass-blur-heavy)`.
-- `SettingsPanel.svelte` has the “glass” controls and range sliders, including `menuBlur` (0–48 px). It also uses `--glass-blur-heavy` for its own panel.
-- `glassTune.svelte.ts` defines `menuBlur: 28px` default. `Sky.svelte` maps that to `--glass-blur-heavy`, and separately maps `cardBlur` to `--glass-blur` (default 22px).
-- Therefore ThemePanel and NavPanel do have blur, but use the weaker `--glass-blur` (cardBlur); ScenePanel and SettingsPanel use the stronger menu blur. This likely explains why scene looks blurred while theme/nav look less blurred. It is not a missing declaration in those two panels.
-- Other remaining inconsistencies are confirmed: YearPicker, reading context menu, BookView annotation editor, and BookView notes panel have glass backgrounds without any backdrop-filter. FacetPanel and TagChipInput use the regular adaptive glass variables; both currently use the stronger menu blur in the synced source.
-- SettingsPanel's range styling is mostly native (`accent-color`) while ScenePanel uses the same native approach. Their sizes/layout differ because the panels serve different control sets; control unification can be considered after the surface/blur decision.
+- `git diff --check` passed for both implementation passes.
+- `npm run check` could not pass because dependencies are missing from this laptop's `node_modules`: `unified`, remark/rehype packages, `mdast`, and `hast`. It reported 18 errors in three Markdown files and none in the changed popup/layout Svelte components.
+- `npm test`: 27 test files / 345 tests passed; one test timed out, and two Markdown suites could not load because `unified` is missing. No UI test covers these CSS changes.
+- **No browser/visual verification was completed.** The nav pseudo-element/backdrop-root correction is reasoned from the CSS backdrop-root model, but still needs on-screen confirmation. Do not describe the blur fix as visually verified.
 
-## Sync status
+## Sync / final state
 
-- Laptop `main` was fast-forwarded to `34fc293` from GitHub; no force operation or conflict resolution was needed.
-- Workstation `/home/user/Projects/cwcorella-git.github.io` was already at `34fc293`, clean; its stale remote-tracking ref caused the apparent ahead count. Verify this again before pulling after the audit note is pushed.
-- At the audit stage, edits were limited to this note. The UI changes made afterward are recorded below.
-
-## Implementation (laptop, after the audit)
-
-- Added `src/lib/styles/popups.css`, imported by `src/routes/+layout.svelte`. `.popup-glass` centralizes dark glass background/border and uses `--glass-blur-heavy` (the admin-tunable `menuBlur`). `.popup-glass--adaptive` preserves the library's adaptive heavy-glass background/border.
-- Applied the shared surface to ThemePanel, NavPanel, SettingsPanel, ScenePanel, YearPicker, library FacetPanel and TagChipInput, the Reading context menu, and BookView's annotation editor and notes popover. Existing placement, sizing, content and modal/drawer surfaces remain component-owned/unchanged.
-- Theme and nav now use the same strong menu blur as scene/admin settings. Previously they used `--glass-blur` (`cardBlur`), while scene/settings used `--glass-blur-heavy` (`menuBlur`); both groups already had blur declarations, but at different strengths.
-- Added shared `.popup-range` sizing/accent-color and focus-visible treatment for controls inside glass popovers; applied to ScenePanel and SettingsPanel sliders. No interaction/slider behavior changed.
-- Validation: `git diff --check` passes. `npm run check` reports 18 errors in markdown modules because installed `node_modules` lacks `unified`, `rehype-sanitize`, `mdast`, and `hast`; no reported errors point to changed Svelte components. `npm test`: 27 files / 345 tests pass, one existing test times out, and two suites cannot load due missing `unified`. No visual browser pass was possible with those dependencies absent.
-- Commit `add3387` (`style: unify popup glass surfaces`) was pushed from the laptop and fast-forwarded to the workstation. Laptop, GitHub `main`, and workstation `HEAD` all verified at `add3387`; both working trees clean. The workstation's displayed ahead count remains stale and is not evidence of divergence.
-
-## Follow-up correction (user reported admin + nav still unblurred)
-
-The first implementation did not fix the key visual bug. Admin settings, nav, and theme popovers remained descendants of the fixed `nav`, which itself had `backdrop-filter` and therefore created a backdrop root. A descendant backdrop filter cannot sample the page content behind that root; the scene tuner is rendered outside the nav, explaining why its blur worked. The earlier statement that only the blur strength explained the difference was incomplete.
-
-- Moved the nav's glass treatment to a `nav::before` sibling layer; the nav element itself no longer establishes a filtered backdrop root. This should let popovers inside it blur the page behind the header while preserving the nav glass.
-- Replaced the range controls' native appearance with a common 4px track and 14px circular thumb, palette-aware border/fill, and hover/focus styling. Applies to both SettingsPanel glass sliders and ScenePanel tuners.
-- Validation for this follow-up: `git diff --check` passes. Re-running `npm run check` still fails only in the same three markdown files with missing installed dependencies (`unified`, remark/rehype packages, `mdast`, `hast`); no diagnostics point to the popup or layout changes. Browser verification remains unavailable in this checkout until dependencies are installed.
-- Follow-up commit `efaba85` (`fix: allow nav popovers to blur page backdrop`) was pushed from the laptop and fast-forwarded to the workstation. Verify refs directly because the workstation's `origin/main` tracking ref remains stale.
-
-## Preliminary diagnosis and direction
-
-The blur declarations are already present on Theme/Nav/Admin and the library menus; the obvious missing blur declaration is the YearPicker. The larger issue is inconsistent panel variables and opacity: light-glass library menus use adaptive light glass while theme/admin menus use dark glass, and the latter background opacity is often high enough to make blur subtle. This is not yet proof that CSS filter application is broken; stacking context, ancestor transforms/opacity, browser support, and the actual live theme must be checked in a browser before changing the shared treatment.
-
-Likely safe unification: introduce a small shared popup-glass class or component for anchored popovers (positioning remains caller-owned), with a theme-aware translucent surface, border, blur, fallback background, and consistent focus/control tokens. Keep modal/drawer/sheet surfaces separate and allow variants for light-context vs dark-context content. Do not blindly replace all `--glass-bg-dark` uses: those also cover larger overlays and may need stronger opacity for legibility.
-
-## Scope/status
-
-- Laptop clone only: `/home/user/Projects/cwcorella-git.github.io`.
-- No source or styling changes made during this audit yet; repository was clean at start, on branch `main`.
-- No tests/build run; investigation is source-only so far.
+- Laptop clone was initially stale (`20d6729`); it was fast-forwarded to GitHub `main` (`34fc293`) before editing. The workstation was already at that GitHub commit; its `origin/main` tracking ref was stale, so its `[ahead N]` display was misleading.
+- Popup implementation was committed/pushed as `add3387`; nav backdrop correction as `efaba85`.
+- Audit-note rewrite is the current pending change. After committing/pushing this note, fast-forward the workstation clone using the HTTPS `gh` credential-helper procedure and verify laptop/GitHub/workstation `HEAD`s directly. Never trust the workstation's stale ahead count.
+- No force push, cherry-pick, or direct host-to-host file copy was used.
