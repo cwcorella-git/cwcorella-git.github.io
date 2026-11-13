@@ -64,7 +64,7 @@ The laptop clone was fast-forwarded from `20d6729` to GitHub `main` (`34fc293`) 
 - Theme and nav now use the same strong menu blur as scene/admin settings. Previously they used `--glass-blur` (`cardBlur`), while scene/settings used `--glass-blur-heavy` (`menuBlur`); both groups already had blur declarations, but at different strengths.
 - Added shared `.popup-range` sizing/accent-color and focus-visible treatment for controls inside glass popovers; applied to ScenePanel and SettingsPanel sliders. No interaction/slider behavior changed.
 - Validation: `git diff --check` passes. `npm run check` reports 18 errors in markdown modules because installed `node_modules` lacks `unified`, `rehype-sanitize`, `mdast`, and `hast`; no reported errors point to changed Svelte components. `npm test`: 27 files / 345 tests pass, one existing test times out, and two suites cannot load due missing `unified`. No visual browser pass was possible with those dependencies absent.
-- Commit/push/pull status: to be recorded after syncing this implementation.
+- Commit `add3387` (`style: unify popup glass surfaces`) was pushed from the laptop and fast-forwarded to the workstation. Laptop, GitHub `main`, and workstation `HEAD` all verified at `add3387`; both working trees clean. The workstation's displayed ahead count remains stale and is not evidence of divergence.
 
 ## Preliminary diagnosis and direction
 
