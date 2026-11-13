@@ -114,16 +114,20 @@
 		close();
 	}
 
-	// Lock page (body) scroll while the reader is open — otherwise the page's
-	// own scrollbar sits at the viewport edge behind the modal's .doc-scroll
-	// scrollbar, and the two read as one overlapping bar.
+	// Lock both document scrolling elements while the reader is open. Depending on
+	// browser/root overflow propagation, hiding body alone can leave the viewport's
+	// (html) scrollbar active behind .doc-scroll, making the two scrollbars overlap.
 	$effect(() => {
 		const open = libraryState.openDoc !== null || libraryState.openDocStatus === 'loading';
 		if (!open) return;
-		const prev = document.body.style.overflow;
+		const root = document.documentElement;
+		const prevRoot = root.style.overflow;
+		const prevBody = document.body.style.overflow;
+		root.style.overflow = 'hidden';
 		document.body.style.overflow = 'hidden';
 		return () => {
-			document.body.style.overflow = prev;
+			root.style.overflow = prevRoot;
+			document.body.style.overflow = prevBody;
 		};
 	});
 

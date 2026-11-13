@@ -39,7 +39,7 @@
 	</div>
 	<input class="tag-input" bind:value={q} onkeydown={onKey} placeholder="add tag…" />
 	{#if suggestions.length}
-		<ul class="suggest">
+		<ul class="suggest popup-glass popup-glass--adaptive">
 			{#each suggestions as s (s)}<li><button onclick={() => add(s)}>{s}</button></li>{/each}
 		</ul>
 	{/if}
@@ -53,7 +53,7 @@
 	.chip .x { background: none; border: none; color: var(--clr-text); cursor: pointer; font-size: 0.9rem; line-height: 1; opacity: 0.6; }
 	.tag-input { background: rgba(var(--ui-rgb), 0.06); border: 1px solid rgba(var(--ui-rgb), 0.22);
 		color: var(--clr-text); font-family: var(--font-ui); font-size: 0.72rem; padding: 0.3rem 0.5rem; width: 100%; }
-	.suggest { list-style: none; margin: 0.25rem 0 0; padding: 0; border: 1px solid rgba(var(--ui-rgb), 0.22); }
+	.suggest { list-style: none; margin: 0.25rem 0 0; padding: 0; max-height: 12rem; overflow-y: auto; }
 	.suggest button { display: block; width: 100%; text-align: left; background: none; border: none;
 		color: var(--clr-text); font-family: var(--font-ui); font-size: 0.72rem; padding: 0.3rem 0.5rem; cursor: pointer; }
 	.suggest button:hover { background: rgba(var(--ui-rgb), 0.1); }

@@ -38,6 +38,7 @@ The first slider pass only shared width/accent-color/focus and was not a visible
 - Missing blur before the shared class: `YearPicker.svelte`, reading context menu, BookView annotation editor popup, and BookView notes panel. The BookView hover annotation tooltip already had heavy blur.
 - Adaptive library menus retain `--glass-bg-heavy` / `--glass-border`; dark-context popovers use `--glass-bg-dark` / `--glass-border-dark`.
 - The ordinary library sort control is a native `<select>`, not a floating popup.
+- Follow-up inventory correction: `TagEditor.svelte` has its own tag autocomplete (distinct from the search-bar suggestions) and was missed in the initial inventory. It now uses `.popup-glass.popup-glass--adaptive`, like the other Library dropdowns. The language filter is already covered through `FacetPanel`; search-bar tag suggestions were already covered through `TagChipInput`.
 
 ## Validation and limits
 
