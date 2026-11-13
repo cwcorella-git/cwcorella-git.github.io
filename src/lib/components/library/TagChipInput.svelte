@@ -188,7 +188,7 @@
 	</div>
 
 	{#if open && suggestions.length > 0}
-		<div class="panel" role="menu">
+		<div class="panel popup-glass popup-glass--adaptive" role="menu">
 			{#each suggestions.slice(0, 12) as b (b.name)}
 				<button class="row" role="menuitem" onclick={() => addTag(b.name)}>
 					<span>{b.name}</span>
@@ -231,10 +231,6 @@
 	.panel {
 		position: absolute; top: calc(100% + 0.3rem); left: 0; z-index: 20;
 		min-width: 15rem; max-height: 50vh; overflow-y: auto;
-		background: var(--glass-bg);
-		backdrop-filter: var(--glass-blur);
-		-webkit-backdrop-filter: var(--glass-blur);
-		border: 1px solid var(--glass-border);
 		padding: 0.4rem 0;
 	}
 	.row {

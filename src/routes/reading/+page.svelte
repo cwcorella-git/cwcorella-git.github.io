@@ -191,7 +191,7 @@
 <!-- Context menu -->
 {#if menu}
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-	<div class="menu" style="top:{menu.y}px; left:{menu.x}px" role="dialog">
+	<div class="menu popup-glass" style="top:{menu.y}px; left:{menu.x}px" role="dialog">
 		{#each linksFor(menu.book) as link}
 			<a href={link.url} target="_blank" rel="noopener noreferrer">{link.name} ↗</a>
 		{/each}
@@ -549,8 +549,6 @@
 	.menu {
 		position: fixed;
 		z-index: 200;
-		background: var(--glass-bg-dark);
-		border: 1px solid var(--glass-border-dark);
 		padding: 0.3rem 0;
 		min-width: 180px;
 		display: flex;

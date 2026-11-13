@@ -38,7 +38,7 @@
 	}
 </script>
 
-<div class="panel" role="dialog" aria-label="Navigation bar settings">
+<div class="panel popup-glass" role="dialog" aria-label="Navigation bar settings">
 	<p class="panel-label">nav bar</p>
 
 	<div class="rows">
@@ -114,10 +114,6 @@
 		top: calc(100% + 0.6rem);
 		right: 0;
 		z-index: 100;
-		background: var(--glass-bg-dark);
-		border: 1px solid var(--glass-border-dark);
-		backdrop-filter: var(--glass-blur);
-		-webkit-backdrop-filter: var(--glass-blur);
 		padding: 0.85rem 0.9rem;
 		width: 288px;
 		display: flex;

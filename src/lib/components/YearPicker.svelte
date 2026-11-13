@@ -118,7 +118,7 @@
 	</div>
 
 	{#if open}
-		<div class="dropdown" role="dialog" aria-label="Year picker">
+		<div class="dropdown popup-glass" role="dialog" aria-label="Year picker">
 			<div class="dropdown-nav">
 				<button type="button" class="nav-btn" onclick={prevDecade} aria-label="Previous years">‹</button>
 				<span class="decade-label">{decadeStart}–{decadeStart + 11}</span>
@@ -202,8 +202,6 @@
 		top: calc(100% + 4px);
 		left: 0;
 		z-index: 50;
-		background: var(--glass-bg-dark);
-		border: 1px solid rgba(var(--dark-panel-rgb), 0.25);
 		padding: 0.6rem;
 		min-width: 200px;
 		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);

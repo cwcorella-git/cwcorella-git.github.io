@@ -96,7 +96,7 @@
 	}
 </script>
 
-<aside class="scene" aria-label="Scene tuner">
+<aside class="scene popup-glass" aria-label="Scene tuner">
 	<header>
 		<p class="title">scene</p>
 		<button class="chip" class:on={scenePanel.peek} onclick={togglePeek}>{scenePanel.peek ? 'show page' : 'hide page'}</button>
@@ -114,12 +114,12 @@
 			</p>
 			<label class="row">
 				<span>time</span>
-				<input type="range" min="0" max="1439" step="5" value={minutes} oninput={(e) => setSceneTime(atMinutes(now, +e.currentTarget.value))} />
+				<input class="popup-range" type="range" min="0" max="1439" step="5" value={minutes} oninput={(e) => setSceneTime(atMinutes(now, +e.currentTarget.value))} />
 				<span class="val">{fmtTime(minutes)}</span>
 			</label>
 			<label class="row">
 				<span>day</span>
-				<input type="range" min="1" max="365" step="1" value={doy} oninput={(e) => setSceneTime(atDayOfYear(now, +e.currentTarget.value))} />
+				<input class="popup-range" type="range" min="1" max="365" step="1" value={doy} oninput={(e) => setSceneTime(atDayOfYear(now, +e.currentTarget.value))} />
 				<span class="val">{doy}</span>
 			</label>
 			<div class="chips">
@@ -154,7 +154,7 @@
 					{:else}
 						<label class="row" class:changed={changed(row.key)}>
 							<span>{row.label}</span>
-							<input type="range" min={row.min} max={row.max} step={row.step} value={sceneTune[row.key] as number}
+							<input class="popup-range" type="range" min={row.min} max={row.max} step={row.step} value={sceneTune[row.key] as number}
 								oninput={(e) => setScene({ [row.key]: +e.currentTarget.value })}
 								ondblclick={() => setScene({ [row.key]: SCENE_DEFAULTS[row.key] })} />
 							<span class="val">{fmt(sceneTune[row.key] as number, row.unit)}</span>
@@ -182,10 +182,6 @@
 		max-height: calc(100vh - 83px);
 		overflow-y: auto;
 		overscroll-behavior: contain;
-		background: var(--glass-bg-dark);
-		border: 1px solid var(--glass-border-dark);
-		backdrop-filter: var(--glass-blur-heavy);
-		-webkit-backdrop-filter: var(--glass-blur-heavy);
 		padding: 11px 13px;
 		display: flex;
 		flex-direction: column;
@@ -217,7 +213,6 @@
 	}
 	.row.toggle { grid-template-columns: 1fr auto; }
 	.row.changed span:first-child { font-weight: 600; }
-	.row input[type='range'] { width: 100%; min-width: 0; accent-color: rgb(var(--dark-panel-rgb)); }
 	.val { text-align: right; opacity: 0.7; font-variant-numeric: tabular-nums; }
 	.chips { display: flex; flex-wrap: wrap; gap: 4px; }
 	.chip {

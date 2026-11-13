@@ -340,7 +340,7 @@
 								onmousedown={handleTextareaMousedown}
 							></textarea>
 							{#if annPopup}
-								<div class="ann-popup" style="top:{annPopup.y - (textareaEl?.getBoundingClientRect().top ?? 0)}px">
+								<div class="ann-popup popup-glass" style="top:{annPopup.y - (textareaEl?.getBoundingClientRect().top ?? 0)}px">
 									<span class="ann-selected">"{annPopup.selected.slice(0, 40)}{annPopup.selected.length > 40 ? '…' : ''}"</span>
 									<input
 										bind:this={annInputEl}
@@ -412,7 +412,7 @@
 						notes {notesOpen ? '▴' : '▾'}
 					</button>
 					{#if notesOpen}
-						<div class="notes-panel">{book.notes}</div>
+						<div class="notes-panel popup-glass">{book.notes}</div>
 					{/if}
 				</div>
 			{/if}
@@ -797,8 +797,6 @@
 	.ann-popup {
 		position: absolute;
 		left: 1rem;
-		background: var(--glass-bg-dark);
-		border: 1px solid var(--glass-border-dark);
 		padding: 0.7rem 0.8rem;
 		z-index: 10;
 		display: flex;
@@ -972,8 +970,6 @@
 		position: absolute;
 		bottom: calc(100% + 6px);
 		right: 0;
-		background: var(--glass-bg-dark);
-		border: 1px solid var(--glass-border-dark);
 		padding: 0.8rem 1rem;
 		min-width: 240px;
 		max-width: 320px;

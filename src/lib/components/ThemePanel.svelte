@@ -5,7 +5,7 @@
 	const ORDER: PaletteName[] = ['sky', 'ink'];
 </script>
 
-<div class="panel" role="dialog" aria-label="Theme palette picker">
+<div class="panel popup-glass" role="dialog" aria-label="Theme palette picker">
 	<p class="panel-label">palette</p>
 	<div class="grid">
 		{#each ORDER as name}
@@ -33,10 +33,6 @@
 		top: calc(100% + 0.6rem);
 		right: 0;
 		z-index: 100;
-		background: var(--glass-bg-dark);
-		border: 1px solid var(--glass-border-dark);
-		backdrop-filter: var(--glass-blur);
-		-webkit-backdrop-filter: var(--glass-blur);
 		padding: 0.7rem 0.75rem;
 		width: 190px;
 	}

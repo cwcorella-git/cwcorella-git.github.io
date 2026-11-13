@@ -55,7 +55,16 @@ The laptop clone was fast-forwarded from `20d6729` to GitHub `main` (`34fc293`) 
 
 - Laptop `main` was fast-forwarded to `34fc293` from GitHub; no force operation or conflict resolution was needed.
 - Workstation `/home/user/Projects/cwcorella-git.github.io` was already at `34fc293`, clean; its stale remote-tracking ref caused the apparent ahead count. Verify this again before pulling after the audit note is pushed.
-- Current edits are limited to this session note on the laptop. No UI source changes yet.
+- At the audit stage, edits were limited to this note. The UI changes made afterward are recorded below.
+
+## Implementation (laptop, after the audit)
+
+- Added `src/lib/styles/popups.css`, imported by `src/routes/+layout.svelte`. `.popup-glass` centralizes dark glass background/border and uses `--glass-blur-heavy` (the admin-tunable `menuBlur`). `.popup-glass--adaptive` preserves the library's adaptive heavy-glass background/border.
+- Applied the shared surface to ThemePanel, NavPanel, SettingsPanel, ScenePanel, YearPicker, library FacetPanel and TagChipInput, the Reading context menu, and BookView's annotation editor and notes popover. Existing placement, sizing, content and modal/drawer surfaces remain component-owned/unchanged.
+- Theme and nav now use the same strong menu blur as scene/admin settings. Previously they used `--glass-blur` (`cardBlur`), while scene/settings used `--glass-blur-heavy` (`menuBlur`); both groups already had blur declarations, but at different strengths.
+- Added shared `.popup-range` sizing/accent-color and focus-visible treatment for controls inside glass popovers; applied to ScenePanel and SettingsPanel sliders. No interaction/slider behavior changed.
+- Validation: `git diff --check` passes. `npm run check` reports 18 errors in markdown modules because installed `node_modules` lacks `unified`, `rehype-sanitize`, `mdast`, and `hast`; no reported errors point to changed Svelte components. `npm test`: 27 files / 345 tests pass, one existing test times out, and two suites cannot load due missing `unified`. No visual browser pass was possible with those dependencies absent.
+- Commit/push/pull status: to be recorded after syncing this implementation.
 
 ## Preliminary diagnosis and direction
 

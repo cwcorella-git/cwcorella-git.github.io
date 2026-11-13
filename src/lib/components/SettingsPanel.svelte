@@ -125,7 +125,7 @@
 	}
 </script>
 
-<div class="panel" role="dialog" aria-label="Admin settings">
+<div class="panel popup-glass" role="dialog" aria-label="Admin settings">
 	<p class="panel-label">settings</p>
 
 	<!-- PAT -->
@@ -227,7 +227,7 @@
 		{#each GLASS_SLIDERS as sl (sl.key)}
 			<label class="slider-row">
 				<span class="slider-label">{sl.label}</span>
-				<input type="range" min={sl.min} max={sl.max} step={sl.step} value={glassTune[sl.key]}
+				<input class="popup-range" type="range" min={sl.min} max={sl.max} step={sl.step} value={glassTune[sl.key]}
 					oninput={(e) => setGlass({ [sl.key]: +e.currentTarget.value })} />
 				<span class="slider-val">{glassTune[sl.key]}{sl.unit}</span>
 			</label>
@@ -252,10 +252,6 @@
 		top: calc(100% + 0.6rem);
 		right: 0;
 		z-index: 100;
-		background: var(--glass-bg-dark);
-		border: 1px solid var(--glass-border-dark);
-		backdrop-filter: var(--glass-blur-heavy);
-		-webkit-backdrop-filter: var(--glass-blur-heavy);
 		padding: 0.85rem 0.9rem;
 		max-height: calc(100vh - 5rem);
 		overflow-y: auto;
@@ -300,7 +296,6 @@
 		font-size: 0.62rem;
 		color: var(--clr-dark-text);
 	}
-	.slider-row input { width: 100%; min-width: 0; accent-color: rgb(var(--dark-panel-rgb)); }
 	.slider-val { text-align: right; opacity: 0.7; font-variant-numeric: tabular-nums; }
 	.glass-actions { display: flex; justify-content: flex-end; gap: 0.4rem; }
 	.glass-reset:disabled { opacity: 0.5; cursor: default; }

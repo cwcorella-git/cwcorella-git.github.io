@@ -52,7 +52,7 @@
 	</button>
 
 	{#if open}
-		<div class="panel" class:wide role="menu" tabindex="-1">
+		<div class="panel popup-glass popup-glass--adaptive" class:wide role="menu" tabindex="-1">
 			{@render children()}
 		</div>
 	{/if}
@@ -94,12 +94,6 @@
 	.panel {
 		position: absolute; top: calc(100% + 0.3rem); right: 0; z-index: 20;
 		min-width: 11rem; max-height: 60vh; overflow-y: auto;
-		/* Heavy glass: it floats over the list and controls, and the page glass let
-		   them read through it (2026-10-11). */
-		background: var(--glass-bg-heavy);
-		backdrop-filter: var(--glass-blur-heavy);
-		-webkit-backdrop-filter: var(--glass-blur-heavy);
-		border: 1px solid var(--glass-border);
 		padding: 0.4rem 0;
 		font-family: var(--font-ui); font-size: 0.6rem; letter-spacing: 0.05em;
 	}

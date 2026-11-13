@@ -1,4 +1,5 @@
 <script lang="ts">
+	import '$lib/styles/popups.css';
 	import { onMount } from 'svelte';
 	import favicon from '$lib/assets/favicon.svg';
 	import { page } from '$app/stores';

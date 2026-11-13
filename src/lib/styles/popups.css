@@ -1,0 +1,25 @@
+/* Shared surface treatment for compact, floating menus and popovers.
+   Layout, placement, and content remain owned by each component. */
+.popup-glass {
+	background: var(--glass-bg-dark);
+	border: 1px solid var(--glass-border-dark);
+	backdrop-filter: var(--glass-blur-heavy);
+	-webkit-backdrop-filter: var(--glass-blur-heavy);
+}
+
+/* Library menus sit in the adaptive light-glass context rather than dark-panel chrome. */
+.popup-glass--adaptive {
+	background: var(--glass-bg-heavy);
+	border-color: var(--glass-border);
+}
+
+.popup-glass .popup-range {
+	width: 100%;
+	min-width: 0;
+	accent-color: rgb(var(--dark-panel-rgb));
+}
+
+.popup-glass :is(button, input, select):focus-visible {
+	outline: 2px solid rgb(var(--dark-panel-rgb));
+	outline-offset: 2px;
+}
