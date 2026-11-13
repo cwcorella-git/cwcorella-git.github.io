@@ -49,6 +49,6 @@ The first slider pass only shared width/accent-color/focus and was not a visible
 ## Sync / final state
 
 - Laptop clone was initially stale (`20d6729`); it was fast-forwarded to GitHub `main` (`34fc293`) before editing. The workstation was already at that GitHub commit; its `origin/main` tracking ref was stale, so its `[ahead N]` display was misleading.
-- Popup implementation was committed/pushed as `add3387`; nav backdrop correction as `efaba85`.
-- Audit-note rewrite is the current pending change. After committing/pushing this note, fast-forward the workstation clone using the HTTPS `gh` credential-helper procedure and verify laptop/GitHub/workstation `HEAD`s directly. Never trust the workstation's stale ahead count.
+- Popup implementation was committed/pushed as `add3387`; nav backdrop correction as `efaba85`; this session-note rewrite as `ef61e79`.
+- Laptop, GitHub `main`, and workstation `HEAD` verified at `ef61e79`; working trees are clean. Never trust the workstation's stale ahead count.
 - No force push, cherry-pick, or direct host-to-host file copy was used.
