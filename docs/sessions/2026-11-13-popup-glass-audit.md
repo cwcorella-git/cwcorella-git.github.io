@@ -73,7 +73,7 @@ The first implementation did not fix the key visual bug. Admin settings, nav, an
 - Moved the nav's glass treatment to a `nav::before` sibling layer; the nav element itself no longer establishes a filtered backdrop root. This should let popovers inside it blur the page behind the header while preserving the nav glass.
 - Replaced the range controls' native appearance with a common 4px track and 14px circular thumb, palette-aware border/fill, and hover/focus styling. Applies to both SettingsPanel glass sliders and ScenePanel tuners.
 - Validation for this follow-up: `git diff --check` passes. Re-running `npm run check` still fails only in the same three markdown files with missing installed dependencies (`unified`, remark/rehype packages, `mdast`, `hast`); no diagnostics point to the popup or layout changes. Browser verification remains unavailable in this checkout until dependencies are installed.
-- Follow-up commit/push/pull status to be recorded after syncing.
+- Follow-up commit `efaba85` (`fix: allow nav popovers to blur page backdrop`) was pushed from the laptop and fast-forwarded to the workstation. Verify refs directly because the workstation's `origin/main` tracking ref remains stale.
 
 ## Preliminary diagnosis and direction
 
