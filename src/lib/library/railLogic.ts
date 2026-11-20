@@ -25,9 +25,14 @@ export function railKind(sort: string): RailKind {
 
 export function alphaAnchors(dir: 'asc' | 'desc'): RailAnchor[] {
 	// '#' = non-alpha leading chars, which sort before 'A' → the top of an asc list.
+	// /anchor-offset counts the rows BEFORE `value` in the current ordering. Ascending, that is
+	// col < 'M', which stops at the start of the M block. Descending it is col > 'M', and every
+	// title starting with M is greater than the bare 'M', so a bare letter lands BELOW the M
+	// block. A descending seek therefore names the end of the block: the letter plus the
+	// highest code point (the same value VG's rail sends).
 	const anchors: RailAnchor[] = [
 		{ label: '#', seek: null },
-		...ALPHA.map((c) => ({ label: c, seek: c }))
+		...ALPHA.map((c) => ({ label: c, seek: dir === 'desc' ? c + '\uffff' : c }))
 	];
 	return dir === 'asc' ? anchors : anchors.slice().reverse();
 }

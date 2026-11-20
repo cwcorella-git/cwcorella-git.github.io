@@ -21,8 +21,23 @@ describe('alphaAnchors', () => {
 	});
 	it('desc: reversed, # still maps to the top of the ordering (null)', () => {
 		const a = alphaAnchors('desc');
-		expect(a[0]).toEqual({ label: 'Z', seek: 'Z' });
+		expect(a[0].label).toBe('Z');
 		expect(a[26]).toEqual({ label: '#', seek: null });
+	});
+	it("desc: a letter seeks the END of its block, so the click lands on the block's first row", () => {
+		// Descending, /anchor-offset counts rows with title > value. Bare 'M' would count
+		// 'Mutual' (> 'M') as before the M block and land below it.
+		const a = alphaAnchors('desc');
+		expect(a[0]).toEqual({ label: 'Z', seek: 'Z\uffff' });
+		for (const x of a.slice(0, 26)) {
+			expect(x.seek! > x.label + 'zzzzzz').toBe(true); // greater than every title in the block
+			expect(x.seek!.startsWith(x.label)).toBe(true);
+		}
+		expect('Mutual' > 'M').toBe(true); // the failure this guards against
+		expect(a.find((x) => x.label === 'M')!.seek! > 'Mutual').toBe(true);
+	});
+	it('asc: the bare letter is still the start of the block', () => {
+		for (const x of alphaAnchors('asc').slice(1)) expect(x.seek).toBe(x.label);
 	});
 });
 
