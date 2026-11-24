@@ -25,6 +25,7 @@ import rehypeSanitize from 'rehype-sanitize';
 import rehypeKatex from 'rehype-katex';
 import rehypeStringify from 'rehype-stringify';
 import type { Root, Element, ElementContent, Parent } from 'hast';
+import { stripFrontMatter } from './vg/front-matter';
 import { remarkWikiLinks } from './vg/wikilink-plugin';
 import { remarkColumns } from './vg/columns-plugin';
 import { remarkLiteralTextDirectives } from './vg/literal-text-directives-plugin';
@@ -52,7 +53,7 @@ export function shouldUseMath(source: string | undefined | null): boolean {
 
 // ── VG pre-processing (HybridMarkdownRenderer, verbatim regexes) ────────────
 export function vgPreprocess(content: string): string {
-	let s = content.replace(/(?<![`\[])@([a-zA-Z0-9_-]+)(?![`\]])/g, '[@$1](/profile/$1)');
+	let s = stripFrontMatter(content).replace(/(?<![`\[])@([a-zA-Z0-9_-]+)(?![`\]])/g, '[@$1](/profile/$1)');
 	s = s.replace(/^:::[ ]*center\s*\n([\s\S]*?)\n:::[ ]*$/gm, '<div class="text-center">$1</div>');
 	s = s.replace(/^->[ ]*(.*?)[ ]*<-$/gm, '<div class="text-center">$1</div>');
 	return s;

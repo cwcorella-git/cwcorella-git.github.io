@@ -54,3 +54,13 @@ describe('library renderer (VG pipeline, R2)', () => {
 		expect(html).toContain('text-center');
 	});
 });
+
+describe('front-matter', () => {
+	it('is not rendered as a rule or heading', async () => {
+		const { renderLibraryMarkdown } = await import('./library');
+		const html = renderLibraryMarkdown('---\ntitle: X\nsource_md5: abc\n---\n\n# Real\n\ntext');
+		expect(html).not.toContain('<hr');
+		expect(html).not.toContain('source_md5');
+		expect(html).toContain('Real');
+	});
+});
