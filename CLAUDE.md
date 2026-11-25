@@ -60,6 +60,8 @@ npm test          # vitest
 
 **Books data**: `src/lib/books.json` — 902 books, `BookLink[]` schema: `[{ name, url }]`.
 
+**Resources** (`/resources`, public): `src/lib/resources.json`, baked from the workstation-only saved-links catalogue (`~/Projects/apps/saved-links`). Only entries with `public: true` (mark with `mark_public.py` there) are exported by `node scripts/export-public-links.mjs --confirm`; the exporter refuses private/credential/personal/secret-query entries and exits non-zero. Never hand-edit the JSON. Spec: `docs/superpowers/specs/2026-11-25-vg-auth-bridge-and-public-links.md`.
+
 **Docs**: `static/docs/public/*.md` (plaintext), `static/docs/private/*.enc` (AES-256-GCM JSON).
 
 **Journals**: `static/docs/private/journals/` — index + entries all encrypted. Slugs are word-based (top-3 nouns via `compromise` NLP, e.g. `bread-morning-quiet`). `journalCache` (in-memory) lets reader/editor open newly created entries before the write queue commits. `draftStore` persists the pending journals-index payload to localStorage across hard refreshes. Rapid creates are safe — `writeQueue.push()` merges `extraUpdates` keyed by file path.
