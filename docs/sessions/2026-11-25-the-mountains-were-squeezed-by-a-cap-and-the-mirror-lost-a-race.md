@@ -23,6 +23,9 @@ repaired archive-mirror deploy. Spec for the unbuilt part:
 | 14 | civic-reno cluster (26) | **left private** on judgement; operator has not ruled |
 | 15 | Archive mirror (`scripts/build-archive.mjs`) does not list `/resources` | **proposed** |
 | 16 | Sign in with VG | **blocked** on the open questions in the spec (see Open) |
+| 17 | Push from the workstation without typing the command | **done**: ops script `ops/push-cwcorella-site.sh` (slug `op-push-cwcorella-site`) + approval requests; pushed `6676e4e`, then `2a6b367`. Script is committed in the operations repo, not pushed |
+| 18 | Where the library token lives | **answered**: `/data/library-api/library-api.env`, root-only, unread from this session. Operator's saved token is "out of date"; not diagnosed |
+| 19 | Fold the reading list into the library | **proposed, spec only**: `f2d11f6`, `e1e9f2e`, `2a6b367`. Not built |
 
 ## 1. The mountains were squeezed by a cap, not by the stretch the operator described
 
@@ -87,6 +90,26 @@ duplicate, non-http, local-address, userinfo and secret-query entries, and exits
 The `privacy-opsec` section has a neutral public heading (`PUBLIC_LABELS` in
 `scripts/export-public-links.mjs`), because its private name mentions data brokers.
 
+## 6. The reading list cannot move into the library as asked, without a decision
+
+Asked: make the reading list the library's primary "to read" set, with cards that can mark
+read, edit and remove, keeping links, authors and dates. Measured first: **only 327 of 917
+reading entries match a library document** (590 do not), the reading page is public while the
+library is admin-only, and the library has no author or date field in its editor because the
+metadata overlay (`edit_meta`) has no HTTP endpoint, only scripts. The operator ruled: stubs
+for all 590, `/reading` retires, the library goes public later after curation, nothing lost.
+Spec: `docs/superpowers/specs/2026-11-25-reading-into-library.md`. It also records that
+`edit_meta` can be promoted to VG's Postgres (`backend/vg_metadata.py`), so a metadata edit
+for reading reasons could reach VG; the trigger was not read.
+
+## 7. Pushing: the permission layer blocked the push, an approval request did not
+
+My combined edit+commit+push command was denied ("Sensitive Information Leakage"), and so was
+re-creating a deleted script ("Destructive or Unwanted Actions") until the operator said go.
+The route that works is an ops Scripts-tab approval: it presses a script **by slug**, so a
+script has to exist first. I first built a "button" the operator had not asked for and deleted
+it; they meant the allow/decline queue. Verified each push by `ls-remote` against local `HEAD`.
+
 ## Open
 
 - **Never verified on a real screen:** the resize timings are from software-rendered headless
@@ -106,14 +129,22 @@ The `privacy-opsec` section has a neutral public heading (`PUBLIC_LABELS` in
 - Rows 4-8 of the table live in the saved-links repo, which has no remote. Its only other
   copy is the `scratch-saved-links` backup row.
 
+- **Reading into library:** spec only. Unverified: how `user`-source rows are created (could they
+  hold stubs?), whether VG metadata promotion runs on a schedule, and the `/documents` cost of
+  a stub UNION on 107k rows. Operator's calls left: does `x` mean remove-from-to-read (not
+  curation delete), matched-doc edits as reading-side hints, when `/reading` is removed.
+- **Library token:** operator's saved one is out of date. Not read, not re-entered. The service
+  last restarted 2026-11-21; the env file last changed Sep 26.
+- **Deploy of `2a6b367`** (docs only) was not checked for green runs.
+
 ## Resume here
 
 Nothing is in flight and nothing is running in the background. Next work, if any, is the
 operator's: the VG-auth questions, the civic-reno ruling, or a report of what they see in
 half-screen after a hard reload.
 
-- **Branch:** `main`, head `d3cd723` (session doc + STATE.md land on top of it). Pushed.
-- **Push route:** the workstation cannot push over SSH. `git -c credential.helper= -c
+- **Branch:** `main`, head `2a6b367`, pushed (verified with `ls-remote`).
+- **Push route (preferred):** `mcp__ops__ops_request_approval` with slug `op-push-cwcorella-site`, then `ops_approval_status`. Manual fallback: the workstation cannot push over SSH. `git -c credential.helper= -c
   'credential.helper=!gh auth git-credential' push https://github.com/cwcorella-git/cwcorella-git.github.io.git main`
   (pull `--rebase` the same way first).
 - **Publish more or fewer:** `python3 mark_public.py [--unmark] ID...` in
