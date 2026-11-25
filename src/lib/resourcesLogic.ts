@@ -28,3 +28,33 @@ export function groupByCluster(items: Resource[], clusters: Cluster[], f: Filter
 export function host(url: string): string {
 	try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
 }
+
+/** Short rail label for a topic: the rail is a narrow column, topic names are not. */
+const SHORT: Record<string, string> = {
+	'p2p-transport': 'P2P', 'dns-naming': 'DNS', 'edge-security': 'EDGE', 'supply-chain': 'SUPPLY',
+	'selfhost-collab': 'SELF', 'governance-funding': 'GOV', 'privacy-opsec': 'PRIV', 'ai-tooling': 'AI',
+	'3d-mocap': '3D', 'hardware-field': 'HW', 'dev-misc': 'DEV'
+};
+export function shortLabel(c: Cluster): string {
+	return SHORT[c.id] ?? c.name.slice(0, 4).toUpperCase();
+}
+
+export const SELF_HOSTABLE_TAG = 'self-hostable';
+export type Tag = { kind: 'cluster'; id: string; label: string } | { kind: 'self'; id: string; label: string };
+
+/** Tags that match what is being typed, minus the ones already applied. Same idea as /reading's suggestions. */
+export function suggestTags(q: string, clusters: Cluster[], f: Pick<Filter, 'cluster' | 'selfHostableOnly'>): Tag[] {
+	const s = q.trim().toLowerCase();
+	if (!s) return [];
+	const all: Tag[] = [
+		...(f.selfHostableOnly ? [] : [{ kind: 'self', id: SELF_HOSTABLE_TAG, label: SELF_HOSTABLE_TAG } as Tag]),
+		...clusters.filter((c) => c.id !== f.cluster).map((c) => ({ kind: 'cluster', id: c.id, label: c.name }) as Tag)
+	];
+	return all.filter((t) => t.label.toLowerCase().includes(s));
+}
+
+/** One flat A–Z list (the guide-letter rail needs it flat). */
+export function sortByName(items: Resource[]): Resource[] {
+	const key = (n: string) => n.replace(/^[^\p{L}\p{N}]+/u, '').toLocaleLowerCase();
+	return [...items].sort((a, b) => key(a.name).localeCompare(key(b.name)));
+}

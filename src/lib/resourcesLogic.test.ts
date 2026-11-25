@@ -27,3 +27,21 @@ describe('groupByCluster', () => {
 describe('host', () => {
 	it('strips www and survives junk', () => { expect(host('https://www.a.org/x')).toBe('a.org'); expect(host('nope')).toBe('nope'); });
 });
+import { suggestTags, sortByName, shortLabel } from './resourcesLogic';
+describe('suggestTags', () => {
+	it('nothing until typing, then matches topics and the self-hostable tag', () => {
+		expect(suggestTags('', clusters, none)).toEqual([]);
+		expect(suggestTags('self', clusters, none).map((t) => t.id)).toEqual(['self-hostable']);
+		expect(suggestTags('tw', clusters, none).map((t) => t.id)).toEqual(['c2']);
+	});
+	it('drops tags already applied', () => {
+		expect(suggestTags('self', clusters, { cluster: '', selfHostableOnly: true })).toEqual([]);
+		expect(suggestTags('one', clusters, { cluster: 'c1', selfHostableOnly: false })).toEqual([]);
+	});
+});
+describe('sortByName / shortLabel', () => {
+	it('sorts ignoring leading punctuation', () => {
+		expect(sortByName([r({ id: 'b', name: 'Beta' }), r({ id: 'a', name: '"Alpha' })]).map((x) => x.id)).toEqual(['a', 'b']);
+	});
+	it('falls back for unknown topics', () => expect(shortLabel({ id: 'zz', name: 'Zebra', description: '' })).toBe('ZEBR'));
+});
