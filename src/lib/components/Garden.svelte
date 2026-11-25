@@ -19,6 +19,7 @@
 	import { makeStars, drawStarField, siderealDeg, type StarField } from '$lib/garden/stars';
 
 	// ── constants ─────────────────────────────────────────────────────────────
+	const TERRAIN_EXAGGERATION = 1.75;   // vertical ÷ horizontal scale of the panorama; 1.74 is what 16:9 shows the full span at
 	const HORIZON_FRAC = 0.68;   // horizon at 68% down canvas
 	const NAV_CLEAR    = 70;   // CSS px kept clear above clouds
 
@@ -185,6 +186,7 @@
 
 
 	let starField: StarField | null = null;
+	let starDims: [number, number, number] = [0, 0, 1];
 	let starLayer: HTMLCanvasElement | null = null;   // stars, with the clouds and the moon's glare cut out
 	let clouds: CloudDef[]          = [];
 	let cirrus: CirrusDef[]         = [];
@@ -275,12 +277,23 @@
 		treePending = null;
 	}
 
-	function buildScene(cw: number, ch: number, hy: number): void {
-		starField = makeStars(cw, hy, dpr);
+	function buildScene(cw: number, ch: number, hy: number, keepSky = false): void {
+		// Built when first drawn (~60 ms): they only show well after sunset, and a
+		// daytime resize used to pay for them every time.
+		starField = null;
+		starDims = [cw, hy, dpr];
 		starLayer = document.createElement('canvas');
 		starLayer.width = Math.max(1, Math.round(cw)); starLayer.height = Math.max(1, Math.round(hy));
 
-		buildClouds();
+		// Clouds are sized in px and placed by fraction of W, so a resize needs no
+		// new ones. Rebuilding dropped every bake: the cumulus vanished until
+		// re-baked one a frame, and the cirrus re-baked all at once (~250 ms).
+		if (keepSky && clouds.length && weatherDay === cloudsKey(sceneNow())) {
+			treeCache.key = '';
+			treePending = null;
+		} else {
+			buildClouds();
+		}
 
 		terrainLit = { key: '', canvas: terrainLit.canvas };
 		shadowCache = { key: '', canvas: null };
@@ -487,7 +500,8 @@
 		const starAlpha = Math.max(0, Math.min(1, (-altDeg - 8) / 6));
 		if (starAlpha <= 0) return;
 
-		if (!starField || !starLayer) return;
+		if (!starLayer) return;
+		starField ??= makeStars(...starDims);
 		const moon = moonState(altDeg, now);
 		const minutes = sceneMs() / 60000;
 		// Nothing over the stars (no cloud, no glare): draw them straight, skipping the layer.
@@ -616,7 +630,12 @@
 		const az = mid + ((moon ? moon.x / W : sxn) - 0.5) * 2 * half * 1.3;
 		const ph = horizonY * 0.36;                                       // panorama height on screen
 		const frame = m.ang1 - m.ang0, total = m.az1 - m.az0;
-		const span = Math.min(total, (4 * W * frame) / ph);              // ≤ 4× vertical exaggeration
+		// One exaggeration at every window shape. The span used to be capped at 4x,
+		// but a 16:9 window needs only 1.74x to show the whole range, so a half-width
+		// window drew it at 3.5x and a phone at 4x: peaks twice as steep, meadow
+		// patches half as wide. Holding the ratio fixed means narrower windows
+		// show a narrower slice, and every shape sees the same slopes.
+		const span = Math.min(total, (TERRAIN_EXAGGERATION * W * frame) / ph);
 		const cols = (span / total) * m.ncol;
 		const c0 = (m.ncol - cols) / 2;
 		const doy = dayOfYear(sceneNow());
@@ -1432,6 +1451,11 @@
 	let frameCount = 0;
 	let lastStamp  = 0;
 
+	// A resize clears the canvas (assigning its width does), and by day draw() runs
+	// one frame in fifteen: the window sat on an empty sky for up to ~250 ms plus
+	// the rebuild. resize() sets this so the very next frame paints.
+	let forceDraw = false;
+
 	function draw(timestamp: DOMHighResTimeStamp = 0): void {
 		if (!canvas) return;
 		const ctx = canvas.getContext('2d');
@@ -1448,12 +1472,13 @@
 		// for the twinkle; every 2nd frame redrew the whole screen for nothing (2026-10-23).
 		// Boost to every frame when cursor is active so interaction feels responsive.
 		const skip = cursorActive ? 1 : Math.max(1, Math.round(60 / (isNight ? T.nightFps : T.dayFps)));
-		if (frameCount % skip !== 0) {
+		if (!forceDraw && frameCount % skip !== 0) {
 			pumpBakes();
 			animFrame = requestAnimationFrame(draw);
 			return;
 		}
 
+		forceDraw = false;
 		const time = timestamp / 1000;
 		const dt   = lastStamp > 0 ? Math.min((timestamp - lastStamp) / 1000, 0.1) : 0.016;
 		lastStamp  = timestamp;
@@ -1578,7 +1603,8 @@
 		W = canvas.width  = newW;
 		H = canvas.height = newH;
 		horizonY = H * HORIZON_FRAC;
-		buildScene(W, H, horizonY);
+		buildScene(W, H, horizonY, true);
+		forceDraw = true;
 		if (Math.abs(W - prevW) > 4 || Math.abs(H - prevH) > 4) {
 			const tgf = treeGrowthFactor(gardenAgeUnits);
 			fgTreeSegs = fgTreeFor(tgf);
