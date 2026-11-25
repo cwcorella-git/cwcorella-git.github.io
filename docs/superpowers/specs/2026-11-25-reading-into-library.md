@@ -134,13 +134,12 @@ The import is additive, dry-run first, and reversible.
 
 ## 4. Invariants this must not break
 
-- **Withheld and absent bodies look the same to a visitor.** The public export keeps
+- **Withheld and absent bodies look the same to a visitor.** The library, once public, keeps
   `resolveBookDoc`'s single construction site and carries no field naming a withheld doc.
   `to_read` must not become a signal for "this is in the private corpus".
 - **Publication is unchanged:** `is_public = keep AND visibility == public AND free licence`.
   A to-read flag grants nothing and never changes tier, decision or visibility.
-- **`books.json` stays minified with no trailing newline**, byte-identical to what the
-  browser would write, or the next browser sync rewrites all rows.
+- **`books.json` is frozen, not edited**, until it is retired; the parity check reads it as is.
 - **No `pushState` before the router mounts; `page.url` is stale while a doc is open.** New
   URL params for the filter follow `urlLogic.ts`.
 - **Keep new gating logic pure and tested** (as `keyLogic.ts`), not inside components.
@@ -172,7 +171,9 @@ The import is additive, dry-run first, and reversible.
 3. Importer in dry-run, with the report from section 3. Review it; apply.
 4. Frontend: types, `filtersToParams`, filter control, card buttons, highlight, links block,
    metadata fields in the editor. Ship before the API restart.
-5. Exporter + parity check; switch `/reading` to read-only; remove its admin controls.
+5. Parity check (re-export from the new tables, diff against the frozen `books.json`); then
+   retire `/reading` with a redirect to `/library?to_read=1`, drop its nav entry and the
+   archive-mirror section.
 6. Update `CLAUDE.md` (Reading list ↔ library) and `docs/STATE.md`.
 
 ## Open (the operator's calls)
