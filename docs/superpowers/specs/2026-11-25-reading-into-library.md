@@ -33,21 +33,25 @@ Other facts that shape the design:
 
 ## 2. Proposal
 
-### 2.1 The source of truth moves to library-api; `books.json` becomes a baked projection
+### 2.1 The library owns the list; `/reading` retires (operator ruling, 2026-11-25)
 
-Keep the public page, change who owns the data:
+Operator: "we don't have the 'reading list' anymore. I'll make 'library' public once we've
+curated. Nothing should be lost with the data migration; if anything we gain features and get a
+fuller list." So:
 
 - **library-api owns the to-read set** (new tables in `edits.db`, which survives migrate).
-- A build-time exporter (same pattern as `export-public-links.mjs` and
-  `export-library-docs.mjs`) writes `src/lib/books.json` from it. `/reading` stays a static
-  public page rendering that file, **read-only for visitors**, with its admin controls
-  removed (they move to the library).
-- Nothing about the public site gains a runtime dependency on library-api. This respects the
-  "one acknowledged exception" rule in `CLAUDE.md`.
+- **`/reading` is retired**, not preserved as a baked page. Until the library goes public the
+  list is admin-only, which is a deliberate loss of the public list. The nav entry and the
+  archive-mirror "reading" section go when the migration is verified, not before.
+- **`src/lib/books.json` stays in the repo, untouched, as the frozen backstop** until the
+  parity check (section 3) passes. It is no longer written to once the cutover happens.
+- **Making the library public is out of scope here and is a separate, deliberate decision**
+  that breaks the "no server" exception in `CLAUDE.md`. It needs its own spec. This design must
+  not make it harder: see the invariants in section 4, which become the public surface.
 
-Rejected: making `/library` public (breaks the exception and leaks the corpus), and keeping
-`books.json` primary with the library joining on a fuzzy title match (the match is only 36%
-and a second copy of "what matched" is how the rail once scrolled to the wrong row).
+Rejected: keeping `books.json` primary with the library joining on a fuzzy title match (the
+match is only 36%, and a second copy of "what matched" is how the rail once scrolled to the
+wrong row).
 
 ### 2.2 Data model (library-api, `edits.db`)
 
@@ -154,9 +158,9 @@ The import is additive, dry-run first, and reversible.
   would cover it.
 - **Cost.** Stubs in the list query add a UNION to a 107k-row paginated, rail-indexed list.
   Measure `/documents` and `/anchor-offset` before and after on the real DB.
-- **The public page loses live edit.** Between a to-read change and the next export, the
-  public page is stale. Either the exporter runs on demand from the library UI (writes via
-  the Git Data API like books today), or it is a manual step. Decide before building.
+- **Public later.** When the library goes public, every to-read, link and metadata field becomes
+  visitor-visible unless gated. Fields added here need a public/private decision at the time
+  (a stub's `category`, hand-written links and notes are the likely ones).
 
 ## 6. Build order
 
@@ -173,10 +177,11 @@ The import is additive, dry-run first, and reversible.
 
 ## Open (the operator's calls)
 
-1. **Stubs for the 590 non-library entries** (recommended) versus only flagging the 327
-   matches and leaving the other 590 on the old page.
-2. **`x` means "remove from to-read"**, not curation delete. Confirm.
-3. **Public `/reading` stays**, as a baked read-only view (recommended), or goes away.
-4. **How the public page refreshes**: export from the library UI on demand, or a manual step.
-5. **Matched-doc author/date edits**: reading-side hint by default (recommended), or edit the
+Settled 2026-11-25: stubs for all 590 unmatched entries; `/reading` retires; the library goes
+public later, after curation; nothing may be lost in the migration.
+
+1. **`x` means "remove from to-read"**, not curation delete (recommended). Confirm.
+2. **Matched-doc author/date edits**: reading-side hint by default (recommended), or edit the
    document's own metadata directly.
+3. **When `/reading` is removed**: only after the parity check, plus a redirect to
+   `/library?to_read=1` for old links (recommended).
