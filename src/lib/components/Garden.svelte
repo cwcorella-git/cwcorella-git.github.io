@@ -277,7 +277,7 @@
 		treePending = null;
 	}
 
-	function buildScene(cw: number, ch: number, hy: number, keepSky = false): void {
+	function buildScene(cw: number, ch: number, hy: number, resize = false): void {
 		// Built when first drawn (~60 ms): they only show well after sunset, and a
 		// daytime resize used to pay for them every time.
 		starField = null;
@@ -288,7 +288,7 @@
 		// Clouds are sized in px and placed by fraction of W, so a resize needs no
 		// new ones. Rebuilding dropped every bake: the cumulus vanished until
 		// re-baked one a frame, and the cirrus re-baked all at once (~250 ms).
-		if (keepSky && clouds.length && weatherDay === cloudsKey(sceneNow())) {
+		if (resize && clouds.length && weatherDay === cloudsKey(sceneNow())) {
 			treeCache.key = '';
 			treePending = null;
 		} else {
@@ -297,9 +297,19 @@
 
 		terrainLit = { key: '', canvas: terrainLit.canvas };
 		shadowCache = { key: '', canvas: null };
-		meadow = renderMeadow(cw, ch - hy, dpr);
-		flowers = makeFlowers(cw, ch - hy, dpr);
+		// The heavy parts. On a resize each is its own stage, run one a frame by
+		// draw(), so no single frame pays for all of them (together ~100 ms).
+		meadow = null; flowers = []; bgPlants = []; fgPlants = [];
+		const build = [
+			() => { meadow = renderMeadow(cw, ch - hy, dpr); flowers = makeFlowers(cw, ch - hy, dpr); },
+			() => buildPlants(cw, ch, hy),
+		];
+		if (resize) stages.push(...build);
+		else for (const f of build) f();
+	}
 
+	/** The grass tufts and seed heads. */
+	function buildPlants(cw: number, ch: number, hy: number): void {
 		// ── plants ──────────────────────────────────────────────────────────────────────────
 		const prng = makePRNG(0xBADC0FFE);
 
@@ -641,6 +651,8 @@
 		const doy = dayOfYear(sceneNow());
 		const key = `${Math.round(altDeg * 2)}|${Math.round(az)}|${doy}|${Math.round(c0)}|${weather.kind}|${weather.snow}|${Math.round(ml * 20)}`;
 		if (terrainLit.key !== key) {
+			if (frameSpent) { terrainDeferred = true; forceDraw = true; return; }   // another job has this frame
+			frameSpent = true;
 			const L: TerrainLight = {
 				az, alt: moon ? moon.alt : altDeg,
 				sunCol: moon ? [150, 166, 205] : dimSun(lerpRGB([255, 246, 228], [255, 170, 96], golden)),
@@ -1046,6 +1058,7 @@
 	let treePending: { key: string; jobs: (() => void)[]; next: typeof treeCache; frame: number } | null = null;
 
 	function treeArts(altDeg: number, sxn: number): typeof treeCache {
+		if (stages.length) { treesDeferred = true; return emptyTrees(); }   // the tree shapes are still being regrown
 		const doy = dayOfYear(sceneNow());
 		const geom = `${W}x${H}|${gardenAgeUnits}|${fgTreeSegs.length}|${bgTreeSegs.length}`;
 		const ml = landMoon(altDeg);
@@ -1057,8 +1070,10 @@
 		}
 		const P = treePending;
 		if (!treeCache.key.startsWith(geom + '|')) {
-			for (const j of P.jobs) j();
-			P.jobs = [];
+			// A new size (or first load): bake one tree a frame, and draw none until
+			// they are all done; the old ones are the wrong size for this window.
+			if (P.frame !== frameCount && !frameSpent) { P.frame = frameCount; frameSpent = true; P.jobs.shift()?.(); }
+			if (P.jobs.length) { treesDeferred = true; forceDraw = true; return emptyTrees(); }
 		} else if (P.frame !== frameCount) {
 			P.frame = frameCount;     // several draws call this per frame; one job per frame
 			P.jobs.shift()?.();
@@ -1456,6 +1471,18 @@
 	// the rebuild. resize() sets this so the very next frame paints.
 	let forceDraw = false;
 
+	// Staged rebuild after a resize. Work that depends on the window's size is
+	// queued here and run one stage a frame, so the garden refills over a few
+	// frames instead of stalling on one. At most one heavy job a frame:
+	// frameSpent marks it taken, and the terrain relight and the tree bakes
+	// wait their turn (draw order: stages, terrain, trees). What isn't ready is
+	// left out of the frame rather than drawn at the old size.
+	let stages: (() => void)[] = [];
+	let frameSpent = false;
+	let terrainDeferred = false;
+	let treesDeferred = false;
+	const emptyTrees = (): typeof treeCache => ({ key: '', fg: null, bg: null, mid: [], sage: [] });
+
 	function draw(timestamp: DOMHighResTimeStamp = 0): void {
 		if (!canvas) return;
 		const ctx = canvas.getContext('2d');
@@ -1479,6 +1506,8 @@
 		}
 
 		forceDraw = false;
+		frameSpent = terrainDeferred = treesDeferred = false;
+		if (stages.length) { stages.shift()!(); frameSpent = true; forceDraw = true; }
 		const time = timestamp / 1000;
 		const dt   = lastStamp > 0 ? Math.min((timestamp - lastStamp) / 1000, 0.1) : 0.016;
 		lastStamp  = timestamp;
@@ -1519,7 +1548,7 @@
 		if (T.contours) drawGroundContours(ctx, altDeg);
 		if (T.mountains) drawTerrain(ctx, altDeg, sxn);
 		if (T.meadow) drawMeadow(ctx);
-		sampleGround(ctx, altDeg);
+		if (!stages.length && !terrainDeferred) sampleGround(ctx, altDeg);   // not from a half-built ground
 		if (snowLayer && T.snow) ctx.drawImage(snowLayer, 0, horizonY);
 		if (rocks && T.rocks) ctx.drawImage(rocks, 0, horizonY);
 		if (!weather.snow && T.flowers) drawFlowers(ctx, altDeg);
@@ -1535,7 +1564,7 @@
 		if (T.grass) drawPlants(ctx, bgPlants, horizonY, H, tuftLight(altDeg), plantGreen);   // far grass — behind tree
 		if (T.cirrus) drawCirrus(ctx, altDeg);
 		drawClouds(ctx, altDeg, sxn);
-		if (T.trees && T.treeShadows) { drawTreeCastShadow(ctx, altDeg, sxn); drawTreeShadow(ctx, altDeg); }
+		if (T.trees && T.treeShadows && !stages.length) { drawTreeCastShadow(ctx, altDeg, sxn); drawTreeShadow(ctx, altDeg); }
 		const fgArt = T.trees ? treeArts(altDeg, sxn).fg : null;
 		if (fgArt) {
 			// Seeded trunk lean — rotate the whole tree around its base
@@ -1551,8 +1580,10 @@
 		if (T.grass) drawPlants(ctx, fgPlants, horizonY, H, tuftLight(altDeg), plantGreen);   // near grass — in front of everything
 		if (T.grain) drawGrain(ctx);
 		if (T.vignette) drawVignette(ctx);
-		saveAverage(timestamp);
-		sampleSeen(timestamp);
+		if (!stages.length && !terrainDeferred && !treesDeferred) {   // the scene is whole again
+			saveAverage(timestamp);
+			sampleSeen(timestamp);
+		}
 
 		animFrame = requestAnimationFrame(draw);
 	}
@@ -1603,15 +1634,16 @@
 		W = canvas.width  = newW;
 		H = canvas.height = newH;
 		horizonY = H * HORIZON_FRAC;
+		stages = [];                       // a newer size supersedes a rebuild still under way
 		buildScene(W, H, horizonY, true);
-		forceDraw = true;
 		if (Math.abs(W - prevW) > 4 || Math.abs(H - prevH) > 4) {
-			const tgf = treeGrowthFactor(gardenAgeUnits);
-			fgTreeSegs = fgTreeFor(tgf);
-			saveFgTreeToCache(fgTreeSegs, W, H, tgf);
-			bgTreeSegs = bgTreeFor(tgf);
-			saveBgTreeToCache(bgTreeSegs, W, H, tgf);
+			const tgf = treeGrowthFactor(gardenAgeUnits), w = W, h = H;
+			stages.push(
+				() => { fgTreeSegs = fgTreeFor(tgf); saveFgTreeToCache(fgTreeSegs, w, h, tgf); },
+				() => { bgTreeSegs = bgTreeFor(tgf); saveBgTreeToCache(bgTreeSegs, w, h, tgf); },
+			);
 		}
+		forceDraw = true;
 	}
 
 	onMount(() => {
