@@ -36,8 +36,17 @@
 			{/each}
 		</div>
 
+		{#if groups.length > 1}
+			<nav class="jump" aria-label="jump to section">
+				<span class="jump-label">jump to</span>
+				{#each groups as g (g.cluster.id)}
+					<a href="#sec-{g.cluster.id}">{g.cluster.name} <span class="n">{g.items.length}</span></a>
+				{/each}
+			</nav>
+		{/if}
+
 		{#each groups as g (g.cluster.id)}
-			<section>
+			<section id="sec-{g.cluster.id}">
 				<h2>{g.cluster.name}</h2>
 				<p class="desc">{g.cluster.description}</p>
 				<ul class="list">
@@ -88,7 +97,12 @@
 	}
 	.pill:hover, .pill.active { opacity: 1; }
 	.pill.active { background: rgba(0, 0, 0, 0.06); }
-	section { margin-bottom: 2.25rem; }
+	.jump { display: flex; flex-wrap: wrap; gap: 0.35rem 1.1rem; align-items: baseline; margin: -0.5rem 0 2rem; padding: 0.7rem 0; border-top: 1px solid var(--glass-border); border-bottom: 1px solid var(--glass-border); }
+	.jump-label { font-family: var(--font-ui); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.5; }
+	.jump a { color: var(--clr-text); font-size: 0.8rem; opacity: 0.8; text-decoration: none; }
+	.jump a:hover { opacity: 1; text-decoration: underline; text-underline-offset: 2px; }
+	.jump .n { font-family: var(--font-ui); font-size: 0.62rem; opacity: 0.5; margin-left: 0.15rem; }
+	section { margin-bottom: 2.25rem; scroll-margin-top: 4.5rem; }
 	h2 { font-size: 1rem; font-weight: 500; margin: 0 0 0.25rem; }
 	.desc { margin: 0 0 0.9rem; opacity: 0.6; font-size: 0.8rem; line-height: 1.45; }
 	.list { list-style: none; margin: 0; padding: 0; }
@@ -102,5 +116,7 @@
 		.page { padding-top: 4.5rem; }
 		.inner { padding: 1.5rem 1.25rem 4rem; }
 		.controls { flex-direction: column; align-items: stretch; gap: 0.5rem; }
+		.jump { flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+		.jump::-webkit-scrollbar { display: none; }
 	}
 </style>
