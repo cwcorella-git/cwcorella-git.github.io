@@ -18,6 +18,13 @@ const CATALOG = process.env.SAVED_LINKS_CATALOG ?? join(homedir(), 'Projects/app
 const TAXONOMY = process.env.SAVED_LINKS_TAXONOMY ?? join(dirname(CATALOG), 'taxonomy.json');
 const OUT = join(HERE, '..', 'src', 'lib', 'resources.json');
 
+// Public headings that differ from the private taxonomy's. The private cluster is
+// about data brokers; nothing on that subject is published, so its public face
+// is just the tools.
+const PUBLIC_LABELS = {
+	'privacy-opsec': { name: 'Privacy & security tools', description: 'Hardware keys, encrypted storage and authentication, and privacy-minded services.' }
+};
+
 const argv = process.argv.slice(2);
 const confirm = argv.includes('--confirm');
 if (confirm === argv.includes('--dry-run')) {
@@ -36,7 +43,7 @@ if (confirm) {
 	const used = new Set(items.map((i) => i.cluster));
 	const clusters = JSON.parse(readFileSync(TAXONOMY, 'utf8')).clusters
 		.filter((c) => used.has(c.id))
-		.map(({ id, name, description }) => ({ id, name, description }));
+		.map(({ id, name, description }) => ({ id, ...(PUBLIC_LABELS[id] ?? { name, description }) }));
 	writeFileSync(OUT, JSON.stringify({ clusters, items })); // minified, no trailing newline, like books.json
 	console.log(`wrote ${OUT}`);
 }
