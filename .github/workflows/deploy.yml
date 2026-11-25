@@ -40,19 +40,15 @@ jobs:
           command: pages deploy build --project-name=cwcorella --branch=main --commit-hash=${{ github.sha }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
-  deploy-archive:
-    name: Deploy to GitHub Pages (cwcorella-git.github.io)
+  # Built and uploaded in one job, deployed from another. Done in a single job,
+  # deploy-pages listed the run's artifacts ~0.4 s after the upload finalized and
+  # often saw none ("Found 0 artifact(s)", 5 of 6 runs on 2026-11-25). The job
+  # boundary puts seconds between the two.
+  build-archive:
+    name: Build archive (cwcorella-git.github.io)
     runs-on: ubuntu-latest
-
     permissions:
       contents: read
-      pages: write
-      id-token: write
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
       - uses: actions/checkout@v4
 
@@ -76,6 +72,20 @@ jobs:
         with:
           path: archive-build
 
+  deploy-archive:
+    name: Deploy to GitHub Pages (cwcorella-git.github.io)
+    needs: build-archive
+    runs-on: ubuntu-latest
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
