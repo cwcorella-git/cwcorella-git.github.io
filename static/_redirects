@@ -6,3 +6,6 @@
 # The target has no .html: Pages strips the extension from served paths, and
 # /404.html here came back as a 308 to /404, dropping the document's address.
 /library/*  /404  200
+
+# The reading list moved into the library (2026-11-26); /library is admin-gated.
+/reading  /library?to_read=1  302

@@ -9,13 +9,8 @@ const PRIVATE_DOCS = join(ROOT, 'static/docs/private');
 mkdirSync(OUT, { recursive: true });
 
 const homeContent = JSON.parse(readFileSync(join(ROOT, 'src/lib/content/home.json'), 'utf8')).content;
-const books = JSON.parse(readFileSync(join(ROOT, 'src/lib/books.json'), 'utf8'));
 
 const homeHtml = await marked(homeContent);
-
-const booksHtml = books
-	.map(b => b.url ? `<li><a href="${b.url}">${b.name}</a></li>` : `<li>${b.name}</li>`)
-	.join('\n    ');
 
 function countEnc(dir) {
 	let count = 0;
@@ -99,11 +94,6 @@ const html = `<!DOCTYPE html>
   <p class="byline">archive mirror &mdash; <a href="https://cwcorella.com">cwcorella.com</a></p>
 
   ${homeHtml}
-
-  <h2>reading</h2>
-  <ul>
-    ${booksHtml}
-  </ul>
 
   <h2>encrypted archive</h2>
   <div class="archive-note">

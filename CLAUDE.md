@@ -1,6 +1,6 @@
 # CLAUDE.md — cwcorella-git.github.io
 
-Personal site: reading list, journals, home page. Fully static. Live site at cwcorella.com (Cloudflare Pages); cwcorella-git.github.io is a minimal HTML archive mirror. All writes go through the GitHub REST API from the browser using a session-scoped PAT. No server — with one acknowledged exception, `/library` (see below).
+Personal site: journals, home page. Fully static. Live site at cwcorella.com (Cloudflare Pages); cwcorella-git.github.io is a minimal HTML archive mirror. All writes go through the GitHub REST API from the browser using a session-scoped PAT. No server — with one acknowledged exception, `/library` (see below).
 
 ## Hard constraints
 
@@ -162,6 +162,8 @@ that reading was wrong and its correction is recorded there.
   type-check and unit tests and were caught only there.
 
 ### Reading list ↔ library
+
+- **The reading list lives in the library (2026-11-26).** `/reading` is retired (`/reading` 302s to `/library?to_read=1`, which is admin-gated, so visitors no longer see a list). 917 entries are in library-api's `edits.db` (`reading_item`/`reading_link`, 264 attached to documents, 653 stubs), operator-private: never sent to the VG token. `src/lib/books.json` is now a frozen snapshot, kept for `resolveBookDoc` and the parity script (`library-api` `python -m scripts.reading_parity`); do not edit it. `x` on a card removes from to-read, never a curation delete.
 
 - **A withheld body and an absent body must be indistinguishable to a visitor.** Whether a
   text is in the corpus is itself private. `resolveBookDoc` in `src/lib/bookDocLogic.ts` is

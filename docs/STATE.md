@@ -122,3 +122,8 @@ static/.nojekyll                     — prevents GitHub Pages from running Jeky
   that should stay held. 3 documents remain claimed by two list entries each — all
   distinct books sharing a title, which the matcher cannot separate without an author
   signal; the safe outcome (exclude) is what happens today.
+
+
+## Reading list into the library (2026-11-26)
+
+Imported 917 books into library-api `edits.db` (264 attached, 653 stubs, 1,878 links, 3 read); parity vs `books.json` 0 differences. `/reading` retired with a redirect to `/library?to_read=1`; nav entry and archive-mirror section removed. **Not built:** stub editing, an add-to-to-read control, reading-side hint fields for matched documents. **Never verified live:** `/library` reading controls in a browser; `/documents` timing with the list populated. Spec: `docs/superpowers/specs/2026-11-25-reading-into-library.md`.
