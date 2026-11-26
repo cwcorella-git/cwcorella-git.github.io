@@ -29,6 +29,8 @@ import type {
 	AnchorOffsetParams,
 	ReadingItem,
 	ReadingState,
+	ReadingLink,
+	MetaPayload,
 	Decision,
 	CurationStats,
 	DocVersion
@@ -461,6 +463,47 @@ export const libraryState = {
 		} catch {
 			_stubs = before;
 			toast.error('could not update reading list');
+		}
+	},
+
+	/** Save document metadata (author, date, type, source URL). Toasts on failure,
+	 *  never _status. Returns whether it saved so the editor can keep its draft. */
+	async saveMeta(payload: MetaPayload): Promise<boolean> {
+		const doc = _openDoc;
+		if (!doc) return false;
+		try {
+			const merged = await client.saveMeta(doc.id, payload);
+			if (_openDoc && _openDoc.id === doc.id) {
+				_openDoc = { ...merged, reading: merged.reading ?? doc.reading };
+				const idx = _openIndex;
+				const c = idx === null ? undefined : _rowCache.get(idx);
+				if (idx !== null && c && c.id === doc.id) {
+					_rowCache.set(idx, { ...c, author: merged.author, publication_date: merged.publication_date,
+						document_type: merged.document_type });
+					_version++;
+				}
+			}
+			return true;
+		} catch {
+			toast.error('could not save details');
+			return false;
+		}
+	},
+
+	/** Replace the open document's reading links. */
+	async saveReadingLinks(links: ReadingLink[]): Promise<boolean> {
+		const doc = _openDoc;
+		const r = doc?.reading;
+		if (!doc || !r) return false;
+		try {
+			const item = await client.updateReading(r.item_id, { links });
+			if (_openDoc && _openDoc.id === doc.id && _openDoc.reading) {
+				_openDoc = { ..._openDoc, reading: { ..._openDoc.reading, links: item.links } };
+			}
+			return true;
+		} catch {
+			toast.error('could not save links');
+			return false;
 		}
 	},
 

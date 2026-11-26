@@ -104,6 +104,9 @@ export interface EditPayload {
 export interface LibraryDoc extends DocListItem {
 	collections: string[];
 	body: string;
+	// Detail-only; optional because an un-upgraded API omits them.
+	date_precision?: string | null;
+	source_url?: string | null;
 }
 
 export interface FacetBucket {
