@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-	readingButtons, readingTone, applyReadingAction, actionToPatch, stubsFor
+	readingButtons, readingTone, applyReadingAction, actionToPatch, stubsFor,
+	stubDraft, stubPatch, itemToState, applyStubItem
 } from './readingLogic';
 import type { ReadingItem, ReadingState } from './types';
 
@@ -56,5 +57,48 @@ describe('stubsFor', () => {
 			mk({ item_id: 4, to_read: 0 })];
 		expect(stubsFor(items, 'to_read').map((i) => i.item_id)).toEqual([1]);
 		expect(stubsFor(items, 'read').map((i) => i.item_id)).toEqual([2]);
+	});
+});
+
+describe('add to to-read', () => {
+	it('offers only + to read off the list, and only when allowed', () => {
+		expect(readingButtons(undefined)).toEqual([]);
+		expect(readingButtons(undefined, true)).toEqual([{ action: 'add', label: '+ to read' }]);
+		expect(readingButtons(st({ to_read: false }), true).map((b) => b.action)).toEqual(['add']);
+		expect(readingButtons(st(), true).map((b) => b.action)).toEqual(['mark-read', 'edit', 'remove']);
+	});
+	it('add is a to_read write and never a curation field', () => {
+		expect(actionToPatch('add')).toEqual({ to_read: true });
+		expect(applyReadingAction(st({ to_read: false }), 'add').to_read).toBe(true);
+	});
+	it('itemToState maps the API row', () => {
+		const s = itemToState({ item_id: 4, to_read: 1, read: false, links: [{ name: 'a', url: 'https://a' }] } as ReadingItem);
+		expect(s).toEqual({ item_id: 4, to_read: true, read: false, links: [{ name: 'a', url: 'https://a' }] });
+	});
+});
+
+describe('stub editing', () => {
+	const it0 = {
+		item_id: 9, doc_id: null, legacy_id: 'x', title: 'Book', author: 'A B', year_hint: 1990,
+		category: 'cat', type_hint: null, tags: null, to_read: 1, read_at: null, read: false, stub: true,
+		links: [{ name: 'src', url: 'https://x.org/b' }]
+	} as ReadingItem;
+	it('an untouched draft produces an empty patch', () => {
+		expect(stubPatch(it0, stubDraft(it0))).toEqual({ patch: {}, problems: [] });
+	});
+	it('sends only what changed', () => {
+		const d = { ...stubDraft(it0), title: ' New ', year: '1991' };
+		expect(stubPatch(it0, d).patch).toEqual({ title: 'New', year_hint: 1991 });
+	});
+	it('blocks an empty title, a bad year, a cleared year and a non-http link', () => {
+		const d = { ...stubDraft(it0), title: ' ', year: '19x', links: [{ name: 'n', url: 'javascript:alert(1)' }] };
+		expect(stubPatch(it0, d).problems.length).toBe(3);
+		expect(stubPatch(it0, { ...stubDraft(it0), year: '' }).problems).toEqual(['a year cannot be cleared']);
+	});
+	it('emptying author sends an empty string, not null', () => {
+		expect(stubPatch(it0, { ...stubDraft(it0), author: '' }).patch).toEqual({ author: '' });
+	});
+	it('replaces the saved row in place', () => {
+		expect(applyStubItem([it0], { ...it0, title: 'Z' })[0].title).toBe('Z');
 	});
 });

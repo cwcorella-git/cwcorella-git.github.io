@@ -226,7 +226,7 @@
 				onChange={(p) => libraryState.applyControls(p)}
 			/>
 			{#if libraryState.controls.filters.reading}
-				<StubList items={libraryState.stubs} onAct={(id, a) => libraryState.stubAct(id, a)} />
+				<StubList items={libraryState.stubs} onAct={(id, a) => libraryState.stubAct(id, a)} onSave={(id, p) => libraryState.saveStub(id, p)} />
 			{/if}
 			{#if libraryState.total === 0}
 				<p class="status">{libraryState.stubs.length > 0 ? 'no library documents match.' : 'no documents match.'}</p>
@@ -239,6 +239,7 @@
 					queryKey={libraryState.queryKey}
 					onOpen={openFromList}
 					{onReading}
+					canAddReading={libraryState.facets?.reading !== undefined}
 					hrefFor={(row) => docPath(row) + linkSearch}
 					onVisibleRange={(s, e) => libraryState.ensureWindowsForRange(s, e)}
 					resolveJumpIndex={(seek) => libraryState.jumpToAnchor(seek)}

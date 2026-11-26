@@ -15,6 +15,7 @@
 		queryKey: string;
 		onOpen: (index: number) => void;
 		onReading?: (index: number, a: ReadingAction) => void;
+		canAddReading?: boolean;
 		/** The row's own address: what a new tab, a bookmark or a copied link opens. */
 		hrefFor: (row: DocListItem) => string;
 		onVisibleRange: (start: number, end: number) => void;
@@ -30,6 +31,7 @@
 		queryKey,
 		onOpen,
 		onReading,
+		canAddReading = false,
 		hrefFor,
 		onVisibleRange,
 		resolveJumpIndex,
@@ -130,9 +132,9 @@
 				{@const row = rowAt(index)}
 				{#if row}
 					{#if view === 'grid'}
-						<div class="grid-cell"><DocCard item={row} href={hrefFor(row)} onOpen={() => onOpen(index)} onReading={onReading && row.reading ? (a) => onReading(index, a) : undefined} /></div>
+						<div class="grid-cell"><DocCard item={row} href={hrefFor(row)} onOpen={() => onOpen(index)} onReading={onReading && (row.reading || canAddReading) ? (a) => onReading(index, a) : undefined} canAdd={canAddReading} /></div>
 					{:else}
-						<DocRow item={row} href={hrefFor(row)} onOpen={() => onOpen(index)} onReading={onReading && row.reading ? (a) => onReading(index, a) : undefined} />
+						<DocRow item={row} href={hrefFor(row)} onOpen={() => onOpen(index)} onReading={onReading && (row.reading || canAddReading) ? (a) => onReading(index, a) : undefined} canAdd={canAddReading} />
 					{/if}
 				{:else}
 					<div class="skeleton" aria-hidden="true"></div>

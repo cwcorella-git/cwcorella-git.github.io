@@ -5,10 +5,11 @@
 
 	interface Props {
 		state: ReadingState | undefined;
+		canAdd?: boolean;
 		onAct: (a: ReadingAction) => void;
 	}
-	const { state, onAct }: Props = $props();
-	const buttons = $derived(readingButtons(state));
+	const { state, canAdd = false, onAct }: Props = $props();
+	const buttons = $derived(readingButtons(state, canAdd));
 
 	// These sit beside the card's <a>, not inside it, so a click can never also
 	// open the reader; stopPropagation keeps a parent handler from seeing it too.
@@ -22,7 +23,7 @@
 {#if buttons.length > 0}
 	<span class="rb" role="group" aria-label="Reading list">
 		{#each buttons as b (b.action)}
-			<button type="button" class="b" class:x={b.action === 'remove'}
+			<button type="button" class="b" class:x={b.action === 'remove'} class:add={b.action === 'add'}
 				aria-label={b.action === 'remove' ? 'remove from reading list' : b.label}
 				onclick={(e) => click(e, b.action)}>{b.label}</button>
 		{/each}
@@ -37,4 +38,6 @@
 		font-size: 0.5rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.4rem;
 	}
 	.b:hover { background: rgba(var(--ui-rgb), 0.2); }
+	.b.add { background: none; border-style: dashed; opacity: 0.7; }
+	.b.add:hover { opacity: 1; }
 </style>

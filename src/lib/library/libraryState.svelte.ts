@@ -29,6 +29,7 @@ import type {
 	AnchorOffsetParams,
 	ReadingItem,
 	ReadingState,
+	ReadingPatch,
 	ReadingLink,
 	MetaPayload,
 	Decision,
@@ -43,7 +44,7 @@ function revertKeysToValues(patch: { visibility?: string; needs_formatting?: 0 |
 	return out;
 }
 
-import { actionToPatch, applyReadingAction, stubsFor, type ReadingAction } from './readingLogic';
+import { actionToPatch, applyReadingAction, applyStubItem, itemToState, stubsFor, type ReadingAction } from './readingLogic';
 const baseUrl = env.PUBLIC_LIBRARY_API_URL || 'https://library-api.cwcorella.com';
 const client = createLibraryClient({ baseUrl, getToken: () => adminState.libraryToken });
 
@@ -433,22 +434,50 @@ export const libraryState = {
 	 *  touches _status (the controls are gated behind it). Never touches decision. */
 	async readingAct(index: number, action: ReadingAction) {
 		const row = _rowCache.get(index);
-		if (!row || !row.reading) return;
+		if (!row) return;
 		const patch = actionToPatch(action);
 		if (!patch) return;
 		const before = row.reading;
 		const id = row.id;
-		const set = (r: ReadingState) => {
+		const set = (r: ReadingState | undefined) => {
 			const c = _rowCache.get(index);
 			if (c && c.id === id) { _rowCache.set(index, { ...c, reading: r }); _version++; }
 		};
+		// A document never on the list has no row yet: `add` creates one (POST),
+		// everything else needs an existing row.
+		if (!before) {
+			if (action !== 'add') return;
+			set({ item_id: 0, to_read: true, read: false, links: [] });
+			try {
+				const item = await client.addReading({ doc_id: id });
+				set(itemToState(item));
+				void this.loadFacets();
+			} catch {
+				set(undefined);
+				toast.error('could not add to reading list');
+			}
+			return;
+		}
 		set(applyReadingAction(before, action));
 		try {
 			await client.updateReading(before.item_id, patch);
 			void this.loadFacets();
 		} catch {
 			set(before);
-			toast.error('could not update reading list');
+			toast.error(action === 'add' ? 'could not add to reading list' : 'could not update reading list');
+		}
+	},
+
+	/** Save an edited stub (title, author, year, category, links). Toasts on failure,
+	 *  never _status; returns whether it saved so the form can keep its draft. */
+	async saveStub(itemId: number, patch: ReadingPatch): Promise<boolean> {
+		try {
+			const saved = await client.updateReading(itemId, patch);
+			_stubs = applyStubItem(_stubs, saved);
+			return true;
+		} catch {
+			toast.error('could not save entry');
+			return false;
 		}
 	},
 

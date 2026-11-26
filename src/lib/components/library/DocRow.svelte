@@ -13,9 +13,11 @@
 		onOpen: () => void;
 		// Reading-list buttons. Absent = none (non-operator, or an un-upgraded API).
 		onReading?: (a: ReadingAction) => void;
+		// Show `+ to read` on a document that is not on the list.
+		canAdd?: boolean;
 	}
 
-	const { item, href, onOpen, onReading }: Props = $props();
+	const { item, href, onOpen, onReading, canAdd = false }: Props = $props();
 
 	// A real link, so the browser's own menu works: open in new tab, copy link,
 	// bookmark. A plain left click opens the reader in place instead.
@@ -60,7 +62,7 @@
 		>
 	{/if}
 </a>
-	{#if onReading}<span class="rbtn"><ReadingButtons state={item.reading} onAct={onReading} /></span>{/if}
+	{#if onReading}<span class="rbtn"><ReadingButtons state={item.reading} {canAdd} onAct={onReading} /></span>{/if}
 </div>
 
 <style>
