@@ -152,3 +152,20 @@ half-screen after a hard reload.
   `node scripts/export-public-links.mjs --confirm` here, build, tests, commit
   `src/lib/resources.json`, push, then read the commit's `check-runs` (all three should be green).
 - **Test servers:** none left running (ports 4173 and 5199 were killed).
+
+## Addendum 2026-11-26 — `/resources` streamlined to match `/reading` and `/library`
+
+| # | item | state |
+|---|---|---|
+| 20 | Drop the lede and h1; replace the topic pill row and the big self-hostable checkbox with one search bar whose topic and `self-hostable` tags appear as you type and become chips | **done**: `dd93786`, local only |
+| 21 | Sort select (Topic / Name A–Z) | **done**: `dd93786` |
+| 22 | Replace the "jump to" strip with the shared `JumpRail` (short topic labels in Topic sort, letters in A–Z) | **done**: `dd93786` |
+| 23 | Same treatment for `/journals` (own h1 + search bar today) | **proposed**, not started |
+| 24 | Push `dd93786` | **held**: the push also releases the earlier unpushed commit (`b7b5989` era, not authored here), and the UI was never seen |
+
+- Logic lives in `src/lib/resourcesLogic.ts` (`suggestTags`, `sortByName`, `shortLabel`); 9 unit tests pass, `npm run check` 0 errors, `npm run build` ok. A first test failed because "self-hostable" contains "o"; the test was wrong, not the code.
+- **Never verified:** the page has not been rendered or clicked. Rail labels (`SUPPLY`, `PRIV`…) on a phone, the sticky rail with the new search bar, and scroll-spy accuracy are all OWED by eye.
+
+## Resume here (2026-11-26)
+
+Open rows: 23 (journals alignment, proposed) and 24 (push). Repo `~/Projects/cwcorella-git.github.io`, branch `main`, ahead 2 of origin. Push via the ops script `op-push-cwcorella-site` (approval request) once the operator has seen `/resources` (`npm run dev`). Nothing runs in the background.
