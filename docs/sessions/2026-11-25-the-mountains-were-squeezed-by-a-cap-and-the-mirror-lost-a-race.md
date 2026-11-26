@@ -179,3 +179,10 @@ Open rows: 23 (journals alignment, proposed) and 24 (push). Repo `~/Projects/cwc
 ## Resume here (2026-11-26 b)
 
 Push `dd93786`, `0140270`, `1b3f8dc` (and `faae0f7`, not mine) via `op-push-cwcorella-site` with an approval request once the operator has OK'd the pages.
+
+## Addendum 2026-11-26 c
+
+Renders re-sent to the ops Media tab (`/resources` 390 and 1280px, `/journals` public gate). Operator verdict on them is pending; scroll-spy, tag pills and A-Z remain unseen. Push still held.
+
+## Resume here (2026-11-26 c)
+On the operator's OK of the renders: push dd93786, 0140270, 1b3f8dc, 25a5db1 plus faae0f7 (not mine) via `op-push-cwcorella-site` with an approval request, then check the deploy.
