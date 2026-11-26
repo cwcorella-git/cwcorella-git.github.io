@@ -4,6 +4,7 @@
 	import DocCard from './DocCard.svelte';
 	import JumpRail from './JumpRail.svelte';
 	import type { DocListItem } from '$lib/library/types';
+	import type { ReadingAction } from '$lib/library/readingLogic';
 	import { anchorLabelForRow, estimateLabel, type RailAnchor } from '$lib/library/railLogic';
 
 	interface Props {
@@ -13,6 +14,7 @@
 		sort: string;
 		queryKey: string;
 		onOpen: (index: number) => void;
+		onReading?: (index: number, a: ReadingAction) => void;
 		/** The row's own address: what a new tab, a bookmark or a copied link opens. */
 		hrefFor: (row: DocListItem) => string;
 		onVisibleRange: (start: number, end: number) => void;
@@ -27,6 +29,7 @@
 		sort,
 		queryKey,
 		onOpen,
+		onReading,
 		hrefFor,
 		onVisibleRange,
 		resolveJumpIndex,
@@ -127,9 +130,9 @@
 				{@const row = rowAt(index)}
 				{#if row}
 					{#if view === 'grid'}
-						<div class="grid-cell"><DocCard item={row} href={hrefFor(row)} onOpen={() => onOpen(index)} /></div>
+						<div class="grid-cell"><DocCard item={row} href={hrefFor(row)} onOpen={() => onOpen(index)} onReading={onReading && row.reading ? (a) => onReading(index, a) : undefined} /></div>
 					{:else}
-						<DocRow item={row} href={hrefFor(row)} onOpen={() => onOpen(index)} />
+						<DocRow item={row} href={hrefFor(row)} onOpen={() => onOpen(index)} onReading={onReading && row.reading ? (a) => onReading(index, a) : undefined} />
 					{/if}
 				{:else}
 					<div class="skeleton" aria-hidden="true"></div>

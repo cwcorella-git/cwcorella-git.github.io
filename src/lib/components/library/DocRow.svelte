@@ -1,6 +1,8 @@
 <script lang="ts">
 	import TierBadge from './TierBadge.svelte';
 	import type { DocListItem } from '$lib/library/types';
+	import ReadingButtons from './ReadingButtons.svelte';
+	import { readingTone, type ReadingAction } from '$lib/library/readingLogic';
 	import { badgeLabel } from '$lib/library/curationLogic';
 	import { isBrowserClick } from '$lib/library/urlLogic';
 	import { splitSnippet } from '$lib/library/snippetLogic';
@@ -9,9 +11,11 @@
 		item: DocListItem;
 		href: string;
 		onOpen: () => void;
+		// Reading-list buttons. Absent = none (non-operator, or an un-upgraded API).
+		onReading?: (a: ReadingAction) => void;
 	}
 
-	const { item, href, onOpen }: Props = $props();
+	const { item, href, onOpen, onReading }: Props = $props();
 
 	// A real link, so the browser's own menu works: open in new tab, copy link,
 	// bookmark. A plain left click opens the reader in place instead.
@@ -23,10 +27,12 @@
 
 	// Empty unless this is a relevance row whose body actually matched, so an
 	// ordinary listing renders exactly the two children it always has.
+	const tone = $derived(readingTone(item.reading));
 	const parts = $derived(splitSnippet(item.snippet));
 </script>
 
-<a class="doc-row" data-doc-id={item.id} {href} {onclick}>
+<div class="rw">
+<a class="doc-row" class:to-read={tone === 'to-read'} class:was-read={tone === 'read'} data-doc-id={item.id} {href} {onclick}>
 	<span class="title">
 		{#if item.visibility === 'public'}<span class="mine" aria-label="mine (public)" title="public">◉</span>{/if}
 		{item.title}
@@ -54,6 +60,8 @@
 		>
 	{/if}
 </a>
+	{#if onReading}<span class="rbtn"><ReadingButtons state={item.reading} onAct={onReading} /></span>{/if}
+</div>
 
 <style>
 	.doc-row {
@@ -153,4 +161,11 @@
 	.decision-keep { color: var(--clr-text); border-color: rgba(var(--ui-rgb), 0.5); opacity: 1; }
 	.decision-hide { opacity: 0.5; border-color: rgba(var(--ui-rgb), 0.25); }
 	.decision-delete { color: var(--clr-danger); border-color: var(--clr-danger); }
+
+	/* The buttons overlay the card's corner; they are a sibling of the link. */
+	.rw { position: relative; width: 100%; height: 100%; }
+	.rbtn { position: absolute; right: 0.4rem; top: 0.4rem; }
+	/* To read: an accent bar and a label-free tint, distinct from keep and from the public mark. */
+	.to-read { box-shadow: inset 3px 0 0 var(--clr-text); background: rgba(var(--ui-rgb), 0.1); }
+	.was-read { opacity: 0.55; }
 </style>

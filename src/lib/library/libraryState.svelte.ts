@@ -27,6 +27,8 @@ import type {
 	LibraryDoc,
 	Facets,
 	AnchorOffsetParams,
+	ReadingItem,
+	ReadingState,
 	Decision,
 	CurationStats,
 	DocVersion
@@ -39,6 +41,7 @@ function revertKeysToValues(patch: { visibility?: string; needs_formatting?: 0 |
 	return out;
 }
 
+import { actionToPatch, applyReadingAction, stubsFor, type ReadingAction } from './readingLogic';
 const baseUrl = env.PUBLIC_LIBRARY_API_URL || 'https://library-api.cwcorella.com';
 const client = createLibraryClient({ baseUrl, getToken: () => adminState.libraryToken });
 
@@ -55,6 +58,8 @@ let _openIndex = $state<number | null>(null);
 let _curationStats = $state<CurationStats | null>(null);
 let _editMode = $state(false);
 let _versions = $state<DocVersion[]>([]);
+let _stubs = $state<ReadingItem[]>([]); // reading rows with no document (GET /reading)
+let _stubsEpoch = 0;
 
 let _total = $state<number | null>(null);
 let _version = $state(0); // bumped whenever the row cache changes
@@ -149,6 +154,7 @@ async function _newQuery() {
 	_queryEpoch++;
 	_resetData();
 	_activeWindows = [0];
+	void libraryState.loadStubs();
 	await _fetchWindow(0, _queryEpoch);
 }
 
@@ -402,6 +408,60 @@ export const libraryState = {
 		if (!doc) return Promise.resolve();
 		const next = doc.needs_formatting ? 0 : 1;
 		return this._setFlags({ needs_formatting: next }, { needs_formatting: doc.needs_formatting });
+	},
+
+	get stubs() { return _stubs; },
+
+	/** Reading rows with no library text. Only meaningful under a reading filter;
+	 *  non-fatal like every secondary fetch (a failure leaves the list as it was). */
+	async loadStubs() {
+		const f = _controls.filters.reading;
+		const epoch = ++_stubsEpoch;
+		if (!f) { _stubs = []; return; }
+		try {
+			const res = await client.getReading({ state: f, limit: 1000 });
+			if (epoch !== _stubsEpoch) return;
+			_stubs = stubsFor(res.items, f);
+		} catch {
+			if (epoch === _stubsEpoch) _stubs = [];
+		}
+	},
+
+	/** Mark read / unread / x on a list row. Optimistic; toasts on failure and never
+	 *  touches _status (the controls are gated behind it). Never touches decision. */
+	async readingAct(index: number, action: ReadingAction) {
+		const row = _rowCache.get(index);
+		if (!row || !row.reading) return;
+		const patch = actionToPatch(action);
+		if (!patch) return;
+		const before = row.reading;
+		const id = row.id;
+		const set = (r: ReadingState) => {
+			const c = _rowCache.get(index);
+			if (c && c.id === id) { _rowCache.set(index, { ...c, reading: r }); _version++; }
+		};
+		set(applyReadingAction(before, action));
+		try {
+			await client.updateReading(before.item_id, patch);
+			void this.loadFacets();
+		} catch {
+			set(before);
+			toast.error('could not update reading list');
+		}
+	},
+
+	async stubAct(itemId: number, action: ReadingAction) {
+		const patch = actionToPatch(action);
+		if (!patch) return;
+		const before = _stubs;
+		_stubs = _stubs.filter((i) => i.item_id !== itemId);
+		try {
+			await client.updateReading(itemId, patch);
+			void this.loadFacets();
+		} catch {
+			_stubs = before;
+			toast.error('could not update reading list');
+		}
 	},
 
 	startEdit() { _editMode = true; },

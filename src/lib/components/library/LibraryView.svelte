@@ -13,6 +13,8 @@
 	import DecisionControl from '$lib/components/library/DecisionControl.svelte';
 	import TierControl from '$lib/components/library/TierControl.svelte';
 	import StateControl from '$lib/components/library/StateControl.svelte';
+	import StubList from '$lib/components/library/StubList.svelte';
+	import type { ReadingAction } from '$lib/library/readingLogic';
 	import ReadingControl from '$lib/components/library/ReadingControl.svelte';
 	import { buildRail } from '$lib/library/railLogic';
 	import { progressText } from '$lib/library/curationLogic';
@@ -72,6 +74,14 @@
 	function openFromList(index: number) {
 		pushNext = true;
 		void libraryState.openDocByIndex(index);
+	}
+
+	async function onReading(index: number, a: ReadingAction) {
+		if (a !== 'edit') return libraryState.readingAct(index, a);
+		// Edit = open the document, then straight into the editor.
+		pushNext = true;
+		await libraryState.openDocByIndex(index);
+		libraryState.startEdit();
 	}
 
 	// The address bar, not page.url: a shallow pushState/replaceState moves the
@@ -215,8 +225,11 @@
 				facets={libraryState.facets}
 				onChange={(p) => libraryState.applyControls(p)}
 			/>
+			{#if libraryState.controls.filters.reading}
+				<StubList items={libraryState.stubs} onAct={(id, a) => libraryState.stubAct(id, a)} />
+			{/if}
 			{#if libraryState.total === 0}
-				<p class="status">no documents match.</p>
+				<p class="status">{libraryState.stubs.length > 0 ? 'no library documents match.' : 'no documents match.'}</p>
 			{:else}
 				<DocList
 					total={libraryState.total}
@@ -225,6 +238,7 @@
 					sort={libraryState.controls.sort}
 					queryKey={libraryState.queryKey}
 					onOpen={openFromList}
+					{onReading}
 					hrefFor={(row) => docPath(row) + linkSearch}
 					onVisibleRange={(s, e) => libraryState.ensureWindowsForRange(s, e)}
 					resolveJumpIndex={(seek) => libraryState.jumpToAnchor(seek)}
