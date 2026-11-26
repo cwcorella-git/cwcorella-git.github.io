@@ -213,3 +213,19 @@ Never verified: `/library` reading controls in a browser (the API is not reachab
 
 ## Resume here (2026-11-26 e)
 Everything is pushed (site `86964c7`, library-api `0420a9c`, operations `b2b1276`) except this addendum. Next row: #8, operator's priority. Check first that cwcorella.com/reading redirects and `/library?to_read=1` lists 264 attached items for the admin.
+
+## Addendum 2026-11-26 f: stub editing and `+ to read` built and pushed, never seen
+
+| # | item | state |
+|---|---|---|
+| 8a | stub editing (title, author, year, category, links; inline form in the stub list) | **done** — `3bfbdd7` |
+| 8b | `+ to read` on library documents not on the list (POST /reading, or PUT to_read for a removed one) | **done** — `3bfbdd7` |
+| 8c | reading-side hint fields for matched documents | **proposed** — not built |
+
+Supersedes row 8 of addendum e. Site pushed via `op-push-cwcorella-site` (approval 1795678609-ee5b40, clean); remote `main` == local `3bfbdd7`. No backend change: `PUT /reading/{id}` and `POST /reading` already did both. Pure rules (`stubDraft`, `stubPatch`, `itemToState`, `applyStubItem`, the `add` action) are in `src/lib/library/readingLogic.ts` with 8 new tests (414 pass, `npm run check` 0 errors, build OK). Traps recorded: the API reads null as "leave alone", so emptying author/category sends `''` and a stub's year cannot be cleared (the form says so). `+ to read` only shows when `facets.reading` exists, so an old API shows nothing.
+
+## Open
+Never verified: either feature in a browser (the API is unreachable from localhost; only unit tests cover them), `/library` reading controls generally, `/documents` timing with the list populated, and the Pages/Cloudflare deploys of `86964c7` and `3bfbdd7`. #8c is the operator's call on priority. Earlier items still open: library token diagnosis, VG auth questions, civic-reno ruling, `/resources` in the archive mirror, half-screen squash report.
+
+## Resume here (2026-11-26 f)
+Everything is pushed except this addendum. First: open `/library?reading=to_read` as admin and try `+ to read`, `mark read`, `x`, and stub `edit`, then report what is wrong. Then #8c if the operator wants it. Repos: site `3bfbdd7`, library-api `0420a9c`, operations `b2b1276`.
