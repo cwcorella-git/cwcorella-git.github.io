@@ -186,3 +186,9 @@ Renders re-sent to the ops Media tab (`/resources` 390 and 1280px, `/journals` p
 
 ## Resume here (2026-11-26 c)
 On the operator's OK of the renders: push dd93786, 0140270, 1b3f8dc, 25a5db1 plus faae0f7 (not mine) via `op-push-cwcorella-site` with an approval request, then check the deploy.
+
+## Addendum 2026-11-26 d: pushed
+Supersedes the "push held" lines above. The operator said "push it"; `op-push-cwcorella-site` (approval 1795670693-d971c1, verdict clean) released main through `37dade5`, verified by HTTPS fetch (FETCH_HEAD == HEAD). It carried `faae0f7` and library 4a-4c (`6ecb440`, `de7c1b3`, `2dfcee5`) from other sessions. The live pages were NOT looked at after the deploy.
+
+## Resume here (2026-11-26 d)
+Nothing unpushed except this addendum. Still unseen by eye: scroll-spy, tag pills while typing, A-Z switch, /journals admin view.
