@@ -15,6 +15,8 @@ export interface LibraryControls {
 		// VG preview (rulings R3): the list as VG's tiers see it. Sent as the API's
 		// `tier` filter: public = VG public, curated = VG staff (both tiers), none = not on VG.
 		tier?: import('./types').TierFilter;
+		// Reading list. Sent as the API's `to_read=1` / `read=1`.
+		reading?: import('./types').ReadingFilter;
 	};
 	view: 'list' | 'grid';
 }
@@ -90,6 +92,13 @@ export function filtersToParams(filters: LibraryControls['filters']): Record<str
 			const { source, collection } = value as import('./types').CorpusFilter;
 			if (source) out.source = source;
 			if (collection) out.collection = collection;
+			continue;
+		}
+		// One UI control over two API flags (see mapping in the API: to_read = on
+		// the list and unread, read = marked read).
+		if (key === 'reading') {
+			if (value === 'to_read') out.to_read = 1;
+			else if (value === 'read') out.read = 1;
 			continue;
 		}
 		// filters.tags is the chip set; the HTTP param is `tag`, repeated once per

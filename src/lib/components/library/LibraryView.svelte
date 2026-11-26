@@ -13,6 +13,7 @@
 	import DecisionControl from '$lib/components/library/DecisionControl.svelte';
 	import TierControl from '$lib/components/library/TierControl.svelte';
 	import StateControl from '$lib/components/library/StateControl.svelte';
+	import ReadingControl from '$lib/components/library/ReadingControl.svelte';
 	import { buildRail } from '$lib/library/railLogic';
 	import { progressText } from '$lib/library/curationLogic';
 	import {
@@ -183,6 +184,14 @@
 						facets={libraryState.facets}
 						visibility={libraryState.controls.filters.visibility}
 						needs_formatting={libraryState.controls.filters.needs_formatting}
+						onChange={(patch) =>
+							libraryState.applyControls({
+								filters: { ...libraryState.controls.filters, ...patch }
+							})}
+					/>
+					<ReadingControl
+						facets={libraryState.facets}
+						reading={libraryState.controls.filters.reading}
 						onChange={(patch) =>
 							libraryState.applyControls({
 								filters: { ...libraryState.controls.filters, ...patch }

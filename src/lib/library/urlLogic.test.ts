@@ -123,3 +123,14 @@ describe('VG tier preview in the URL', () => {
 		expect(searchToControls(new URLSearchParams('tier=bogus')).filters.tier).toBeUndefined();
 	});
 });
+
+describe('reading filter in the URL', () => {
+	it('round-trips', () => {
+		const c = searchToControls(new URLSearchParams('reading=to_read'));
+		expect(c.filters.reading).toBe('to_read');
+		expect(controlsToSearch(c)).toBe('?reading=to_read');
+	});
+	it('ignores an unknown value', () => {
+		expect(searchToControls(new URLSearchParams('reading=bogus')).filters.reading).toBeUndefined();
+	});
+});

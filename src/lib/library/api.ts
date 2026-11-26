@@ -9,7 +9,12 @@ import type {
 	DecisionInput,
 	CurationStats,
 	DocVersion,
-	EditPayload
+	EditPayload,
+	ReadingItem,
+	ReadingListResponse,
+	ReadingPatch,
+	ReadingLink,
+	MetaPayload
 } from './types';
 
 export class AuthError extends Error {
@@ -161,6 +166,18 @@ export function createLibraryClient({ baseUrl, getToken, fetchImpl = fetch }: Cr
 		},
 		saveBody(id: number | string, payload: EditPayload): Promise<LibraryDoc> {
 			return request<LibraryDoc>('/documents/' + id + '/body', { method: 'PUT', body: payload });
+		},
+		saveMeta(id: number | string, payload: MetaPayload): Promise<LibraryDoc> {
+			return request<LibraryDoc>('/documents/' + id + '/meta', { method: 'PUT', body: payload });
+		},
+		getReading(query: { state?: 'to_read' | 'read' | 'all'; q?: string; limit?: number; offset?: number } = {}): Promise<ReadingListResponse> {
+			return request<ReadingListResponse>('/reading', { query });
+		},
+		addReading(body: { doc_id?: number; title?: string; author?: string; year_hint?: number; category?: string; links?: ReadingLink[] }): Promise<ReadingItem> {
+			return request<ReadingItem>('/reading', { method: 'POST', body });
+		},
+		updateReading(itemId: number, patch: ReadingPatch): Promise<ReadingItem> {
+			return request<ReadingItem>('/reading/' + itemId, { method: 'PUT', body: patch });
 		},
 		async getVersions(id: number | string): Promise<DocVersion[]> {
 			const res = await request<{ versions: DocVersion[] }>('/documents/' + id + '/versions');

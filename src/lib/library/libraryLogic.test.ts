@@ -335,3 +335,15 @@ describe('filtersToParams: tier', () => {
 		expect(filtersToParams({ tier: 'public' })).toEqual({ tier: 'public' });
 	});
 });
+
+describe('reading filter', () => {
+	it('maps to to_read / read flags in the one mapping', () => {
+		expect(filtersToParams({ reading: 'to_read' })).toEqual({ to_read: 1 });
+		expect(filtersToParams({ reading: 'read' })).toEqual({ read: 1 });
+		expect(filtersToParams({})).toEqual({});
+	});
+	it('is part of the query identity', () => {
+		const a = { ...defaultControls(), filters: { reading: 'to_read' as const } };
+		expect(computeQueryKey(a)).not.toBe(computeQueryKey(defaultControls()));
+	});
+});

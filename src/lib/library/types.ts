@@ -30,6 +30,62 @@ export interface DocListItem {
 	snippet?: string;
 	// VG tier (R3 badge). Optional: an un-upgraded API omits it; null = not on VG.
 	tier?: VgTier | null;
+	// Operator only; absent when the doc is not on the reading list.
+	reading?: ReadingState;
+}
+
+/** The reading-list state of a library document. Optional everywhere: an
+ *  un-upgraded API omits it, and a non-operator never receives it. */
+export interface ReadingState {
+	item_id: number;
+	to_read: boolean;
+	read: boolean;
+	links: ReadingLink[];
+}
+export interface ReadingLink { name: string; url: string }
+/** `reading` filter: on the list and unread, or marked read. Absent = no filter. */
+export type ReadingFilter = 'to_read' | 'read';
+
+/** One reading-list row from GET /reading. doc_id null = a stub (links, no text). */
+export interface ReadingItem {
+	item_id: number;
+	doc_id: number | null;
+	legacy_id: string | null;
+	title: string | null;
+	author: string | null;
+	year_hint: number | null;
+	category: string | null;
+	type_hint: string | null;
+	tags: string | null; // JSON array, as stored
+	to_read: number;
+	read_at: string | null;
+	read: boolean;
+	stub: boolean;
+	links: ReadingLink[];
+}
+export interface ReadingListResponse {
+	total: number;
+	items: ReadingItem[];
+	counts: { to_read: number; read: number };
+}
+export interface ReadingPatch {
+	to_read?: boolean;
+	read?: boolean;
+	title?: string;
+	author?: string;
+	year_hint?: number;
+	category?: string;
+	links?: ReadingLink[];
+}
+/** PUT /documents/{id}/meta. Unsent fields are left alone; `clear` resets named ones. */
+export interface MetaPayload {
+	title?: string;
+	author?: string;
+	publication_date?: string;
+	date_precision?: 'day' | 'month' | 'year';
+	document_type?: string;
+	source_url?: string;
+	clear?: string[];
 }
 
 export interface DocVersion {
@@ -69,6 +125,8 @@ export interface Facets {
 	// '0' and '1' — every bucket name is a string.
 	visibility?: FacetBucket[];
 	needs_formatting?: FacetBucket[];
+	// Operator only (an older API omits it): counts for the reading filter.
+	reading?: { to_read: number; read: number };
 	// Optional: an older backend won't send it. Drives the date rail's decade buckets.
 	date_range?: {
 		min_year: number | null;
@@ -94,6 +152,8 @@ export interface LibraryQuery {
 	visibility?: string;
 	needs_formatting?: 0 | 1;
 	decision?: DecisionInput; // 'undecided' | 'keep' | 'hide' | 'delete'
+	to_read?: 1;
+	read?: 1;
 	offset?: number;
 	limit?: number;
 }
@@ -110,6 +170,8 @@ export interface AnchorOffsetParams {
 	visibility?: string;
 	needs_formatting?: 0 | 1;
 	decision?: DecisionInput;
+	to_read?: 1;
+	read?: 1;
 }
 
 export interface AnchorOffsetResponse {

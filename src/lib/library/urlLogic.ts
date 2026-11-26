@@ -67,6 +67,7 @@ export function controlsToSearch(c: LibraryControls): string {
 	if (f.needs_formatting !== undefined) p.set('needs_formatting', String(f.needs_formatting));
 	if (f.decision) p.set('decision', f.decision);
 	if (f.tier) p.set('tier', f.tier);
+	if (f.reading) p.set('reading', f.reading);
 	if (c.view !== d.view) p.set('view', c.view);
 	const s = p.toString();
 	return s ? '?' + s : '';
@@ -101,6 +102,8 @@ export function searchToControls(params: URLSearchParams): LibraryControls {
 	if (decision && DECISIONS.has(decision)) c.filters.decision = decision;
 	const tier = params.get('tier') as TierFilter | null;
 	if (tier && TIER_FILTERS.has(tier)) c.filters.tier = tier;
+	const reading = params.get('reading');
+	if (reading === 'to_read' || reading === 'read') c.filters.reading = reading;
 	return c;
 }
 
