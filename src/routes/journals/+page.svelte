@@ -288,11 +288,19 @@
 		return e.slug.toLowerCase().includes(q) || (e.title?.toLowerCase().includes(q) ?? false);
 	}
 
+	let sort = $state<'newest' | 'oldest' | 'name'>('newest');
+	// Undated (sealed) entries sort last in the date orders.
+	function sorted(list: JournalMeta[]): JournalMeta[] {
+		const by = (a: JournalMeta, b: JournalMeta) => (a.date ?? '').localeCompare(b.date ?? '');
+		if (sort === 'name') return [...list].sort((a, b) => a.slug.localeCompare(b.slug));
+		const dated = list.filter((e) => e.date).sort(sort === 'newest' ? (a, b) => by(b, a) : by);
+		return [...dated, ...list.filter((e) => !e.date)];
+	}
 	let filteredEntries = $derived(
-		searchQuery.trim() ? journalIndexState.entries.filter(matchesSearch) : journalIndexState.entries
+		sorted(searchQuery.trim() ? journalIndexState.entries.filter(matchesSearch) : journalIndexState.entries)
 	);
 	let filteredArchive = $derived(
-		searchQuery.trim() ? activeIndex.filter(matchesSearch) : activeIndex
+		sorted(searchQuery.trim() ? activeIndex.filter(matchesSearch) : activeIndex)
 	);
 </script>
 
@@ -412,6 +420,11 @@
 				/>
 				{#if archiveState.mode}<span class="mode-tag">archive</span>{/if}
 			</div>
+			<select class="sort-sel" bind:value={sort} aria-label="sort by">
+				<option value="newest">Newest</option>
+				<option value="oldest">Oldest</option>
+				<option value="name">Name</option>
+			</select>
 			{#if journalIndexState.loaded && adminState.active}
 				<button class="new-btn" onclick={startCreate}>+ new</button>
 			{/if}
@@ -545,9 +558,14 @@
 	}
 	.search-bar {
 		display: flex; align-items: center; gap: 0.75rem;
-		flex: 1;
-		border-bottom: 1px solid rgba(var(--ui-rgb), 0.22);
-		padding-bottom: 0.4rem;
+		flex: 1; min-width: 0;
+		background: rgba(var(--ui-rgb), 0.06); border: 1px solid var(--glass-border);
+		border-radius: 3px; padding: 0.35rem 0.75rem;
+	}
+	.sort-sel {
+		background: none; border: 1px solid rgba(var(--ui-rgb), 0.28); color: var(--clr-text);
+		font-family: var(--font-ui); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase;
+		height: 1.75rem; padding: 0 0.5rem; flex-shrink: 0; cursor: pointer;
 	}
 	.search-input {
 		background: none; border: none; outline: none; flex: 1;
