@@ -169,3 +169,13 @@ half-screen after a hard reload.
 ## Resume here (2026-11-26)
 
 Open rows: 23 (journals alignment, proposed) and 24 (push). Repo `~/Projects/cwcorella-git.github.io`, branch `main`, ahead 2 of origin. Push via the ops script `op-push-cwcorella-site` (approval request) once the operator has seen `/resources` (`npm run dev`). Nothing runs in the background.
+
+## Addendum 2026-11-26 b
+
+- Row 23 done in `1b3f8dc`: `/journals` search bar is boxed like the others and has a sort select (Newest, Oldest, Name; undated sealed entries last). The public gate view keeps its `journals` heading; reader and editor untouched. check/vitest/build green.
+- `/resources` static renders at 390px and 1280px were seen (sent to the ops Media tab): rail labels fit, no overflow. **Still unseen:** scroll-spy highlight, tag pills while typing, A–Z switch, and `/journals` rendered (admin-gated).
+- Row 24 push still held; branch also carries `faae0f7`, another session's commit.
+
+## Resume here (2026-11-26 b)
+
+Push `dd93786`, `0140270`, `1b3f8dc` (and `faae0f7`, not mine) via `op-push-cwcorella-site` with an approval request once the operator has OK'd the pages.
