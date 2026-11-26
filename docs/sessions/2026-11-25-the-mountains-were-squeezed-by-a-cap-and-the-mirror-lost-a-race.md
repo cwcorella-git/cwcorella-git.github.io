@@ -192,3 +192,24 @@ Supersedes the "push held" lines above. The operator said "push it"; `op-push-cw
 
 ## Resume here (2026-11-26 d)
 Nothing unpushed except this addendum. Still unseen by eye: scroll-spy, tag pills while typing, A-Z switch, /journals admin view.
+
+## Addendum 2026-11-26 e: the reading list moved into the library, /reading retired
+
+| # | item | state |
+|---|---|---|
+| 1 | library-api `PUT /documents/{id}/meta` with `clear` | **done** — `79c2200` |
+| 2 | `reading_item`/`reading_link`, `/reading` CRUD, `to_read`/`read` filters | **done** — `4442fcf`, `f30aa4f` |
+| 3 | importer (dry-run first, additive, backs up edits.db) | **done** — `2383c89` |
+| 4 | frontend: filter, buttons, stub list, details editor | **done** — `6ecb440`, `de7c1b3`, `2dfcee5` |
+| 5 | parity script | **done** — `14e85e6` |
+| 6 | restart library-api; import applied (917: 264 attached, 653 stubs, 1,878 links, 3 read) | **done** — ops `7fdbeb9`, `b2b1276`; parity 0 differences |
+| 7 | retire `/reading` (302 to `/library?to_read=1`, nav and archive section removed, docs) | **done** — `86964c7` |
+| 8 | stub editing, add-to-to-read control, reading-side hint fields for matched docs | **proposed** — not built |
+
+Findings: the importer's first dry run attached Angela Davis's "An Autobiography" to a David Graeber document; an author-surname hold now turns such matches into stubs (20 held). The library-api push approval returned "noop" because a peer's commit `0420a9c` on top had already carried `79c2200..14e85e6` to the remote; verified by HTTPS ls-remote. A peer relayed that the operator wanted a live `/library` check before retiring; the operator then said "retire it" directly in this session, and that stood.
+
+## Open
+Never verified: `/library` reading controls in a browser (the API is not reachable from localhost, so only mocks are possible); `/documents` timing with the list populated; the Cloudflare/Pages deploy of `86964c7`. Visitors no longer see any reading list (`/library` is admin-gated). `books.json` stays frozen. Untracked in `/data/library-api`: `edits.db.pre-reading-2026-11-26T063137+0000` (import backup, kept). Still open from earlier: library token diagnosis, VG auth questions, civic-reno ruling, `/resources` in the archive mirror, half-screen squash report.
+
+## Resume here (2026-11-26 e)
+Everything is pushed (site `86964c7`, library-api `0420a9c`, operations `b2b1276`) except this addendum. Next row: #8, operator's priority. Check first that cwcorella.com/reading redirects and `/library?to_read=1` lists 264 attached items for the admin.
