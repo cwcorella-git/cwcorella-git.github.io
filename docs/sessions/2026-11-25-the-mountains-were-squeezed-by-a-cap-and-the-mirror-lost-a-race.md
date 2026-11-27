@@ -229,3 +229,10 @@ Never verified: either feature in a browser (the API is unreachable from localho
 
 ## Resume here (2026-11-26 f)
 Everything is pushed except this addendum. First: open `/library?reading=to_read` as admin and try `+ to read`, `mark read`, `x`, and stub `edit`, then report what is wrong. Then #8c if the operator wants it. Repos: site `3bfbdd7`, library-api `0420a9c`, operations `b2b1276`.
+
+## Addendum 2026-11-27 g: only the push is outstanding
+
+Nothing new was built after addendum f. The docs-only push of `d82b394` is requested as approval `1795695075-dc6c46` (`op-push-cwcorella-site`) and was still **pending** when this was written; it was not verified against the remote.
+
+## Resume here (2026-11-27 g)
+First: `ops_approval_status('1795695075-dc6c46')`, then compare `git ls-remote` over HTTPS with local `HEAD` (this addendum is a further unpushed commit). Then the "Resume here (2026-11-26 f)" block: try `/library?reading=to_read` live as admin.
