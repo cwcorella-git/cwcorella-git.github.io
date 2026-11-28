@@ -16,6 +16,7 @@
 	import { clock, sceneNow, sceneMs } from '$lib/garden/clock.svelte';
 	import { renderMeadow, renderRocks, type RockSpot, renderSnow, makeFlowers, flowerBloom, type Flower, bakeNoiseCloud, cloudAlphaLUT, type CloudBake, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
 	import { moonPosition } from '$lib/garden/moon';
+	import { createCloudField, cloudUniforms, coverFor, type CloudField } from '$lib/garden/cloudField';
 	import { extremes, publishSeen, cellsIn } from '$lib/garden/seen.svelte';
 	import { makeStars, drawStarField, siderealDeg, type StarField } from '$lib/garden/stars';
 
@@ -516,7 +517,8 @@
 		const moon = moonState(altDeg, now);
 		const minutes = sceneMs() / 60000;
 		// Nothing over the stars (no cloud, no glare): draw them straight, skipping the layer.
-		if (moon.light <= 0.05 && !clouds.some((c) => cloudRect(c, minutes))) {
+		const live = fieldReady();
+		if (moon.light <= 0.05 && !live && !clouds.some((c) => cloudRect(c, minutes))) {
 			drawStarField(ctx, starField, starAlpha, time, siderealDeg(now), moon.light, starTune());
 			return;
 		}
@@ -534,7 +536,8 @@
 			lc.fillRect(moon.x - gr, moon.y - gr, gr * 2, gr * 2);
 		}
 		// Clouds hide what is behind them.
-		for (const cloud of clouds) {
+		if (live && field) lc.drawImage(field.canvas, 0, 0, W, horizonY);
+		else for (const cloud of clouds) {
 			const at = cloudRect(cloud, minutes);
 			if (!at) continue;
 			lc.globalAlpha = Math.min(1, (cloud.life ? 1 : (0.3 + cloud.alpha) * 1.4) * sceneTune.cloudOpacity) * at.life;
@@ -1353,7 +1356,50 @@
 		return canvas;
 	}
 
+	// ── live cloud layer (cloudField.ts); the baked sprites stay as the fallback ──
+	let field: CloudField | null = null;
+	let fieldTried = false;
+	/** True when the live layer is on and ready to draw. */
+	function fieldReady(): boolean {
+		if (!sceneTune.cloudField) return false;
+		if (!fieldTried) { fieldTried = true; field = createCloudField(); }
+		if (!field) return false;
+		field.pump();
+		return field.ok;
+	}
+	function renderField(altDeg: number, sxn: number): HTMLCanvasElement | null {
+		if (!field || !field.ok) return null;
+		let { top, shadow } = getCloudColors(altDeg);
+		const sky = getSkyColors(altDeg);
+		const night = clamp01((-altDeg - 8) / 6);
+		let lightAlt = altDeg, lightX = sxn;
+		if (night > 0) {
+			const moon = moonState(altDeg, sceneNow()), lit = clamp01(moon.light * 1.6);
+			top    = lerpRGB(top,    lerpRGB([54, 56, 68], [132, 140, 162], lit), night);
+			shadow = lerpRGB(shadow, lerpRGB([24, 26, 38], [40, 46, 68], lit), night);
+			if (lit > 0.08) { lightX = moon.x / W; lightAlt = 12; }
+		}
+		const cover = Math.min(1, coverFor(weather.kind) * sceneTune.cloudAmount);
+		field.resize(W / dpr, horizonY / dpr, Math.max(0.25, 0.5 * sceneTune.cloudDetail), 28);
+		field.render(cloudUniforms({
+			top, shadow, zenith: sky.zenith, horizon: lerpRGB(sky.lower, sky.horizon, 0.6), ground: groundMid,
+			cover, altDeg, lightAlt, lightX, tSec: sceneMs() / 1000, pace: sceneTune.cloudPace, night,
+		}));
+		return field.canvas;
+	}
+
 	function drawClouds(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
+		if (fieldReady()) {
+			const fc = renderField(altDeg, sxn);
+			if (fc) {
+				ctx.save();
+				ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+				ctx.globalAlpha = Math.min(1, sceneTune.cloudOpacity);
+				ctx.drawImage(fc, 0, 0, W, horizonY);
+				ctx.restore();
+				return;
+			}
+		}
 		const cloudAlpha = 1;   // clouds stay at night, dark, and hide the stars behind them
 
 		const minutesSinceEpoch = sceneMs() / 60000;
@@ -1527,7 +1573,7 @@
 		// Day: draw at ~4fps (every 15 frames). Night: ~15fps (every 4 frames), enough
 		// for the twinkle; every 2nd frame redrew the whole screen for nothing (2026-10-23).
 		// Boost to every frame when cursor is active so interaction feels responsive.
-		const skip = cursorActive ? 1 : Math.max(1, Math.round(60 / (isNight ? T.nightFps : T.dayFps)));
+		const skip = cursorActive ? 1 : Math.max(1, Math.round(60 / (isNight ? T.nightFps : (T.cloudField ? Math.max(T.dayFps, 12) : T.dayFps))));
 		if (!forceDraw && frameCount % skip !== 0) {
 			pumpBakes();
 			animFrame = requestAnimationFrame(draw);
