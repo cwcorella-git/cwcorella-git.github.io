@@ -7,13 +7,17 @@
 
 	let editing = $state(false);
 
-	// The panel starts minimised (2026-11-28): the page opens on the scene alone.
-	// The choice is remembered for this browser.
-	let open = $state(false);
-	onMount(() => { open = localStorage.getItem('cwc-home-open') === '1'; });
+	// Admin sees the panel minimised by default (2026-11-28); visitors see it open.
+	// An admin's own choice is remembered in this browser; a visitor's is not.
+	let pref = $state<boolean | null>(null);
+	let open = $derived(pref ?? !adminState.active);
+	onMount(() => {
+		const v = localStorage.getItem('cwc-home-open');
+		if (v !== null && localStorage.getItem('cwc-admin-key')) pref = v === '1';
+	});
 	function toggle() {
-		open = !open;
-		localStorage.setItem('cwc-home-open', open ? '1' : '0');
+		pref = !open;
+		if (adminState.active) localStorage.setItem('cwc-home-open', pref ? '1' : '0');
 	}
 
 	// Fall back to static build value if no draft has been restored
