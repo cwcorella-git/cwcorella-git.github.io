@@ -615,6 +615,20 @@
 
 	const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
+	/** Distance haze over the range, in the live clouds' own haze colour, thickest
+	 *  at the foot and gone by the peaks, so the mountains and the cloud deck share one air. */
+	function drawRangeHaze(ctx: CanvasRenderingContext2D, altDeg: number): void {
+		const sky = getSkyColors(altDeg);
+		const haze = lerpRGB(sky.lower, sky.horizon, 0.6);
+		const rise = horizonY * 0.42;
+		const g = ctx.createLinearGradient(0, horizonY - rise, 0, horizonY);
+		g.addColorStop(0,   css(haze, 0));
+		g.addColorStop(0.5, css(haze, 0.14));
+		g.addColorStop(1,   css(haze, 0.46));
+		ctx.fillStyle = g;
+		ctx.fillRect(0, horizonY - rise, W, rise);
+	}
+
 	function drawTerrain(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
 		const dl     = clamp01((altDeg + 8) / 16);                       // 0 night → 1 day
 		const golden = altDeg > -4 ? clamp01(1 - Math.abs(altDeg - 3) / 9) : 0;
@@ -1660,7 +1674,7 @@
 		drawLiveClouds(ctx, altDeg, sxn);
 		drawGround(ctx, altDeg);
 		if (T.contours) drawGroundContours(ctx, altDeg);
-		if (T.mountains) drawTerrain(ctx, altDeg, sxn);
+		if (T.mountains) { drawTerrain(ctx, altDeg, sxn); drawRangeHaze(ctx, altDeg); }
 		if (T.meadow) drawMeadow(ctx);
 		if (!stages.length && !terrainDeferred) sampleGround(ctx, altDeg);   // not from a half-built ground
 		if (snowLayer && T.snow) ctx.drawImage(snowLayer, 0, horizonY);
