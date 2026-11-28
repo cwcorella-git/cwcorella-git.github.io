@@ -25,8 +25,8 @@ export interface CloudInput {
 export function coverFor(kind: string): number {
 	switch (kind) {
 		case 'clear': return 0.05;
-		case 'fair': return 0.25;
-		case 'busy': return 0.42;
+		case 'fair': return 0.22;
+		case 'busy': return 0.34;
 		case 'overcast': return 0.9;
 		default: return 0.25;
 	}
