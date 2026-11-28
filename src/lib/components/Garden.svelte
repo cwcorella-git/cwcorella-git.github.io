@@ -17,6 +17,7 @@
 	import { renderMeadow, renderRocks, type RockSpot, renderSnow, makeFlowers, flowerBloom, type Flower, bakeNoiseCloud, cloudAlphaLUT, type CloudBake, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
 	import { moonPosition } from '$lib/garden/moon';
 	import { localCover, startLocalSky } from '$lib/garden/localSky';
+	import { createCloudPuffs, puffEnv, type CloudPuffs } from '$lib/garden/cloudPuffs';
 	import { createCloudField, cloudUniforms, coverFor, type CloudField } from '$lib/garden/cloudField';
 	import { extremes, publishSeen, cellsIn } from '$lib/garden/seen.svelte';
 	import { makeStars, drawStarField, siderealDeg, type StarField } from '$lib/garden/stars';
@@ -537,7 +538,7 @@
 			lc.fillRect(moon.x - gr, moon.y - gr, gr * 2, gr * 2);
 		}
 		// Clouds hide what is behind them.
-		if (live) { if (field?.ok) lc.drawImage(field.canvas, 0, 0, W, cloudBottom()); }
+		if (live) { const f = layer(); if (f?.ok) lc.drawImage(f.canvas, 0, 0, W, cloudBottom()); }
 		else for (const cloud of clouds) {
 			const at = cloudRect(cloud, minutes);
 			if (!at) continue;
@@ -827,14 +828,15 @@
 	// horizon's on the far field), widened with nearness and thrown away from the sun.
 	let shadowMap: HTMLCanvasElement | null = null;
 	function drawFieldShadows(ctx: CanvasRenderingContext2D, sun: number, sunX: number): void {
-		if (!field) return;
+		const lf = layer();
+		if (!lf) return;
 		const MW = 112, MH = 40;
 		if (!shadowMap) { shadowMap = document.createElement('canvas'); shadowMap.width = MW; shadowMap.height = MH; }
 		const m = shadowMap.getContext('2d')!;
 		m.globalCompositeOperation = 'source-over';
 		m.clearRect(0, 0, MW, MH);
 		m.imageSmoothingEnabled = true;
-		m.drawImage(field.canvas, 0, 0, MW, MH);
+		m.drawImage(lf.canvas, 0, 0, MW, MH);
 		m.globalCompositeOperation = 'source-in';
 		m.fillStyle = 'rgb(10,16,30)';
 		m.fillRect(0, 0, MW, MH);
@@ -859,7 +861,7 @@
 		if (sun < 0.02) return;
 		const minutes = sceneMs() / 60000;
 		const sunX = sxn * W;
-		if (fieldActive()) { if (field?.ok) drawFieldShadows(ctx, sun, sunX); return; }
+		if (fieldActive()) { if (layer()?.ok) drawFieldShadows(ctx, sun, sunX); return; }
 		ctx.save();
 		ctx.beginPath(); ctx.rect(0, horizonY, W, H - horizonY); ctx.clip();
 		for (const cloud of clouds) {
@@ -1407,45 +1409,77 @@
 	// ── live cloud layer (cloudField.ts); the baked sprites stay as the fallback ──
 	/** Where the cloud deck's own horizon sits: well above the ridge, so the clouds thin out in the sky and never meet the mountains. */
 	const cloudBottom = () => horizonY * 0.6;
-	let field: CloudField | null = null;
-	let fieldTried = false;
-	/** True when the live layer is on and ready to draw. */
-	function fieldReady(): boolean {
-		if (!sceneTune.cloudField) return false;
-		if (!fieldTried) { fieldTried = true; field = createCloudField(); }
-		if (!field) return false;
-		field.pump();
-		return field.ok;
+	// Two live layers share one slot: the 3D march (cloudField.ts) and the painted
+	// 2D puffs (cloudPuffs.ts). `cloudPuffs` wins when both are on; either one
+	// failing to start (no WebGL2, no 2D context) leaves the baked sprites.
+	interface CloudLayer { readonly canvas: HTMLCanvasElement; readonly ok: boolean; readonly pending: boolean; pump(): void }
+	let field3d: CloudField | null = null, fieldPuffs: CloudPuffs | null = null;
+	let tried3d = false, triedPuffs = false;
+	const liveWanted = () => sceneTune.cloudField || sceneTune.cloudPuffs;
+	/** The layer in use, created on first need; null when none can run. */
+	function layer(): (CloudLayer & { kind: 'puffs' | '3d' }) | null {
+		if (sceneTune.cloudPuffs) {
+			if (!triedPuffs) { triedPuffs = true; fieldPuffs = createCloudPuffs(); }
+			if (fieldPuffs) return Object.assign(fieldPuffs, { kind: 'puffs' as const });
+		}
+		if (sceneTune.cloudField) {
+			if (!tried3d) { tried3d = true; field3d = createCloudField(); }
+			if (field3d) return Object.assign(field3d, { kind: '3d' as const });
+		}
+		return null;
 	}
-	/** The live layer is wanted and usable, or still warming up: either way the
+	/** True when a live layer is on and ready to draw. */
+	function fieldReady(): boolean {
+		if (!liveWanted()) return false;
+		const f = layer();
+		if (!f) return false;
+		f.pump();
+		return f.ok;
+	}
+	/** A live layer is wanted and usable, or still warming up: either way the
 	 *  baked sprites stay out, so they never flash in before the live ones. */
 	function fieldActive(): boolean {
-		if (!sceneTune.cloudField) return false;
+		if (!liveWanted()) return false;
 		fieldReady();
-		return !!field && (field.ok || field.pending);
+		const f = layer();
+		return !!f && (f.ok || f.pending);
 	}
 	function renderField(altDeg: number, sxn: number): HTMLCanvasElement | null {
-		if (!field || !field.ok) return null;
+		const f = layer();
+		if (!f || !f.ok) return null;
 		let { top, shadow } = getCloudColors(altDeg);
 		const sky = getSkyColors(altDeg);
 		const night = clamp01((-altDeg - 8) / 6);
 		let lightAlt = altDeg, lightX = sxn;
-		if (night > 0) {
-			const moon = moonState(altDeg, sceneNow()), lit = clamp01(moon.light * 1.6);
+		const moon = night > 0 ? moonState(altDeg, sceneNow()) : null;
+		if (moon) {
+			const lit = clamp01(moon.light * 1.6);
 			top    = lerpRGB(top,    lerpRGB([54, 56, 68], [132, 140, 162], lit), night);
 			shadow = lerpRGB(shadow, lerpRGB([24, 26, 38], [40, 46, 68], lit), night);
 			if (lit > 0.08) { lightX = moon.x / W; lightAlt = 12; }
 		}
 		// The real sky over town when the clock is live and on auto; else the day's seeded weather.
 		const real = !clock.sim && clock.weather === 'auto' ? localCover() : null;
+		const baseCover = Math.min(1, (real ?? coverFor(weather.kind)) * sceneTune.cloudAmount);
+		if (f.kind === 'puffs' && fieldPuffs) {
+			// the puffs thin their own cover at night (puffEnv), so the raw cover goes in
+			fieldPuffs.resize(W, cloudBottom(), dpr, Math.max(0.25, 0.5 * sceneTune.cloudDetail));
+			fieldPuffs.render(puffEnv({
+				top, shadow, hazeTo: lerpRGB(sky.lower, sky.horizon, 0.5), cover: baseCover, altDeg, night,
+				moonLit: moon ? moon.light : 0, sxn, moonXn: moon ? moon.x / W : 0.7,
+				bandW: W, bandH: cloudBottom(), tSec: (sceneMs() / 1000) * (sceneTune.cloudPace / 3),
+			}));
+			return fieldPuffs.canvas;
+		}
+		if (!field3d) return null;
 		// By night the deck thins so the moon and stars stay visible through it.
-		const cover = Math.min(1, (real ?? coverFor(weather.kind)) * sceneTune.cloudAmount * (1 - 0.5 * night));
-		field.resize(W / dpr, cloudBottom() / dpr, Math.max(0.25, 0.5 * sceneTune.cloudDetail), 28);
-		field.render(cloudUniforms({
+		const cover = baseCover * (1 - 0.5 * night);
+		field3d.resize(W / dpr, cloudBottom() / dpr, Math.max(0.25, 0.5 * sceneTune.cloudDetail), 28);
+		field3d.render(cloudUniforms({
 			top, shadow, zenith: sky.zenith, horizon: lerpRGB(sky.lower, sky.horizon, 0.6), ground: groundMid,
 			cover, altDeg, lightAlt, lightX, tSec: sceneMs() / 1000, pace: sceneTune.cloudPace, night,
 		}));
-		return field.canvas;
+		return field3d.canvas;
 	}
 
 	/** The live clouds, drawn in the sky, behind the mountains and the land. */
@@ -1456,7 +1490,7 @@
 		ctx.save();
 		ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
 		ctx.globalAlpha = Math.min(1, sceneTune.cloudOpacity);
-		ctx.filter = `blur(${(0.9 * dpr).toFixed(1)}px)`;   // melts the march's per-pixel jitter (ignored where unsupported)
+		if (layer()?.kind === '3d') ctx.filter = `blur(${(0.9 * dpr).toFixed(1)}px)`;   // melts the march's per-pixel jitter (ignored where unsupported)
 		ctx.drawImage(fc, 0, 0, W, cloudBottom());
 		ctx.restore();
 	}
@@ -1512,7 +1546,7 @@
 	/** Advance the cloud bakes in progress for a few ms. Called on every animation
 	 *  frame, drawn or not, so the sky fills in quickly even at 4 fps by day. */
 	function pumpBakes(): void {
-		if (sceneTune.cloudField) fieldReady();   // builds the live clouds' noise between drawn frames too
+		if (liveWanted()) fieldReady();   // builds the live clouds' noise between drawn frames too
 		const start = performance.now(), BUDGET = 6;
 		for (const cloud of clouds) {
 			const job = cloud.job;
@@ -1637,7 +1671,7 @@
 		// Day: draw at ~4fps (every 15 frames). Night: ~15fps (every 4 frames), enough
 		// for the twinkle; every 2nd frame redrew the whole screen for nothing (2026-10-23).
 		// Boost to every frame when cursor is active so interaction feels responsive.
-		const skip = cursorActive ? 1 : Math.max(1, Math.round(60 / (isNight ? T.nightFps : (T.cloudField ? Math.max(T.dayFps, 12) : T.dayFps))));
+		const skip = cursorActive ? 1 : Math.max(1, Math.round(60 / (isNight ? T.nightFps : (T.cloudField || T.cloudPuffs ? Math.max(T.dayFps, 12) : T.dayFps))));
 		if (!forceDraw && frameCount % skip !== 0) {
 			pumpBakes();
 			animFrame = requestAnimationFrame(draw);

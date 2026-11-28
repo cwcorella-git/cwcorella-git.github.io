@@ -19,6 +19,7 @@ export const SCENE_DEFAULTS = {
 	cloudDetail: 1,    // × bake resolution (cost grows with the square)
 	cloudEdge: 1,      // fine lumps along the edges
 	cloudField: true,  // live volumetric clouds (WebGL); off or unsupported: the baked sprites
+	cloudPuffs: false, // painted 2D clouds (canvas); wins over the 3D layer when both are on
 	cloudPace: 3,      // × drift and evolution speed of the live clouds
 	cloudGrow: true,   // cumulus grow from their cores and dissolve from the edges; off: the old whole-cloud fade
 	// night
