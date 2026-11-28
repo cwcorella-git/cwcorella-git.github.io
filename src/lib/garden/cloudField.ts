@@ -127,7 +127,7 @@ uniform vec2  uSunUV;      // sun (or moon) on screen, sky uv
 uniform vec3  uTop, uShadow, uRim, uZenith, uHorizon, uGround;
 uniform float uTh, uTall, uBacklit, uUnder, uSheet, uGrey;
 uniform vec2  uWind, uWind2;
-uniform float uEvo, uRise, uFadeTop;
+uniform float uEvo, uRise, uFadeTop, uFadeBot;
 out vec4 o;
 const float BASE = 2.2, THICK = 2.6, SC = 1.0;
 float hash(vec2 p){ vec3 q = fract(vec3(p.xyx)*0.1031); q += dot(q, q.yzx + 33.33); return fract((q.x + q.y)*q.z); }
@@ -186,7 +186,7 @@ void main(){
     vec3 col = mix(mix(uShadow, uTop, 0.75), fogc, 0.6*(1. - exp(-ts*0.03)));
     C += T*a*col; T *= 1. - a;
   }
-  float fade = 1. - smoothstep(1. - uFadeTop, 1., uv.y);
+  float fade = (1. - smoothstep(1. - uFadeTop, 1., uv.y))*smoothstep(0., uFadeBot, uv.y);
   o = vec4(C*fade, (1. - T)*fade);   // premultiplied
 }`;
 
@@ -275,7 +275,7 @@ export function createCloudField(): CloudField | null {
 			gl.uniform1f(U.uTh, u.th); gl.uniform1f(U.uTall, u.tall); gl.uniform1f(U.uBacklit, u.backlit);
 			gl.uniform1f(U.uUnder, u.under); gl.uniform1f(U.uSheet, u.sheet); gl.uniform1f(U.uGrey, u.grey);
 			gl.uniform2f(U.uWind, ...u.wind); gl.uniform2f(U.uWind2, ...u.wind2);
-			gl.uniform1f(U.uEvo, u.evo); gl.uniform1f(U.uRise, u.rise); gl.uniform1f(U.uFadeTop, 0.12);
+			gl.uniform1f(U.uEvo, u.evo); gl.uniform1f(U.uRise, u.rise); gl.uniform1f(U.uFadeTop, 0.12); gl.uniform1f(U.uFadeBot, 0.3);
 			gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
 			gl.drawArrays(gl.TRIANGLES, 0, 3);
 		},

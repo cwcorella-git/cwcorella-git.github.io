@@ -536,7 +536,7 @@
 			lc.fillRect(moon.x - gr, moon.y - gr, gr * 2, gr * 2);
 		}
 		// Clouds hide what is behind them.
-		if (live && field) lc.drawImage(field.canvas, 0, 0, W, horizonY);
+		if (live && field) lc.drawImage(field.canvas, 0, 0, W, cloudBottom());
 		else for (const cloud of clouds) {
 			const at = cloudRect(cloud, minutes);
 			if (!at) continue;
@@ -1390,6 +1390,8 @@
 	}
 
 	// ── live cloud layer (cloudField.ts); the baked sprites stay as the fallback ──
+	/** Where the cloud deck's own horizon sits: well above the ridge, so the clouds thin out in the sky and never meet the mountains. */
+	const cloudBottom = () => horizonY * 0.6;
 	let field: CloudField | null = null;
 	let fieldTried = false;
 	/** True when the live layer is on and ready to draw. */
@@ -1413,7 +1415,7 @@
 			if (lit > 0.08) { lightX = moon.x / W; lightAlt = 12; }
 		}
 		const cover = Math.min(1, coverFor(weather.kind) * sceneTune.cloudAmount);
-		field.resize(W / dpr, horizonY / dpr, Math.max(0.25, 0.5 * sceneTune.cloudDetail), 28);
+		field.resize(W / dpr, cloudBottom() / dpr, Math.max(0.25, 0.5 * sceneTune.cloudDetail), 28);
 		field.render(cloudUniforms({
 			top, shadow, zenith: sky.zenith, horizon: lerpRGB(sky.lower, sky.horizon, 0.6), ground: groundMid,
 			cover, altDeg, lightAlt, lightX, tSec: sceneMs() / 1000, pace: sceneTune.cloudPace, night,
@@ -1430,7 +1432,7 @@
 		ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
 		ctx.globalAlpha = Math.min(1, sceneTune.cloudOpacity);
 		ctx.filter = `blur(${(0.9 * dpr).toFixed(1)}px)`;   // melts the march's per-pixel jitter (ignored where unsupported)
-		ctx.drawImage(fc, 0, 0, W, horizonY);
+		ctx.drawImage(fc, 0, 0, W, cloudBottom());
 		ctx.restore();
 	}
 
