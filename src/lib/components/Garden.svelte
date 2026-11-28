@@ -1065,7 +1065,11 @@
 		const doy = dayOfYear(sceneNow());
 		const geom = `${W}x${H}|${gardenAgeUnits}|${fgTreeSegs.length}|${bgTreeSegs.length}`;
 		const ml = landMoon(altDeg);
-		const key = `${geom}|${Math.round(altDeg)}|${Math.round(sxn * 40)}|${doy}|${Math.round(ml * 10)}`;
+		// The ground the shrubs and crowns take their light from is part of the key: it is
+		// sampled after the meadow draws, and can settle (weather arriving, a deferred
+		// bake finishing) without the sun moving, which left them lit by a stale ground.
+		const gsig = `${Math.round(groundLum * 20)}|${groundMid.map((v) => v >> 4).join('.')}|${Math.round(weather.snow * 10)}`;
+		const key = `${geom}|${Math.round(altDeg)}|${Math.round(sxn * 40)}|${doy}|${Math.round(ml * 10)}|${gsig}`;
 		if (treeCache.key === key) return treeCache;
 		if (treePending?.key !== key) {
 			const next: typeof treeCache = { key, fg: null, bg: null, mid: [], sage: [] };
