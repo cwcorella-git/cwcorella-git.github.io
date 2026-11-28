@@ -155,12 +155,12 @@ void main(){
   vec3 fogc = mix(uHorizon, uZenith, smoothstep(0., 0.7, uv.y));
   vec3 C = vec3(0.); float T = 1.;
   float t0 = BASE/rd.y, t1 = min((BASE + THICK)/rd.y, t0 + 14.);
-  if (t0 < 46.) {
+  if (t0 < 34.) {
     float dt = (t1 - t0)/${steps}., t = t0 + dt*hash(gl_FragCoord.xy);
     float glow = pow(clamp(1. - distance(uv*vec2(uAspect,1.), uSunUV*vec2(uAspect,1.))*1.1, 0., 1.), 3.);
     for (int i = 0; i < ${steps}; i++, t += dt) {
       vec3 p = rd*t;
-      float d = dens(p, true)*(1. - smoothstep(30., 46., t));
+      float d = dens(p, true)*(1. - smoothstep(22., 34., t));
       if (d < 0.004) continue;
       float h = (p.y - BASE)/THICK;
       float acc = 0., s = 0.16; vec3 lp = p;
@@ -268,7 +268,7 @@ export function createCloudField(): CloudField | null {
 			if (!api.ok || !prog) return;
 			gl.useProgram(prog);
 			const aspect = canvas.width / canvas.height;
-			gl.uniform2f(U.uRes, canvas.width, canvas.height); gl.uniform1f(U.uAspect, aspect); gl.uniform1f(U.uK, 0.62);
+			gl.uniform2f(U.uRes, canvas.width, canvas.height); gl.uniform1f(U.uAspect, aspect); gl.uniform1f(U.uK, 0.46);
 			gl.uniform3f(U.uL, ...u.L); gl.uniform2f(U.uSunUV, ...u.sunUV);
 			gl.uniform3fv(U.uTop, u.top); gl.uniform3fv(U.uShadow, u.shadow); gl.uniform3fv(U.uRim, u.rim);
 			gl.uniform3fv(U.uZenith, u.zenith); gl.uniform3fv(U.uHorizon, u.horizon); gl.uniform3fv(U.uGround, u.ground);
