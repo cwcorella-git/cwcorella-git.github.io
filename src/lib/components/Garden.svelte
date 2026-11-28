@@ -1428,7 +1428,9 @@
 				ctx.save();
 				ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
 				ctx.globalAlpha = Math.min(1, sceneTune.cloudOpacity);
+				ctx.filter = `blur(${(0.9 * dpr).toFixed(1)}px)`;   // melts the march's per-pixel jitter (ignored where unsupported)
 				ctx.drawImage(fc, 0, 0, W, horizonY);
+				ctx.filter = 'none';
 				ctx.restore();
 				return;
 			}

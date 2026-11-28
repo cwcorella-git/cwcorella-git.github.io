@@ -130,7 +130,7 @@ uniform vec2  uWind, uWind2;
 uniform float uEvo, uRise, uFadeTop;
 out vec4 o;
 const float BASE = 2.2, THICK = 2.6, SC = 1.0;
-float hash(vec2 p){ return fract(52.9829189*fract(dot(p, vec2(0.06711056, 0.00583715)))); }
+float hash(vec2 p){ vec3 q = fract(vec3(p.xyx)*0.1031); q += dot(q, q.yzx + 33.33); return fract((q.x + q.y)*q.z); }
 float cover(vec2 xz){
   vec2 q = xz*SC + uWind;
   return 0.6*texture(uN, vec3(q*0.075, uEvo)).b + 0.4*texture(uN, vec3(q*0.19 + 0.31, uEvo*1.6 + 0.47)).b;
@@ -138,12 +138,13 @@ float cover(vec2 xz){
 float dens(vec3 p, bool fine){
   float h = (p.y - BASE)/THICK;
   if (h < 0. || h > 1.) return 0.;
-  float d0 = smoothstep(uTh, uTh + 0.22, cover(p.xz));
+  float d0 = smoothstep(uTh, uTh + 0.36, cover(p.xz));
   if (d0 <= 0.) return 0.;
   float topH = (0.2 + 0.8*d0)*uTall;                       // strong cells build higher
-  float prof = smoothstep(0., 0.04, h)*(1. - smoothstep(topH*0.45, topH, h));
   vec3 q = vec3(p.x*SC + uWind2.x, p.y*SC - uRise, p.z*SC + uWind2.y);
   float s = texture(uN, q*0.27).r;
+  float hb = h + 0.16*(s - 0.5) + 0.12*(0.5 - d0);   // the base undulates and rises at the cell edge
+  float prof = smoothstep(0., 0.16, hb)*(1. - smoothstep(topH*0.45, topH, h));
   float d = d0*prof - (1. - s)*0.72;                        // billows erode the cell
   if (fine && d < 0.35) d -= (1. - texture(uN, q*0.47 + vec3(0., -uRise*1.5, 0.)).g)*0.2*(1. - d/0.35);
   return clamp(d*2.7, 0., 1.);
