@@ -24,11 +24,11 @@ export interface CloudInput {
 /** How much of the sky the day's weather covers. */
 export function coverFor(kind: string): number {
 	switch (kind) {
-		case 'clear': return 0.1;
-		case 'fair': return 0.4;
-		case 'busy': return 0.6;
-		case 'overcast': return 0.95;
-		default: return 0.4;
+		case 'clear': return 0.05;
+		case 'fair': return 0.25;
+		case 'busy': return 0.42;
+		case 'overcast': return 0.9;
+		default: return 0.25;
 	}
 }
 

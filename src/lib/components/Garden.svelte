@@ -16,6 +16,7 @@
 	import { clock, sceneNow, sceneMs } from '$lib/garden/clock.svelte';
 	import { renderMeadow, renderRocks, type RockSpot, renderSnow, makeFlowers, flowerBloom, type Flower, bakeNoiseCloud, cloudAlphaLUT, type CloudBake, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
 	import { moonPosition } from '$lib/garden/moon';
+	import { localCover, startLocalSky } from '$lib/garden/localSky';
 	import { createCloudField, cloudUniforms, coverFor, type CloudField } from '$lib/garden/cloudField';
 	import { extremes, publishSeen, cellsIn } from '$lib/garden/seen.svelte';
 	import { makeStars, drawStarField, siderealDeg, type StarField } from '$lib/garden/stars';
@@ -1435,7 +1436,10 @@
 			shadow = lerpRGB(shadow, lerpRGB([24, 26, 38], [40, 46, 68], lit), night);
 			if (lit > 0.08) { lightX = moon.x / W; lightAlt = 12; }
 		}
-		const cover = Math.min(1, coverFor(weather.kind) * sceneTune.cloudAmount);
+		// The real sky over town when the clock is live and on auto; else the day's seeded weather.
+		const real = !clock.sim && clock.weather === 'auto' ? localCover() : null;
+		// By night the deck thins so the moon and stars stay visible through it.
+		const cover = Math.min(1, (real ?? coverFor(weather.kind)) * sceneTune.cloudAmount * (1 - 0.5 * night));
 		field.resize(W / dpr, cloudBottom() / dpr, Math.max(0.25, 0.5 * sceneTune.cloudDetail), 28);
 		field.render(cloudUniforms({
 			top, shadow, zenith: sky.zenith, horizon: lerpRGB(sky.lower, sky.horizon, 0.6), ground: groundMid,
@@ -1783,6 +1787,7 @@
 	}
 
 	onMount(() => {
+		startLocalSky();
 		dpr = window.devicePixelRatio || 1;
 		W = canvas!.width  = Math.round(window.innerWidth * dpr);
 		H = canvas!.height = Math.round(window.innerHeight * dpr);
