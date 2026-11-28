@@ -807,11 +807,44 @@
 	// Cloud cover dims the direct sun; overcast light is flat.
 	function dimSun(c: RGB): RGB { const k = 1 - 0.7 * weather.cover; return [c[0] * k, c[1] * k, c[2] * k]; }
 
+	// The live clouds' shadows: the field's own alpha, shrunk to a coarse map and
+	// laid on the ground row by row (overhead clouds land near the viewer, the
+	// horizon's on the far field), widened with nearness and thrown away from the sun.
+	let shadowMap: HTMLCanvasElement | null = null;
+	function drawFieldShadows(ctx: CanvasRenderingContext2D, sun: number, sunX: number): void {
+		if (!field) return;
+		const MW = 112, MH = 40;
+		if (!shadowMap) { shadowMap = document.createElement('canvas'); shadowMap.width = MW; shadowMap.height = MH; }
+		const m = shadowMap.getContext('2d')!;
+		m.globalCompositeOperation = 'source-over';
+		m.clearRect(0, 0, MW, MH);
+		m.imageSmoothingEnabled = true;
+		m.drawImage(field.canvas, 0, 0, MW, MH);
+		m.globalCompositeOperation = 'source-in';
+		m.fillStyle = 'rgb(10,16,30)';
+		m.fillRect(0, 0, MW, MH);
+		const gh = H - horizonY;
+		const gyOf = (near: number) => horizonY + (0.12 + 0.8 * near) * gh;
+		ctx.save();
+		ctx.beginPath(); ctx.rect(0, horizonY, W, gh); ctx.clip();
+		ctx.imageSmoothingEnabled = true;
+		ctx.globalAlpha = 0.3 * sun * sceneTune.cloudOpacity;
+		for (let r = 0; r < MH; r++) {
+			const n0 = 1 - r / MH, n1 = 1 - (r + 1) / MH, nm = (n0 + n1) / 2;
+			const y0 = gyOf(n1), y1 = gyOf(n0);
+			const sc = 0.55 + 0.9 * nm;               // nearer clouds throw wider shadows
+			const w = W * sc, x0 = W / 2 - w / 2 + (W / 2 - sunX) * -0.15 * sc;
+			ctx.drawImage(shadowMap, 0, r, MW, 1, x0, y0, w, (y1 - y0) + 1);
+		}
+		ctx.restore();
+	}
+
 	function drawCloudShadows(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
 		const sun = clamp01((altDeg - 2) / 12) * (1 - weather.cover / 0.6);
 		if (sun < 0.02) return;
 		const minutes = sceneMs() / 60000;
 		const sunX = sxn * W;
+		if (fieldReady() && field) { drawFieldShadows(ctx, sun, sunX); return; }
 		ctx.save();
 		ctx.beginPath(); ctx.rect(0, horizonY, W, H - horizonY); ctx.clip();
 		for (const cloud of clouds) {
