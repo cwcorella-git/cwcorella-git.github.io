@@ -1421,20 +1421,21 @@
 		return field.canvas;
 	}
 
+	/** The live clouds, drawn in the sky, behind the mountains and the land. */
+	function drawLiveClouds(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
+		if (!fieldReady()) return;
+		const fc = renderField(altDeg, sxn);
+		if (!fc) return;
+		ctx.save();
+		ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+		ctx.globalAlpha = Math.min(1, sceneTune.cloudOpacity);
+		ctx.filter = `blur(${(0.9 * dpr).toFixed(1)}px)`;   // melts the march's per-pixel jitter (ignored where unsupported)
+		ctx.drawImage(fc, 0, 0, W, horizonY);
+		ctx.restore();
+	}
+
 	function drawClouds(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
-		if (fieldReady()) {
-			const fc = renderField(altDeg, sxn);
-			if (fc) {
-				ctx.save();
-				ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-				ctx.globalAlpha = Math.min(1, sceneTune.cloudOpacity);
-				ctx.filter = `blur(${(0.9 * dpr).toFixed(1)}px)`;   // melts the march's per-pixel jitter (ignored where unsupported)
-				ctx.drawImage(fc, 0, 0, W, horizonY);
-				ctx.filter = 'none';
-				ctx.restore();
-				return;
-			}
-		}
+		if (fieldReady()) return;   // drawn earlier, behind the land (drawLiveClouds)
 		const cloudAlpha = 1;   // clouds stay at night, dark, and hide the stars behind them
 
 		const minutesSinceEpoch = sceneMs() / 60000;
@@ -1654,6 +1655,7 @@
 		if (T.sun) drawSun(ctx, altDeg, sxn);
 		if (T.rays) drawCrepuscularRays(ctx, altDeg, sxn);
 		if (T.venus) { drawBeltOfVenus(ctx, altDeg); drawPurpleLight(ctx, altDeg, sxn); }
+		drawLiveClouds(ctx, altDeg, sxn);
 		drawGround(ctx, altDeg);
 		if (T.contours) drawGroundContours(ctx, altDeg);
 		if (T.mountains) drawTerrain(ctx, altDeg, sxn);
