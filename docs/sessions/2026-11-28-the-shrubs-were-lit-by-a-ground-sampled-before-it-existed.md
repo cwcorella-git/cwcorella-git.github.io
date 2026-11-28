@@ -16,6 +16,11 @@ lighting bug the operator found by reloading. Feature notes also in `docs/STATE.
 | 8 | Grass and shrubs still dark after a cold load (ground sample never repeated) | **done, unverified** — `d2b0f1d` |
 | 9 | Pale bare tree "washed out" at night | **proposed** — not started; cause is moon tint plus haze, needs a render to tune |
 | 10 | Shrubs "didn't get the physics update" | **proposed / unexplained** — see Open |
+| 11 | Live 3D cloud layer (WebGL ray-march, `cloudField.ts`), shadows from its alpha, behind the range | **done, unseen live** — `e1b438f` `875ee7b` `3498700` `ab8673d` |
+| 12 | Hatching and boxy bases; flatter perspective; haze over the range; pop-in guard | **done, unseen live** — `2240feb` `b12b8bf` `9ffff93` `7675586` |
+| 13 | Thinner cover, thinner at night; real Reno cloud cover from Open-Meteo with seeded fallback | **done, fetch unconfirmed** — `efd1073` `4a51a4b` |
+| 14 | Painted 2D clouds as a third mode (`cloudPuffs.ts`), off by default | **done, seen only in headless stills** — `0231394` |
+| 15 | 3D layer preserved | **done** — tag `clouds-3d-live` at `4a51a4b` |
 
 ## 1. The thoughts feature had to be admin-only, because the repo is the database
 
@@ -44,7 +49,47 @@ stage baked (plain ground, no tint) was kept for the session; grass and shrubs t
 dark. Added `terrainLit.key`, `meadow` presence and snow to that key. Both are readings of
 the code; **neither has been seen to fix it.**
 
+## 4. The clouds: the operator's eye said the scene was off before any measurement did
+
+Asked for clouds that form and deform, a Fable agent proposed a ray-marched slab in an offscreen
+WebGL2 canvas (stateless in scene time, so the admin clock still scrubs). Built behind
+`cloudField`, with the baked sprites as fallback. Seen in headless renders it worked, and then
+the operator said the scene felt wrong: **one 3D element in an otherwise flat layered scene**,
+and the clouds met the mountains badly. Two causes of mine: the layer was drawn *after* the
+land, over the range (fixed: `drawLiveClouds` runs before `drawGround`), and the deck converged
+to the ground line. Lifting it (60% of the sky height, fading out) and flattening the
+perspective (K 0.62→0.46, reach 46→34) treated the symptom; haze over the range in the cloud
+deck's own haze colour (`drawRangeHaze`) helped. The real fix for "mismatch" was a different
+style: **the agent's painted 2D puffs** (`cloudPuffs.ts`), which the operator chose as a third
+mode. They read much closer to the rest of the scene in stills.
+
+Smaller findings: white-noise jitter plus a 0.9px blur removed the dither hatching (Safari
+ignores canvas `filter`); pop-in came from the baked clouds drawing while the 3D noise built, so
+`fieldActive()` keeps them out while warming up; `pkill -f` on a server name killed my own
+shell twice (exit 144), so kill by port with `lsof -ti`.
+
+## 5. Real weather, and a constraint I bent
+
+`localSky.ts` reads today's cloud cover for Reno (39.53, -119.81) from Open-Meteo once,
+caches 30 min in `localStorage`, and falls back to seeded weather on any failure. It only
+applies when the scene clock is live and on auto. **CLAUDE.md says no free-tier service
+dependencies**; I judged an optional, silently-degrading read acceptable and said so to the
+operator, who did not object. A visitor's browser calls a third party. My own `curl` to the API
+returned nothing from the workstation, so **the live fetch has never been confirmed working.**
+
 ## Open
+
+- **Clouds never seen live on a real screen.** All checks were headless Chrome on SwiftShader (the
+  page with `Date` overridden, because the scene-clock override only works for an admin). The
+  3D layer, its haze, shadows, thinner cover, and the painted 2D mode are all OWED by eye.
+- **Painted 2D clouds, known weak:** sunset is nearly one flat orange; golden hour mottles;
+  overcast is a lumpy band, not a deck; bases are ruler-straight; edge shimmer at 4-12 fps
+  untested; phone cost unmeasured (agent: ~12 ms at 4x throttle). Toggle `painted clouds (2D)`
+  in the scene panel; it wins over `live clouds (3D)`; both off gives the baked sprites.
+- **Open-Meteo fetch unconfirmed**, and it is a call to a third party (see §5). Remove
+  `startLocalSky()` in `Garden.svelte` to go back to seeded weather only.
+- **Default is still the 3D layer** (`cloudField: true`); painted is off. Operator's call.
+- Cloud-shadow strength (0.3) and range haze (0.46) are eyeballed numbers.
 
 - **Never verified in a browser (mine):** every visual and interaction claim above. Rock
   click, ink click, the floating bubble, the minimise button, the dimmer grass. Type-check,
@@ -66,8 +111,11 @@ the code; **neither has been seen to fix it.**
 
 ## Resume here
 
-Nothing in flight, nothing running in the background. Next row: **#8 verification**. Ask
-the operator for a screenshot after a hard reload (deploy of `d2b0f1d` takes a few
-minutes). If still dark, read `tuftLight` and `buildScene` first-load order in
-`src/lib/components/Garden.svelte`. All work is pushed to `main` (`d2b0f1d`); this doc is
-the only unpushed change.
+Nothing in flight, nothing running (the local `http.server` on 4173 was stopped). Everything
+is pushed to `main`; last code commit `0231394`, tag `clouds-3d-live` at `4a51a4b`. Next row
+is the operator's look: grass and shrubs after a hard reload (#8, `d2b0f1d`), then the clouds
+in each mode at noon, sunset and a moonless night. Headless-render recipe: build, serve
+`build/` with `python3 -m http.server 4173`, drive Chrome via `node_modules/playwright` with
+`executablePath: /usr/bin/google-chrome`, swiftshader flags, and a `Date` subclass in
+`addInitScript` (browser TZ is UTC, so sunset is about 16:30Z). Scripts are in the session
+scratchpad (`shot3.mjs`, `shot4.mjs`). Prototypes: `clouds-proto.html`, `clouds2d-proto.html`.
