@@ -717,7 +717,11 @@
 	let groundMid: RGB = [139, 149, 90];
 	let groundSmall: HTMLCanvasElement | null = null;
 	function sampleGround(ctx: CanvasRenderingContext2D, altDeg: number): void {
-		const key = `${W}x${H}|${Math.round(altDeg * 2)}|${dayOfYear(sceneNow())}|${bgPlants.length + fgPlants.length}`;
+		// terrainLit.key and meadow are in the key: the terrain file loads after the first
+		// frames and the meadow bakes in a stage, so a sample taken before either
+		// arrived (plain ground, no meadow tint) otherwise stayed for the whole session,
+		// leaving grass and shrubs lit dark against a ground that had since changed.
+		const key = `${W}x${H}|${Math.round(altDeg * 2)}|${dayOfYear(sceneNow())}|${bgPlants.length + fgPlants.length}|${terrainLit.key}|${meadow ? 1 : 0}|${weather.snow}`;
 		if (key === groundKey || !canvas) return;
 		groundKey = key;
 		const sw = 64, sh = 32, band = H - horizonY;
