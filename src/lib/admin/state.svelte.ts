@@ -19,7 +19,8 @@ type DomainPayload =
 	| { domain: 'books'; books: Book[]; extraUpdates?: { path: string; content: string }[]; deletions?: string[] }
 	| { domain: 'home'; content: string }
 	| { domain: 'journals-index'; encIndexJson: string; extraUpdates: { path: string; content: string }[]; deletions: string[]; message: string }
-	| { domain: 'links'; encIndexJson: string; message: string };
+	| { domain: 'links'; encIndexJson: string; message: string }
+	| { domain: 'thoughts'; encJson: string; message: string };
 
 type SyncStatus = 'idle' | 'dirty' | 'saving' | 'error';
 
@@ -56,6 +57,12 @@ async function _commitDomain(payload: DomainPayload, pat: string): Promise<void>
 		await commitFiles(
 			pat,
 			[{ path: 'static/docs/private/links-index.enc', content: payload.encIndexJson }],
+			payload.message
+		);
+	} else if (payload.domain === 'thoughts') {
+		await commitFiles(
+			pat,
+			[{ path: 'static/docs/private/thoughts.enc', content: payload.encJson }],
 			payload.message
 		);
 	}
@@ -183,6 +190,13 @@ export const writeQueue = {
 		const linksDraft = draftStore.load<Extract<DomainPayload, { domain: 'links' }>>('links');
 		if (linksDraft) {
 			_pending = new Map(_pending).set('links', linksDraft);
+			_syncStatus = 'dirty';
+			count++;
+		}
+
+		const thoughtsDraft = draftStore.load<Extract<DomainPayload, { domain: 'thoughts' }>>('thoughts');
+		if (thoughtsDraft) {
+			_pending = new Map(_pending).set('thoughts', thoughtsDraft);
 			_syncStatus = 'dirty';
 			count++;
 		}

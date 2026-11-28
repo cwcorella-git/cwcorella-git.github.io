@@ -127,3 +127,7 @@ static/.nojekyll                     — prevents GitHub Pages from running Jeky
 ## Reading list into the library (2026-11-26)
 
 Imported 917 books into library-api `edits.db` (264 attached, 653 stubs, 1,878 links, 3 read); parity vs `books.json` 0 differences. `/reading` retired with a redirect to `/library?to_read=1`; nav entry and archive-mirror section removed. Stub editing (title, author, year, category, links) and a `+ to read` button on library documents are built (unit-tested, never seen live). **Not built:** reading-side hint fields for matched documents (the editor's details section writes the document's own metadata). A stub's year cannot be cleared (the API reads null as leave-alone). **Never verified live:** `/library` reading controls in a browser; `/documents` timing with the list populated. Spec: `docs/superpowers/specs/2026-11-25-reading-into-library.md`.
+
+## Thoughts (2026-11-28)
+
+Rocks in the garden (sky) and any non-interactive click (ink) open a box; admin only. Notes are one encrypted file, `static/docs/private/thoughts.enc`, written through the write queue (`domain: 'thoughts'`). They float back as a Poisson process with a saturating rate, `lambda(n) = LAMBDA_MAX*n/(n+K)` (`src/lib/thoughts/thoughtLogic.ts`): hours apart at n=1, never faster than one per 20 min. Home panel starts minimised (`cwc-home-open`). Plant mouse force cut (radius 90→55, push 90→22). Not yet checked in a real browser.

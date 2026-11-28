@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { base } from '$app/paths';
 	import { loadTerrain, relightTerrain, snowLineFor, meadowLight, meadowSeason, type Terrain, type TerrainLight } from '$lib/garden/terrain';
+	import { thoughtsState } from '$lib/thoughts/thoughtsState.svelte';
 	import { makeGrassTuft, makeSeedHead, tickWind, drawPlants, applyMouseForce, setPlantGround, type PlantInstance } from '$lib/garden/plants';
 	import { generateFgTree, loadFgTreeFromCache, saveFgTreeToCache, clearFgTreeCache, generateBgTree, loadBgTreeFromCache, saveBgTreeToCache, drawTree, drawLeaves, type TreeSegment } from '$lib/garden/tree';
 	import { loadGardenState, saveGardenState, creditVisit, accrueElapsedDays, growthFactor, treeGrowthFactor, addAgeUnits } from '$lib/garden/state';
@@ -13,7 +14,7 @@
 	import { weatherFor, weatherForced, type Weather } from '$lib/garden/weather';
 	import { sceneTune } from '$lib/admin/sceneTune.svelte';
 	import { clock, sceneNow, sceneMs } from '$lib/garden/clock.svelte';
-	import { renderMeadow, renderRocks, renderSnow, makeFlowers, flowerBloom, type Flower, bakeNoiseCloud, cloudAlphaLUT, type CloudBake, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
+	import { renderMeadow, renderRocks, type RockSpot, renderSnow, makeFlowers, flowerBloom, type Flower, bakeNoiseCloud, cloudAlphaLUT, type CloudBake, renderNoiseCirrus, makeGrainTile } from '$lib/garden/detail';
 	import { moonPosition } from '$lib/garden/moon';
 	import { extremes, publishSeen, cellsIn } from '$lib/garden/seen.svelte';
 	import { makeStars, drawStarField, siderealDeg, type StarField } from '$lib/garden/stars';
@@ -743,7 +744,8 @@
 		const tl = tuftLight(altDeg), tm = (tl[0] + tl[1] + tl[2]) / 3 || 1;
 		const cw = clamp01((2 - altDeg) / 4);
 		const rl = tl.map((v) => v + (v / tm * groundLum - v) * cw) as RGB;
-		rocks = renderRocks(W, band, dpr, rl, sunXNorm(sceneNow(), 39.53) < 0.5 ? -1 : 1, at(W / 2, horizonY + band * 0.8), weather.snow);
+		rockSpots = [];
+		rocks = renderRocks(W, band, dpr, rl, sunXNorm(sceneNow(), 39.53) < 0.5 ? -1 : 1, at(W / 2, horizonY + band * 0.8), weather.snow, rockSpots);
 		// Snow is white: light it mostly by the light's brightness, with only a
 		// third of its colour (the full tint, sky-blue by day, read cyan).
 		const rm = (rl[0] + rl[1] + rl[2]) / 3;
@@ -754,6 +756,7 @@
 		snowLayer = weather.snow > 0 ? renderSnow(W, band, weather.snow, snowLight, getSkyColors(altDeg).horizon as RGB) : null;
 	}
 	let rocks: HTMLCanvasElement | null = null;
+	let rockSpots: RockSpot[] = [];
 	let snowLayer: HTMLCanvasElement | null = null;
 	let snowLight: RGB = [1, 1, 1];
 
@@ -1416,7 +1419,25 @@
 	let cursorActive = false;
 	let cursorTimeout = 0;
 
+	// ── rocks: click one to write a thought (admin) ───────────────────────────
+	// The canvas has pointer-events: none, so these ride on the window. A click
+	// counts only on bare meadow: not on a link, button, field or glass panel.
+	const NOT_MEADOW = 'a,button,input,textarea,select,label,summary,[role=button],[role=dialog],[role=presentation],[contenteditable],[data-glass],[data-no-thought]';
+	function rockAt(e: MouseEvent): boolean {
+		if (!rocks || !sceneTune.rocks || !adminState.active) return false;
+		const el = e.target as Element | null;
+		if (!el || el.closest(NOT_MEADOW)) return false;
+		const px = e.clientX * dpr, py = e.clientY * dpr - horizonY;
+		return rockSpots.some((r) => Math.abs(px - r.x) <= r.rw * 1.1 && py >= r.y - r.rh * 1.1 && py <= r.y + r.rh * 0.35);
+	}
+	let overRock = false;
+	function onRockClick(e: MouseEvent): void {
+		if (e.button === 0 && rockAt(e)) thoughtsState.open();
+	}
+
 	function onMouseMove(e: MouseEvent): void {
+		const hit = rockAt(e);
+		if (hit !== overRock) { overRock = hit; document.body.style.cursor = hit ? 'cell' : ''; }
 		rawMouseX = e.clientX * dpr;
 		rawMouseY = e.clientY * dpr;
 		cursorActive = true;
@@ -1667,6 +1688,7 @@
 		animFrame = requestAnimationFrame(draw);
 		window.addEventListener('resize', resize);
 		window.addEventListener('mousemove', onMouseMove);
+		window.addEventListener('click', onRockClick);
 		window.addEventListener('touchmove', onTouchMove, { passive: true });
 		canvas!.addEventListener('click', onCanvasClick);
 
@@ -1691,6 +1713,8 @@
 			cancelAnimationFrame(animFrame);
 			window.removeEventListener('resize', resize);
 			window.removeEventListener('mousemove', onMouseMove);
+			window.removeEventListener('click', onRockClick);
+			if (overRock) document.body.style.cursor = '';
 			window.removeEventListener('touchmove', onTouchMove);
 			canvas?.removeEventListener('click', onCanvasClick);
 			clearTimeout(cursorTimeout);

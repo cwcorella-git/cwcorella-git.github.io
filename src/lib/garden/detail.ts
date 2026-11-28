@@ -143,7 +143,10 @@ export function renderMeadow(W: number, bandH: number, scale: number): HTMLCanva
 // than the grass, and the rocks read as mushroom caps. Each is an angular
 // outline, flat where it meets the ground, with a lit facet toward the sun,
 // a shaded side, a few lichen flecks, and grass blades over its foot.
-export function renderRocks(W: number, bandH: number, scale: number, light: RGB, sunDx: number, grass: RGB, snow = 0): HTMLCanvasElement {
+/** A rock's footprint in the rocks layer's own pixels, for hit-testing clicks. */
+export interface RockSpot { x: number; y: number; rw: number; rh: number }
+
+export function renderRocks(W: number, bandH: number, scale: number, light: RGB, sunDx: number, grass: RGB, snow = 0, spots?: RockSpot[]): HTMLCanvasElement {
 	const c = makeCanvas(W, bandH);
 	const ctx = c.getContext('2d')!;
 	const rng = makePRNG(0x50C4);
@@ -152,6 +155,7 @@ export function renderRocks(W: number, bandH: number, scale: number, light: RGB,
 		const t = 0.62 + rng() * 0.33;
 		const x = rng() * W, y = t * bandH;
 		const rw = (10 + rng() * 16) * (0.4 + t) * scale, rh = rw * (0.5 + rng() * 0.25);
+		spots?.push({ x, y, rw, rh });
 		// Outline: 7 points over the top half, flattened bottom, irregular.
 		const pts: [number, number][] = [];
 		for (let k = 0; k <= 6; k++) {

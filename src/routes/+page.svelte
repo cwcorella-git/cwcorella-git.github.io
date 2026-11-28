@@ -3,8 +3,18 @@
 	import HomeEditor from '$lib/components/HomeEditor.svelte';
 	import { homeState, adminState, writeQueue } from '$lib/admin/state.svelte';
 	import { renderMarkdown } from '$lib/admin/markdown';
+	import { onMount } from 'svelte';
 
 	let editing = $state(false);
+
+	// The panel starts minimised (2026-11-28): the page opens on the scene alone.
+	// The choice is remembered for this browser.
+	let open = $state(false);
+	onMount(() => { open = localStorage.getItem('cwc-home-open') === '1'; });
+	function toggle() {
+		open = !open;
+		localStorage.setItem('cwc-home-open', open ? '1' : '0');
+	}
 
 	// Fall back to static build value if no draft has been restored
 	let content = $derived(homeState.content ?? homeContent.content);
@@ -28,8 +38,11 @@
 	<main>
 		{#if editing}
 			<HomeEditor content={content} onSave={save} onCancel={() => (editing = false)} />
+		{:else if !open}
+			<button class="restore" data-glass onclick={toggle} aria-expanded="false" title="Show">+ home</button>
 		{:else}
 			<div class="content-panel" data-glass>
+				<button class="min" onclick={toggle} aria-expanded="true" title="Minimise" aria-label="Minimise">–</button>
 				<div class="prose">
 					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 					{@html rendered}
@@ -68,6 +81,7 @@
 	}
 
 	.content-panel {
+		position: relative;
 		background: var(--glass-bg);
 		backdrop-filter: var(--glass-blur);
 		-webkit-backdrop-filter: var(--glass-blur);
@@ -101,6 +115,31 @@
 	}
 	:global(.prose strong) { font-weight: normal; letter-spacing: 0.04em; }
 	:global(.prose em) { font-style: italic; }
+
+	.min {
+		position: absolute;
+		top: 0.5rem; right: 0.6rem;
+		background: none; border: none; cursor: pointer;
+		color: var(--clr-text);
+		font-family: var(--font-ui);
+		font-size: 1.1rem; line-height: 1;
+		padding: 0.2rem 0.5rem;
+		opacity: 0.6;
+	}
+	.min:hover { opacity: 1; }
+	.restore {
+		align-self: center;
+		background: var(--glass-bg);
+		backdrop-filter: var(--glass-blur);
+		-webkit-backdrop-filter: var(--glass-blur);
+		border: 1px solid var(--glass-border);
+		border-radius: 999px;
+		color: var(--clr-text);
+		font-family: var(--font-ui);
+		font-size: 0.65rem; letter-spacing: 0.1em;
+		padding: 0.4rem 0.9rem;
+		cursor: pointer;
+	}
 
 	.edit-btn {
 		background: none;

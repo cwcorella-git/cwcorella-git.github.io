@@ -255,6 +255,9 @@ export function drawPlants(
 }
 
 // ── mouse/touch interaction ────────────────────────────────────────────────
+// Quieted 2026-11-28 (was radius 90, push 90): plants now only stir when the
+// cursor is close, and lean a little, so the meadow stays calm under a reader.
+const MOUSE_PUSH = 22;
 function applyForceSeg(seg: PlantSegment, mx: number, my: number, radius: number, forceMul: number): void {
 	if (seg.len > 0) {
 		const midX = (seg.wx0 + seg.wx) * 0.5;
@@ -266,7 +269,7 @@ function applyForceSeg(seg: PlantSegment, mx: number, my: number, radius: number
 			const sdx   = seg.wx - seg.wx0;
 			const sdy   = seg.wy - seg.wy0;
 			const cross = sdx * dy - sdy * dx;
-			const str   = (1 - dist / radius) * 90 * forceMul;
+			const str   = (1 - dist / radius) * MOUSE_PUSH * forceMul;
 			seg.angVel += (cross > 0 ? -1 : 1) * str;
 		}
 	}
@@ -278,7 +281,7 @@ export function applyMouseForce(
 	mx: number, my: number,
 	horizonY: number,
 	groundBand: number,
-	radius = 90,
+	radius = 55,
 ): void {
 	for (const plant of plants) {
 		const depthFrac = groundBand > 0 ? Math.max(0, Math.min(1, (plant.y - horizonY) / groundBand)) : 0;

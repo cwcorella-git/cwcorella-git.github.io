@@ -18,6 +18,7 @@
 	import Toasts from '$lib/components/Toasts.svelte';
 	import Sky from '$lib/components/Sky.svelte';
 	import Garden from '$lib/components/Garden.svelte';
+	import ThoughtLayer from '$lib/components/ThoughtLayer.svelte';
 
 	let { children } = $props();
 
@@ -69,6 +70,7 @@
 <!-- ink is the VG-fidelity palette (rulings R8): nothing behind its panels. -->
 {#if themeState.active !== 'ink'}<Garden />{/if}
 <AdminDrawer bind:this={drawerRef} />
+<ThoughtLayer />
 <Toasts />
 
 {#if bookFormState.open}
