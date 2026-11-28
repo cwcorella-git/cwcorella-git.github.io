@@ -23,7 +23,7 @@
 
 	async function letGo() {
 		const ok = await thoughtsState.add(text);
-		if (ok) { text = ''; thoughtsState.close(); toast.success('let go'); }
+		if (ok) { text = ''; thoughtsState.close(); toast.success('✓'); }
 	}
 	function boxKey(e: KeyboardEvent) {
 		if (e.key === 'Escape') { e.stopPropagation(); thoughtsState.close(); }
@@ -75,11 +75,11 @@
 {#if thoughtsState.composing}
 	<div class="tb-backdrop" role="presentation" onclick={backdrop}></div>
 	<div class="tb popup-glass" role="dialog" aria-modal="true" aria-label="Write a thought">
-		<textarea bind:this={box} bind:value={text} onkeydown={boxKey} rows="6" placeholder="put it down here…" spellcheck="true"></textarea>
+		<textarea bind:this={box} bind:value={text} onkeydown={boxKey} rows="6" placeholder="…" spellcheck="true"></textarea>
 		<div class="tb-actions">
 			<span class="tb-hint">ctrl+enter</span>
-			<button type="button" onclick={() => thoughtsState.close()}>keep it</button>
-			<button type="button" class="go" onclick={letGo} disabled={!text.trim()}>let go</button>
+			<button type="button" onclick={() => thoughtsState.close()} aria-label="Close" title="Close">×</button>
+			<button type="button" class="go" onclick={letGo} disabled={!text.trim()} aria-label="Save" title="Save (ctrl+enter)">✓</button>
 		</div>
 	</div>
 {/if}
@@ -145,8 +145,8 @@
 	button {
 		background: none; color: inherit; cursor: pointer;
 		border: 1px solid rgba(var(--dark-panel-rgb), 0.38);
-		font: inherit; font-size: 0.7rem; letter-spacing: 0.08em;
-		padding: 0.4rem 0.9rem;
+		font: inherit; font-size: 1rem; line-height: 1;
+		padding: 0.4rem 0.8rem;
 	}
 	button:hover:not(:disabled) { border-color: var(--clr-dark-text); }
 	button:disabled { opacity: 0.4; cursor: default; }
