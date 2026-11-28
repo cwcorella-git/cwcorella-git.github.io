@@ -195,6 +195,8 @@ export interface CloudField {
 	readonly canvas: HTMLCanvasElement;
 	/** False when WebGL2 is missing or lost, or the noise is still being built. */
 	readonly ok: boolean;
+	/** True while the noise is still being built (and the context is fine). */
+	readonly pending: boolean;
 	/** Advance the noise build a few ms; call every animation frame until ok. */
 	pump(): void;
 	resize(cssW: number, cssH: number, res: number, steps: number): void;
@@ -248,10 +250,11 @@ export function createCloudField(): CloudField | null {
 	const api: CloudField = {
 		canvas,
 		get ok() { return ready && !lost; },
+		get pending() { return !ready && !lost; },
 		pump() {
 			if (ready || !gen) return;
 			const t0 = performance.now();
-			while (performance.now() - t0 < 5) {
+			while (performance.now() - t0 < 8) {
 				const r = gen.next();
 				if (r.done) { upload(r.value); ready = true; gen = null; return; }
 			}

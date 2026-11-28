@@ -517,7 +517,7 @@
 		const moon = moonState(altDeg, now);
 		const minutes = sceneMs() / 60000;
 		// Nothing over the stars (no cloud, no glare): draw them straight, skipping the layer.
-		const live = fieldReady();
+		const live = fieldActive();
 		if (moon.light <= 0.05 && !live && !clouds.some((c) => cloudRect(c, minutes))) {
 			drawStarField(ctx, starField, starAlpha, time, siderealDeg(now), moon.light, starTune());
 			return;
@@ -536,7 +536,7 @@
 			lc.fillRect(moon.x - gr, moon.y - gr, gr * 2, gr * 2);
 		}
 		// Clouds hide what is behind them.
-		if (live && field) lc.drawImage(field.canvas, 0, 0, W, cloudBottom());
+		if (live) { if (field?.ok) lc.drawImage(field.canvas, 0, 0, W, cloudBottom()); }
 		else for (const cloud of clouds) {
 			const at = cloudRect(cloud, minutes);
 			if (!at) continue;
@@ -858,7 +858,7 @@
 		if (sun < 0.02) return;
 		const minutes = sceneMs() / 60000;
 		const sunX = sxn * W;
-		if (fieldReady() && field) { drawFieldShadows(ctx, sun, sunX); return; }
+		if (fieldActive()) { if (field?.ok) drawFieldShadows(ctx, sun, sunX); return; }
 		ctx.save();
 		ctx.beginPath(); ctx.rect(0, horizonY, W, H - horizonY); ctx.clip();
 		for (const cloud of clouds) {
@@ -1416,6 +1416,13 @@
 		field.pump();
 		return field.ok;
 	}
+	/** The live layer is wanted and usable, or still warming up: either way the
+	 *  baked sprites stay out, so they never flash in before the live ones. */
+	function fieldActive(): boolean {
+		if (!sceneTune.cloudField) return false;
+		fieldReady();
+		return !!field && (field.ok || field.pending);
+	}
 	function renderField(altDeg: number, sxn: number): HTMLCanvasElement | null {
 		if (!field || !field.ok) return null;
 		let { top, shadow } = getCloudColors(altDeg);
@@ -1451,7 +1458,7 @@
 	}
 
 	function drawClouds(ctx: CanvasRenderingContext2D, altDeg: number, sxn: number): void {
-		if (fieldReady()) return;   // drawn earlier, behind the land (drawLiveClouds)
+		if (fieldActive()) return;   // drawn earlier, behind the land (drawLiveClouds)
 		const cloudAlpha = 1;   // clouds stay at night, dark, and hide the stars behind them
 
 		const minutesSinceEpoch = sceneMs() / 60000;
@@ -1501,6 +1508,7 @@
 	/** Advance the cloud bakes in progress for a few ms. Called on every animation
 	 *  frame, drawn or not, so the sky fills in quickly even at 4 fps by day. */
 	function pumpBakes(): void {
+		if (sceneTune.cloudField) fieldReady();   // builds the live clouds' noise between drawn frames too
 		const start = performance.now(), BUDGET = 6;
 		for (const cloud of clouds) {
 			const job = cloud.job;
